@@ -183,6 +183,7 @@ from .callbacks import (
     ScheduleDeleteData,
     TagMemberData,
 )
+from .persistence import CredentialStore
 from .sync_client import LansengerSyncClient
 
 __all__ = [
@@ -333,6 +334,7 @@ __all__ = [
     "ScheduleModifyData",
     "ScheduleDeleteData",
     "TagMemberData",
+    "CredentialStore",
 ]
 
 __version__ = "1.0.0"

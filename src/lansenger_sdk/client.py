@@ -35,6 +35,7 @@ from .constants import API_ENDPOINTS, MEDIA_TYPE_FILE, guess_media_type
 from .exceptions import LansengerAPIError, LansengerFileError, LansengerNetworkError
 from .oauth import exchange_code_for_user_token, refresh_user_token
 from .media import download_media, upload_media
+from .persistence import CredentialStore
 from .models import (
     AccountMessageResult,
     AppCardParams,
@@ -125,6 +126,7 @@ class LansengerClient:
         api_gateway_url: str = "https://open.e.lanxin.cn/open/apigw",
         passport_url: str = "",
         http_timeout: float = 30.0,
+        store_path: Optional[str] = None,
     ):
         self._config = LansengerConfig(
             app_id=app_id,
@@ -136,10 +138,15 @@ class LansengerClient:
         self._http_client: Optional[httpx.AsyncClient] = None
         self._token_manager: Optional[TokenManager] = None
         self._owns_http_client = True
+        self._store: Optional[CredentialStore] = CredentialStore(store_path) if store_path else None
 
     @classmethod
-    def from_env(cls) -> LansengerClient:
-        """Create client from environment variables."""
+    def from_env(cls, store_path: Optional[str] = None) -> LansengerClient:
+        """Create client from environment variables.
+
+        If store_path is provided, credentials and tokens are persisted
+        to that file. Without store_path, everything stays in memory only.
+        """
         config = LansengerConfig.from_env()
         return cls(
             app_id=config.app_id,
@@ -147,10 +154,11 @@ class LansengerClient:
             api_gateway_url=config.api_gateway_url,
             passport_url=config.passport_url,
             http_timeout=config.http_timeout,
+            store_path=store_path,
         )
 
     @classmethod
-    def from_config(cls, config: LansengerConfig) -> LansengerClient:
+    def from_config(cls, config: LansengerConfig, store_path: Optional[str] = None) -> LansengerClient:
         """Create client from a LansengerConfig instance."""
         return cls(
             app_id=config.app_id,
@@ -158,13 +166,14 @@ class LansengerClient:
             api_gateway_url=config.api_gateway_url,
             passport_url=config.passport_url,
             http_timeout=config.http_timeout,
+            store_path=store_path,
         )
 
     def _ensure_clients(self) -> None:
         """Lazily initialize HTTP client and token manager."""
         if self._http_client is None:
             self._http_client = httpx.AsyncClient(timeout=self._config.http_timeout)
-            self._token_manager = TokenManager(self._config, self._http_client)
+            self._token_manager = TokenManager(self._config, self._http_client, store=self._store)
             self._owns_http_client = True
 
     def attach_http_client(self, http_client: httpx.AsyncClient) -> None:
@@ -173,7 +182,7 @@ class LansengerClient:
         When attached, close() will NOT close the external client.
         """
         self._http_client = http_client
-        self._token_manager = TokenManager(self._config, http_client)
+        self._token_manager = TokenManager(self._config, http_client, store=self._store)
         self._owns_http_client = False
 
     async def close(self) -> None:
@@ -1030,13 +1039,21 @@ class LansengerClient:
         self._ensure_clients()
 
         app_token = await self._get_token()
-        return await exchange_code_for_user_token(
+        result = await exchange_code_for_user_token(
             self._config,
             app_token=app_token,
             code=code,
             http_client=self._http_client,
             redirect_uri=redirect_uri,
         )
+
+        if result.success and self._store:
+            self._store.save_user_token(
+                user_token=result.user_token,
+                refresh_token=result.refresh_token,
+            )
+
+        return result
 
     async def refresh_user_token(
         self,
