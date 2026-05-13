@@ -1,3 +1,15 @@
+---
+name: lansenger-todos
+description: Lansenger unified todo/task APIs — create, update, query, delete todo tasks, manage executors, and track status counts
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: todo
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Unified Todo (4.33)
 
 Lansenger SDK provides unified todo/task APIs for creating, updating, querying, and managing todo tasks. These are org/app bot APIs — they require `appToken` and optionally accept `userToken`.

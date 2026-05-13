@@ -1,3 +1,15 @@
+---
+name: lansenger-messaging
+description: Lansenger messaging strategy — understand 3 messaging channels (bot/private/account), text/formatText/appCard/appArticles capability boundaries, and SDK method selection
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: messaging
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Messaging Strategy
 
 Lansenger has **private chat** and **group chat** message channels. Each has different sender identity options. Choosing the wrong channel leads to incorrect sender identity or missing features.

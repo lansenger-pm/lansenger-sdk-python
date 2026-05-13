@@ -1,3 +1,15 @@
+---
+name: lansenger-calendars
+description: Lansenger calendar/schedule APIs — fetch primary calendar, create/query/delete schedules, manage attendees
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: calendar
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Calendar & Schedule (4.23)
 
 Lansenger SDK provides calendar & schedule APIs for managing calendars and events. These are org/app bot APIs — they require `appToken` and at least one of `userToken` or `userId`.

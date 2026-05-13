@@ -1,3 +1,15 @@
+---
+name: lansenger-groups
+description: Lansenger group V2 APIs — create groups, fetch group info/members, list groups, check membership, update group settings and members
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: groups
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Groups V2 API
 
 Lansenger SDK provides group V2 APIs for creating groups, fetching group info/members, checking membership, and updating group settings and members. These are org/app bot APIs — they require `appToken` and optionally accept `userToken`.
@@ -154,6 +166,7 @@ groups = await client.fetch_group_list(page_size=100)
 for gid in groups.group_ids:
     info = await client.fetch_group_info(group_id=gid)
     print(info.name, info.total_members)
+```
 
 ### Rename a group and add new members
 

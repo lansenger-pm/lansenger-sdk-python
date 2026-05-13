@@ -416,7 +416,7 @@ lansenger-skills-official/
 │   ├── calendars.py         # 日曆日程
 │   └── users.py             # 使用者資訊
 ├── tests/                   # 296 個測試，全部通過，全部通過
-├── skills/                  # 9 個 skill 文件 + manifest
+├── skills/                  # 9 個 skill（Agent Skills 標準：<name>/SKILL.md）+ manifest
 ├── pyproject.toml
 └── README*.md               # 5 語言 README
 ```

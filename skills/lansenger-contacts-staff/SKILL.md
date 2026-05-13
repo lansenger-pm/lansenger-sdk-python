@@ -1,3 +1,15 @@
+---
+name: lansenger-contacts-staff
+description: Lansenger staff/contacts APIs — fetch staff basic/detailed info, department ancestors, ID mapping (phone/email→staffId), org extra fields, and staff search
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: contacts
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Contacts & Staff API
 
 Lansenger SDK provides staff/contacts/org APIs for looking up organization member and org information. These are org/app bot APIs (not personal bots) — they require `appToken` and optionally accept `userToken` for user-scoped access.

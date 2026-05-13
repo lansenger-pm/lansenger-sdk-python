@@ -1,3 +1,15 @@
+---
+name: lansenger-departments
+description: Lansenger department APIs — navigate org hierarchy, fetch department detail/children, and list department staff
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: org_structure
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Departments API
 
 Lansenger SDK provides department APIs for navigating the org hierarchy — department detail, child departments, and staff listing. These are org/app bot APIs requiring `appToken`, optionally accepting `userToken`.

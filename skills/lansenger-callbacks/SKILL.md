@@ -1,10 +1,22 @@
+---
+name: lansenger-callbacks
+description: Lansenger callback event parsing — 25 event types across 14 categories, structured dataclass parsing, payload parsing, signature verification
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: callbacks
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Callback Events (Webhook)
 
 Lansenger SDK provides callback event parsing for processing webhook payloads sent by the Lansenger platform to your app's HTTP callback endpoint. This is purely data-side — no HTTP calls involved.
 
 ## Event Type Categories
 
-Lansenger sends 26 event types grouped into categories:
+Lansenger sends 25 event types grouped into 14 categories:
 
 | Category | Event Types |
 |----------|-------------|
@@ -16,7 +28,7 @@ Lansenger sends 26 event types grouped into categories:
 | **tag** | `tag_member` |
 | **app** | `app_install_org`, `app_uninstall_org` |
 | **notification** | `telephone_track` |
-| **certificate** | `ua_cert_create`, `ua_cert_modify`, `ua_cert_delete` |
+| **certificate** | `ua_cert_create`, `ua_cert_delete` |
 | **location** | `report_location` |
 | **auth** | `user_logout` |
 | **data_scope** | `data_scope` |
@@ -42,7 +54,7 @@ events = LansengerClient.parse_callback_payload(json_string)
 ```
 
 - Returns: `list[CallbackEvent]`
-- Each `CallbackEvent` has: event_id, event_type, category, data, app_id, org_id
+- Each `CallbackEvent` has: event_id, event_type, category, data (structured dataclass), app_id, org_id
 
 ### 2. Verify callback signature (placeholder)
 
@@ -69,7 +81,7 @@ class CallbackEvent:
     event_id: int        # eventId from payload
     event_type: str      # eventType string (e.g. "bot_private_message")
     category: str        # mapped category (e.g. "bot", "staff", "department")
-    data: dict           # event-specific data payload
+    data: dataclass      # structured event-specific dataclass (not raw dict)
     app_id: str          # appId
     org_id: str          # orgId
 ```
@@ -84,8 +96,8 @@ events = LansengerClient.parse_callback_payload(raw_body)
 
 for event in events:
     if event.category == "bot" and event.event_type == "bot_private_message":
-        staff_id = event.data.get("staffId")
-        content = event.data.get("content")
+        staff_id = event.data.staff_id
+        content = event.data.content
         # Process and reply...
         await client.send_text(chat_id=staff_id, content="收到！")
 ```

@@ -1,3 +1,15 @@
+---
+name: lansenger-streaming
+description: Lansenger streaming message APIs for AI-agent real-time message delivery — create and fetch stream messages for progressive typing output
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: streaming
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger Streaming Messages (AI-Agent SSE)
 
 Lansenger SDK provides streaming message APIs for AI-agent real-time message delivery. These enable the "typing..." progressive output experience that AI assistants need.

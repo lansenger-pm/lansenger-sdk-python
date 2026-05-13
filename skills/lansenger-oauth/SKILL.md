@@ -1,3 +1,15 @@
+---
+name: lansenger-oauth
+description: Lansenger OAuth2 user authentication flow — build authorize URL, exchange code for userToken, refresh userToken, fetch user info, and the appToken/userToken hierarchy
+license: MIT
+compatibility: opencode
+metadata:
+  sdk: lansenger-sdk
+  platform: lansenger
+  category: auth
+  pip: pip install lansenger-sdk
+---
+
 # Lansenger OAuth2 & User Authentication
 
 Lansenger uses a two-tier auth system. Understanding the hierarchy is critical before using user-level APIs.

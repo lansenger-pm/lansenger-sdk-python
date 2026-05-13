@@ -418,7 +418,7 @@ lansenger-skills-official/
 │   ├── calendars.py         # Calendar & Schedule
 │   └── users.py             # User info
 ├── tests/                   # 296 tests, all passing
-├── skills/                  # 9 skill docs + manifest
+├── skills/                  # 9 skills (Agent Skills standard: <name>/SKILL.md) + manifest
 ├── pyproject.toml
 └── README*.md               # 5-language READMEs
 ```
