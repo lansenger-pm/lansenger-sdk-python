@@ -2,11 +2,11 @@
 
 # lansenger-sdk
 
-SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — prend en charge les 应用 Lansenger, les 组织机器人 et les 个人机器人.
+SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — prend en charge les applications Lansenger, les bots d'organisation et les bots personnels.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 267](https://img.shields.io/badge/Tests-267-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 268](https://img.shields.io/badge/Tests-268-green)](https://github.com/lansenger-pm/lansenger-skills-official)
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
@@ -14,27 +14,26 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 | Type de bot | Auth | WebSocket entrant | Toutes les API |
 |-------------|------|-------------------|----------------|
-| **应用 Lansenger** | appToken + userToken | ✗ (utilise webhook) | ✓ |
-| **组织机器人** | appToken + userToken | ✗ (utilise webhook) | ✓ |
-| **个人机器人** | appToken | ✓ (WebSocket) | ✓ (limité pour les API non-bot) |
+| **Application Lansenger** | appToken + userToken | ✗ (utilise webhook) | ✓ |
+| **Bot d'organisation** | appToken + userToken | ✗ (utilise webhook) | ✓ |
+| **Bot personnel** | appToken | ✓ (WebSocket) | ✓ (limité pour les API non-bot) |
 
 Les trois types de bots utilisent le même mécanisme d'authentification : `appToken` est requis pour chaque appel API ; `userToken` est uniquement nécessaire pour certaines opérations au niveau utilisateur (infos utilisateur, recherche de staff, calendrier, etc.).
 
 ## Fonctionnalités
 
 - **Clients async & sync** — `LansengerClient` (async) + `LansengerSyncClient` (bloquant)
-- **3 canaux de chat privé** — bot, 公号 (compte public), 人→人 (impersonnation utilisateur)
-- **Chat de groupe** — supporte tous les types de messages, avec @mention et identité humain/bot
-- **Cartes riches** — appCard (avec mises à jour dynamiques), linkCard, appArticles, oacard, verifyCard
-- **Messages en streaming** — delivery en temps réel basé sur SSE pour les agents IA
-- **Upload/download de médias** — fichiers, images, vidéos avec detection automatique du type
-- **Gestion des messages** — révocation, mise à jour dynamique de carte
 - **Authentification utilisateur OAuth2** — URL d'autorisation, échange de code, refresh de token
 - **Organisation & départements** — infos org, détail/children/staff de département
 - **Staff & contacts** — infos basiques/détaillées, mapping d'ID, ancêtres de département, recherche
+- **Messagerie** — 3 canaux de chat privé (bot, compte public, impersonnation utilisateur) + chat de groupe, tous les types de messages, @mention, identité humain/bot
+- **Cartes riches** — appCard (avec mises à jour dynamiques), oacard, linkCard, verifyCard, appArticles
+- **Messages en streaming** — delivery en temps réel basé sur SSE pour les agents IA
+- **Upload/download de médias** — fichiers, images, vidéos avec detection automatique du type
+- **Gestion des messages** — révocation, mise à jour dynamique de carte
 - **Groups** — créer, infos, membres, liste, vérification de membership, mise à jour des paramètres & membres
-- **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
 - **Calendrier & Schedule** — calendrier principal, CRUD de schedule, gestion des participants
+- **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
 - **Événements de callback** — 26 types d'événements, parsing de payload, vérification de signature
 
 ## Installation rapide
@@ -49,7 +48,7 @@ Pour le développement :
 pip install -e ".[dev]"
 ```
 
-## Authentification
+## 1. Authentification
 
 ### appToken — Requis pour tous les appels API
 
@@ -75,29 +74,15 @@ client.invalidate_token()  # force le refresh au prochain appel
 - Opérations de calendrier & schedule (fetch_primary_calendar, create_schedule, etc.)
 - Opérations de groupe comme envoyeur humain
 
-Pour obtenir userToken, complétez le flux OAuth2 (voir ci-dessous).
-
 ### Obtenir les identifiants
 
 | Type de bot | Comment obtenir app_id + app_secret |
 |-------------|--------------------------------------|
-| **个人机器人** | Client Lansenger (desktop) → Contacts → 智能机器人 → 个人机器人 → cliquer sur l'icône ℹ️ (le client mobile ne permet pas de voir les identifiants) |
-| **应用 Lansenger** | Créer sur le [Lansenger Developer Center](https://dev.lanxin.cn) — peut nécessiter l'approbation de l'administrateur de l'organisation |
-| **组织机器人** | Créer sur le [Lansenger Developer Center](https://dev.lanxin.cn) — peut nécessiter l'approbation de l'administrateur de l'organisation |
+| **Bot personnel** | Client Lansenger (desktop) → Contacts → Bots intelligents → Bots personnels → cliquer sur l'icône ℹ️ (le client mobile ne permet pas de voir les identifiants) |
+| **Application Lansenger** | Créer sur le [Lansenger Developer Center](https://dev.lanxin.cn) — peut nécessiter l'approbation de l'administrateur de l'organisation |
+| **Bot d'organisation** | Créer sur le [Lansenger Developer Center](https://dev.lanxin.cn) — peut nécessiter l'approbation de l'administrateur de l'organisation |
 
-## Démarrage rapide
-
-```python
-from lansenger_sdk import LansengerClient
-
-# Depuis les variables d'environnement (LANSENGER_APP_ID, LANSENGER_APP_SECRET)
-client = LansengerClient.from_env()
-
-# Ou paramètres directs
-client = LansengerClient(app_id="your-appid", app_secret="your-secret")
-```
-
-### 1. Authentification (OAuth2 niveau utilisateur)
+### Authentification OAuth2 niveau utilisateur
 
 ```python
 # Construire l'URL d'autorisation — rediriger l'utilisateur vers Lansenger passport
@@ -113,7 +98,7 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
 
-### 2. Organisation & Départements
+## 2. Organisation & Départements
 
 ```python
 # Infos organisation
@@ -125,7 +110,7 @@ children = await client.fetch_department_children(department_id="deptId")
 staffs = await client.fetch_department_staffs(department_id="deptId")
 ```
 
-### 3. Staff & Contacts
+## 3. Staff & Contacts
 
 ```python
 # Infos basiques du staff
@@ -143,13 +128,13 @@ mapping = await client.fetch_staff_id_mapping(
 ancestors = await client.fetch_department_ancestors(staff_id="staffOpenId")
 
 # Rechercher du staff (requiert userToken ou userId)
-results = await client.search_staff(keyword="张三", user_token="ut")
+results = await client.search_staff(keyword="Zhang San", user_token="ut")
 
 # IDs de champs extra de l'org
 fields = await client.fetch_org_extra_field_ids(org_id="orgId")
 ```
 
-### 4. Messaging & Médias
+## 4. Messagerie & Médias
 
 #### Chat privé de bot — le plus courant
 
@@ -159,7 +144,7 @@ result = await client.send_markdown(chat_id="staff123", content="**Bold**")
 result = await client.send_file(chat_id="staff123", file_path="/path/to/report.pdf")
 ```
 
-#### Canal 公号 (compte public)
+#### Canal compte public
 
 ```python
 result = await client.send_account_message(
@@ -168,7 +153,7 @@ result = await client.send_account_message(
 )
 ```
 
-#### Canal 人→人 (impersonnation utilisateur) (requiert userToken)
+#### Canal impersonnation utilisateur (requiert userToken)
 
 ```python
 result = await client.send_user_message(
@@ -191,23 +176,23 @@ result = await client.send_group_message(
     user_token="ut",
 )
 
+# Le chat de groupe supporte TOUS les types de messages (text, formatText, oacard, appCard, linkCard, etc.)
+result = await client.send_group_message(
+    group_id="group123", msg_type="appCard",
+    msg_data={"appCard": {"bodyTitle": "Approbation", "isDynamic": True}},
+    user_token="ut",
+)
+
 # @mention dans un groupe
 result = await client.send_text(
     chat_id="group123", content="Important!", is_group=True, reminder_all=True,
-)
-
-# Group chat supports ALL message types (text, formatText, oacard, appCard, linkCard, etc.)
-result = await client.send_group_message(
-    group_id="group123", msg_type="appCard",
-    msg_data={"appCard": {"bodyTitle": "Approval", "isDynamic": True}},
-    user_token="ut",
 )
 ```
 
 #### Cartes enrichies
 
 ```python
-result = await client.send_app_card(chat_id="staff123", body_title="Approval", is_dynamic=True)
+result = await client.send_app_card(chat_id="staff123", body_title="Approbation", is_dynamic=True)
 result = await client.send_link_card(chat_id="staff123", title="Article", link="https://...")
 result = await client.send_app_articles(chat_id="staff123", articles=[...])
 
@@ -235,11 +220,11 @@ download = await client.download_media(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
-### 5. Groups
+## 5. Groups
 
 ```python
 # Créer un groupe
-group = await client.create_group(name="Project Chat", org_id="orgId", staff_id_list=["s1","s2","s3"])
+group = await client.create_group(name="Chat Projet", org_id="orgId", staff_id_list=["s1","s2","s3"])
 
 # Récupérer infos & membres
 info = await client.fetch_group_info(group_id="groupOpenId")
@@ -250,7 +235,7 @@ groups = await client.fetch_group_list()
 result = await client.check_is_in_group(group_id="groupOpenId", staff_id="staff1")
 
 # Mettre à jour les paramètres
-await client.update_group_info(group_id="groupId", name="New Name", manage_mode=1)
+await client.update_group_info(group_id="groupId", name="Nouveau nom", manage_mode=1)
 
 # Ajouter/supprimer des membres
 await client.update_group_members(
@@ -258,17 +243,15 @@ await client.update_group_members(
 )
 ```
 
-### 6. Calendrier & Schedule
+## 6. Calendrier & Schedule
 
 ```python
-from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
-
 # Récupérer le calendrier principal (requiert userToken ou userId)
 cal = await client.fetch_primary_calendar(user_token="ut")
 
 # Créer un schedule
 schedule = await client.create_schedule(
-    calendar_id=cal.calendar_id, summary="Team Meeting",
+    calendar_id=cal.calendar_id, summary="Réunion d'équipe",
     start_time={"date": "2024-01-15", "time": "10:00", "timeZone": "Asia/Shanghai"},
     end_time={"date": "2024-01-15", "time": "11:00", "timeZone": "Asia/Shanghai"},
     attendees=[{"staffId": "staff1", "attendeeFlag": "required"}],
@@ -290,20 +273,22 @@ await client.add_schedule_attendees(calendar_id="cal1", schedule_id="sch1", atte
 await client.delete_schedule_attendees(calendar_id="cal1", schedule_id="sch1", attendees=["staff2"], user_token="ut")
 ```
 
-### 7. Todo unifié
+## 7. Todo unifié
 
 ```python
+from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
+
 # Créer une tâche todo
 todo = await client.create_todo_task(
-    title="Approval Request", link="https://app.com/a/1", pc_link="https://pc.app.com/a/1",
+    title="Demande d'approbation", link="https://app.com/a/1", pc_link="https://pc.app.com/a/1",
     executor_ids=["staff1"], org_id="org1", type=TODO_TYPE_APPROVAL,
 )
 
-# Mettre à jour le statut (11=待阅, 12=已阅, 21=待办, 22=已办)
+# Mettre à jour le statut (11=à lire, 12=lu, 21=à faire, 22=fait)
 await client.update_todo_task_status(todotask_id="taskId", status=TODO_TODO_STATUS_DONE, org_id="org1")
 
 # Mettre à jour le contenu
-await client.update_todo_task(todotask_id="taskId", title="Updated", link="l", pc_link="p", org_id="org1")
+await client.update_todo_task(todotask_id="taskId", title="Mis à jour", link="l", pc_link="p", org_id="org1")
 
 # Supprimer (envoyeur uniquement)
 await client.delete_todo_task(todotask_id="taskId", org_id="org1")
@@ -314,7 +299,7 @@ task = await client.fetch_todo_task_by_id(todotask_id="taskId", org_id="org1")
 task = await client.fetch_todo_task_by_source_id(source_id="src1", org_id="org1")
 counts = await client.fetch_todo_task_status_counts(staff_id="staff1", org_id="org1")
 
-# Gestion des exécuteur
+# Gestion des exécuteurs
 await client.add_executors(executor_ids=["staff2"], org_id="org1", todotask_id="taskId")
 await client.delete_executors(executor_ids=["staff2"], org_id="org1", todotask_id="taskId")
 executors = await client.fetch_executor_list(todotask_id="taskId", org_id="org1")
@@ -324,7 +309,7 @@ await client.update_executor_status(
 )
 ```
 
-### Événements de callback
+## 8. Événements de callback
 
 ```python
 from lansenger_sdk import parse_callback_payload, verify_callback_signature
@@ -341,15 +326,23 @@ types = client.get_callback_event_types()  # 26 types d'événements sur 14 cat�
 
 ## Matrice de capacités des types de messages
 
-| msgType     | Markdown | @mention | Attachments | Canaux privés         | Chat de groupe |
-|-------------|----------|----------|-------------|------------------------|----------------|
-| `text`      | ✗        | ✓(groupe)| ✓           | Bot, 公号, 人→人       | ✓              |
-| `formatText`| ✓        | ✗        | ✗           | 人→人 uniquement       | ✓              |
-| `oacard`    | ✗        | ✗        | ✗           | Bot, 公号, 人→人       | ✓              |
-| `appCard`   | ✗ (div)  | ✗        | ✗           | Bot, 公号, 人→人       | ✓              |
-| `appArticles`| ✗       | ✗        | ✗           | Bot privé uniquement   | ✓              |
-| `linkCard`  | ✗        | ✗        | ✗           | Bot, 公号              | ✓              |
-| `verifyCard`| ✗        | ✗        | ✗           | Bot, 公号              | ✓              |
+| msgType | Markdown | @mention | Attachments | Canaux privés | Chat de groupe | Notes |
+|---------|----------|----------|-------------|----------------|----------------|-------|
+| `text` | ✗ | ✓ (groupe) | ✓ | Bot, Compte public, Impersonnation | ✓ | Max 6000 octets |
+| `formatText` | ✓ | ✗ | ✗ | Impersonnation uniquement | ✓ | Markdown (formatType=1) |
+| `oacard` | ✗ | ✗ | ✗ | Bot, Compte public, Impersonnation | ✓ | Carte simple avec champs |
+| `appCard` | ✓ (div) | ✗ | ✗ | Bot, Compte public, Impersonnation | ✓ | Carte riche, mises à jour dynamiques |
+| `linkCard` | ✗ | ✗ | ✗ | Bot, Compte public | ✓ | Carte de lien preview |
+| `appArticles` | ✗ | ✗ | ✗ | Bot privé uniquement | ✓ | Liste d'articles (1+ articles) |
+| `verifyCard` | ✗ | ✗ | ✗ | Bot, Compte public | ✓ | Carte de vérification avec boutons |
+| `system` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Notification système |
+| `systemAction` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Action système avec icône |
+| `redPacket` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Enveloppe rouge (cadeau) |
+| `transferOrder` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Notification de transfert |
+| `document` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Carte de document |
+| `i18nAppCard` | ✓ (div) | ✗ | ✗ | Bot, Compte public, Impersonnation | ✓ | appCard multilingue |
+| `i18nSystemAction` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Action système multilingue |
+| `i18nSystem` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Message système multilingue |
 
 **Chat de groupe** supporte tous les types de messages. Seul le chat de groupe supporte @mention.
 
@@ -392,8 +385,8 @@ lansenger-skills-official/
 │   ├── models.py            # 35+ types de résultat dataclass
 │   ├── contacts.py          # API Staff & infos org
 │   ├── departments.py       # API Départements
-│   ├── account_messages.py  # Canal 公号
-│   ├── user_messages.py     # Canal 人→人
+│   ├── account_messages.py  # Canal compte public
+│   ├── user_messages.py     # Canal impersonnation utilisateur
 │   ├── group_messages.py    # Canal Chat de groupe
 │   ├── media.py             # Upload/download
 │   ├── streaming.py         # Streaming SSE
@@ -402,7 +395,7 @@ lansenger-skills-official/
 │   ├── todos.py             # Todo unifié
 │   ├── calendars.py         # Calendrier & Schedule
 │   └── users.py             # Infos utilisateur
-├── tests/                   # 267 tests, tous passants
+├── tests/                   # 268 tests, tous passants
 ├── skills/                  # 9 docs de skills + manifest
 ├── pyproject.toml
 └── README*.md               # READMEs en 5 langues

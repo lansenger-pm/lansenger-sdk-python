@@ -6,7 +6,7 @@ Framework-independent Python SDK for the Lansenger (蓝信) platform — support
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 267](https://img.shields.io/badge/Tests-267-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 268](https://img.shields.io/badge/Tests-268-green)](https://github.com/lansenger-pm/lansenger-skills-official)
 
 > 💠 Zero framework dependencies — only `httpx`. Works with any async or sync Python codebase.
 
@@ -23,18 +23,17 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 ## Features
 
 - **Async & Sync clients** — `LansengerClient` (async) + `LansengerSyncClient` (blocking)
-- **3 private chat channels** — bot, public account, user impersonate
-- **Group chat** — supports all message types, with @mention and human/bot sender identity
-- **Rich cards** — appCard (with dynamic status updates), linkCard, appArticles, oacard, verifyCard
-- **Streaming messages** — SSE-based real-time delivery for AI agents
-- **Media upload/download** — files, images, videos with auto type detection
-- **Message management** — revoke, dynamic card update
 - **OAuth2 user authentication** — authorize URL, code exchange, token refresh
 - **Organization & departments** — org info, department detail/children/staff
 - **Staff & contacts** — basic/detailed info, ID mapping, department ancestors, search
+- **Messaging** — 3 private chat channels (bot, public account, user impersonate) + group chat, all message types, @mention, human/bot sender identity
+- **Rich cards** — appCard (with dynamic status updates), oacard, linkCard, verifyCard, appArticles
+- **Streaming messages** — SSE-based real-time delivery for AI agents
+- **Media upload/download** — files, images, videos with auto type detection
+- **Message management** — revoke, dynamic card update
 - **Groups** — create, info, members, list, membership check, update settings & members
-- **Unified Todo** — create, update, delete, query, executor management, status counts
-- **Calendar & Schedule** — primary calendar, schedule CRUD, attendee management
+- **Calendar & schedule** — primary calendar, schedule CRUD, attendee management
+- **Unified todo** — create, update, delete, query, executor management, status counts
 - **Callback events** — 26 event types, payload parsing, signature verification
 
 ## Quick Install
@@ -49,7 +48,7 @@ For development:
 pip install -e ".[dev]"
 ```
 
-## Authentication
+## 1. Authentication
 
 ### appToken — Required for all API calls
 
@@ -75,8 +74,6 @@ client.invalidate_token()  # force refresh on next call
 - Calendar & schedule operations (fetch_primary_calendar, create_schedule, etc.)
 - Group operations as a human sender
 
-To obtain userToken, complete the OAuth2 flow (see below).
-
 ### Getting Credentials
 
 | Bot Type | How to get app_id + app_secret |
@@ -85,19 +82,7 @@ To obtain userToken, complete the OAuth2 flow (see below).
 | **Lansenger App** | Create at [Lansenger Developer Center](https://dev.lanxin.cn) — may require organization admin approval |
 | **Organization Bot** | Create at [Lansenger Developer Center](https://dev.lanxin.cn) — may require organization admin approval |
 
-## Quick Start
-
-```python
-from lansenger_sdk import LansengerClient
-
-# From environment variables (LANSENGER_APP_ID, LANSENGER_APP_SECRET)
-client = LansengerClient.from_env()
-
-# Or direct params
-client = LansengerClient(app_id="your-appid", app_secret="your-secret")
-```
-
-### 1. Authentication (OAuth2 user-level)
+### OAuth2 user-level auth
 
 ```python
 # Build authorize URL — redirect user to Lansenger passport
@@ -113,7 +98,7 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
 
-### 2. Organization & Departments
+## 2. Organization & Departments
 
 ```python
 # Organization info
@@ -125,7 +110,7 @@ children = await client.fetch_department_children(department_id="deptId")
 staffs = await client.fetch_department_staffs(department_id="deptId")
 ```
 
-### 3. Staff & Contacts
+## 3. Staff & Contacts
 
 ```python
 # Basic staff info
@@ -149,7 +134,7 @@ results = await client.search_staff(keyword="Zhang San", user_token="ut")
 fields = await client.fetch_org_extra_field_ids(org_id="orgId")
 ```
 
-### 4. Messaging & Media
+## 4. Messaging & Media
 
 #### Bot private chat — most common
 
@@ -235,7 +220,7 @@ download = await client.download_media(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
-### 5. Groups
+## 5. Groups
 
 ```python
 # Create group
@@ -258,11 +243,9 @@ await client.update_group_members(
 )
 ```
 
-### 6. Calendar & Schedule
+## 6. Calendar & Schedule
 
 ```python
-from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
-
 # Get primary calendar (requires userToken or userId)
 cal = await client.fetch_primary_calendar(user_token="ut")
 
@@ -290,9 +273,11 @@ await client.add_schedule_attendees(calendar_id="cal1", schedule_id="sch1", atte
 await client.delete_schedule_attendees(calendar_id="cal1", schedule_id="sch1", attendees=["staff2"], user_token="ut")
 ```
 
-### 7. Unified Todo
+## 7. Unified Todo
 
 ```python
+from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
+
 # Create todo task
 todo = await client.create_todo_task(
     title="Approval Request", link="https://app.com/a/1", pc_link="https://pc.app.com/a/1",
@@ -324,7 +309,7 @@ await client.update_executor_status(
 )
 ```
 
-### Callback Events
+## 8. Callback Events
 
 ```python
 from lansenger_sdk import parse_callback_payload, verify_callback_signature
@@ -341,15 +326,23 @@ types = client.get_callback_event_types()  # 26 event types across 14 categories
 
 ## Message Type Capability Matrix
 
-| msgType     | Markdown | @mention | Attachments | Private Channels     | Group Chat |
-|-------------|----------|----------|-------------|----------------------|------------|
-| `text`      | ✗        | ✓(group) | ✓           | Bot, Public, User    | ✓          |
-| `formatText`| ✓        | ✗        | ✗           | User only            | ✓          |
-| `oacard`    | ✗        | ✗        | ✗           | Bot, Public, User    | ✓          |
-| `appCard`   | ✗ (div)  | ✗        | ✗           | Bot, Public, User    | ✓          |
-| `appArticles`| ✗       | ✗        | ✗           | Bot only             | ✓          |
-| `linkCard`  | ✗        | ✗        | ✗           | Bot, Public          | ✓          |
-| `verifyCard`| ✗        | ✗        | ✗           | Bot, Public          | ✓          |
+| msgType | Markdown | @mention | Attachments | Private Channels | Group Chat | Notes |
+|---------|----------|----------|-------------|------------------|------------|-------|
+| `text` | ✗ | ✓ (group) | ✓ | Bot, Public Account, User Impersonate | ✓ | Up to 6000 bytes |
+| `formatText` | ✓ | ✗ | ✗ | User Impersonate only | ✓ | Markdown via formatType=1 |
+| `oacard` | ✗ | ✗ | ✗ | Bot, Public Account, User Impersonate | ✓ | Simple card with fields |
+| `appCard` | ✓ (div tags) | ✗ | ✗ | Bot, Public Account, User Impersonate | ✓ | Rich card, dynamic updates |
+| `linkCard` | ✗ | ✗ | ✗ | Bot, Public Account | ✓ | Link preview card |
+| `appArticles` | ✗ | ✗ | ✗ | Bot private only | ✓ | Article list (1+ articles) |
+| `verifyCard` | ✗ | ✗ | ✗ | Bot, Public Account | ✓ | Verification card with buttons |
+| `system` | ✗ | ✗ | ✗ | Platform internal | ✓ | System notification |
+| `systemAction` | ✗ | ✗ | ✗ | Platform internal | ✓ | System action with icon |
+| `redPacket` | ✗ | ✗ | ✗ | Platform internal | ✓ | Red packet (gift money) |
+| `transferOrder` | ✗ | ✗ | ✗ | Platform internal | ✓ | Transfer notification |
+| `document` | ✗ | ✗ | ✗ | Platform internal | ✓ | Document card |
+| `i18nAppCard` | ✓ (div tags) | ✗ | ✗ | Bot, Public Account, User Impersonate | ✓ | Multilingual appCard (zhHans/zhHant/zhHantHK/en/fr) |
+| `i18nSystemAction` | ✗ | ✗ | ✗ | Platform internal | ✓ | Multilingual systemAction |
+| `i18nSystem` | ✗ | ✗ | ✗ | Platform internal | ✓ | Multilingual system message |
 
 **Group chat** supports all message types. Only group chat supports @mention.
 
@@ -402,7 +395,7 @@ lansenger-skills-official/
 │   ├── todos.py             # Unified Todo
 │   ├── calendars.py         # Calendar & Schedule
 │   └── users.py             # User info
-├── tests/                   # 267 tests, all passing
+├── tests/                   # 268 tests, all passing
 ├── skills/                  # 9 skill docs + manifest
 ├── pyproject.toml
 └── README*.md               # 5-language READMEs

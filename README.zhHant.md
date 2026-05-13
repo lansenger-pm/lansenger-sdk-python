@@ -2,11 +2,11 @@
 
 # lansenger-sdk
 
-藍信（Lansenger）平臺的框架無關 Python SDK — 支援應用、組織機器人及個人機器人。
+藍信（Lansenger）平臺的框架無關 Python SDK — 支援 藍信應用、組織機器人 及 個人機器人。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 267](https://img.shields.io/badge/Tests-267-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 268](https://img.shields.io/badge/Tests-268-green)](https://github.com/lansenger-pm/lansenger-skills-official)
 
 > 💠 零框架依賴——僅依賴 `httpx`。可適配任何異步或同步 Python 專案。
 
@@ -14,28 +14,27 @@
 
 | 機器人類型 | 認證 | WebSocket 入站 | 所有 API |
 |------------|------|-----------------|----------|
-| **應用** | appToken + userToken | ✗（使用 webhook） | ✓ |
+| **藍信應用** | appToken + userToken | ✗（使用 webhook） | ✓ |
 | **組織機器人** | appToken + userToken | ✗（使用 webhook） | ✓ |
 | **個人機器人** | appToken | ✓（WebSocket） | ✓（非機器人 API 有部分限制） |
 
 三種機器人類型使用相同的認證機制：每次 API 呼叫都需要 `appToken`；`userToken` 僅在特定使用者級操作時需要（使用者資訊、員工搜尋、日曆等）。
 
-## 功能特性
+## 功能特色
 
 - **異步 + 同步雙客戶端** — `LansengerClient`（異步）+ `LansengerSyncClient`（阻塞）
-- **3種私聊通道** — 機器人、公號公眾帳號、人→人使用者代發
-- **群聊** — 支援所有訊息類型，含 @提及和真人/機器人發送身分
-- **富卡片** — appCard（支援動態狀態更新）、linkCard、appArticles、oacard、verifyCard
-- **流式消息** — SSE 實時投遞，專為 AI Agent 設計
-- **媒體上傳/下載** — 檔案、圖片、影片，自動偵測類型
-- **消息管理** — 撤回、動態卡片更新
 - **OAuth2 使用者認證** — 構建授權 URL、換取 userToken、刷新令牌
 - **組織與部門** — 組織資訊、部門詳情/子部門/員工
 - **員工與通訊錄** — 基礎/詳細資訊、ID 映射、部門祖先鏈、搜尋
+- **訊息傳遞** — 3 種私聊通道（機器人、公號、人→人）+ 群聊，支援所有訊息類型，含 @提及和真人/機器人發送身分
+- **富卡片** — appCard（支援動態狀態更新）、oacard、linkCard、verifyCard、appArticles
+- **流式訊息** — SSE 即時投遞，專為 AI Agent 設計
+- **媒體上傳/下載** — 檔案、圖片、影片，自動偵測類型
+- **訊息管理** — 撤回、動態卡片更新
 - **群組** — 建立、查詢資訊/成員/列表、檢查成員、更新設定與成員
-- **統一待辦** — 建立、更新、刪除、查詢、執行人管理、狀態統計
 - **日曆日程** — 主日曆、日程 CRUD、參會人管理
-- **回調事件** — 26種事件類型、消息解析、簽名驗證
+- **統一待辦** — 建立、更新、刪除、查詢、執行人管理、狀態統計
+- **回調事件** — 26 種事件類型、訊息解析、簽名驗證
 
 ## 快速安裝
 
@@ -49,7 +48,7 @@ pip install lansenger-sdk
 pip install -e ".[dev]"
 ```
 
-## 認證
+## 1. 認證
 
 ### appToken — 所有 API 呼叫均需
 
@@ -75,29 +74,15 @@ client.invalidate_token()  # 強制下次呼叫時刷新
 - 日曆與日程操作（fetch_primary_calendar、create_schedule 等）
 - 作為真人發送者的群組操作
 
-取得 userToken 需完成 OAuth2 流程（見下方）。
-
 ### 取得憑證
 
 | 機器人類型 | 如何取得 app_id + app_secret |
 |------------|-------------------------------|
-| **個人機器人** | 藍信桌面端 → 通訊錄 → 智慧機器人 → 個人機器人 → 點擊右側 ℹ️ 圖標（行動端不支援查看憑證） |
-| **應用** | 在藍信開發者中心建立，可能需要向組織管理員申請 |
+| **個人機器人** | 藍信桌面端 → 通訊錄 → 智能機器人 → 個人機器人 → 點擊右側 ℹ️ 圖標（行動端不支援查看憑證） |
+| **藍信應用** | 在藍信開發者中心建立，可能需要向組織管理員申請 |
 | **組織機器人** | 在藍信開發者中心建立，可能需要向組織管理員申請 |
 
-## 快速開始
-
-```python
-from lansenger_sdk import LansengerClient
-
-# 從環境變數讀取（LANSENGER_APP_ID, LANSENGER_APP_SECRET）
-client = LansengerClient.from_env()
-
-# 或直接傳入參數
-client = LansengerClient(app_id="your-appid", app_secret="your-secret")
-```
-
-### 認證（OAuth2 使用者級）
+### OAuth2 使用者級認證
 
 ```python
 # 構建授權 URL——將使用者重定向到藍信通行證頁面
@@ -113,7 +98,7 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
 
-### 組織與部門
+## 2. 組織與部門
 
 ```python
 # 組織資訊
@@ -125,7 +110,7 @@ children = await client.fetch_department_children(department_id="deptId")
 staffs = await client.fetch_department_staffs(department_id="deptId")
 ```
 
-### 員工與通訊錄
+## 3. 員工與通訊錄
 
 ```python
 # 基本員工資訊
@@ -149,7 +134,7 @@ results = await client.search_staff(keyword="張三", user_token="ut")
 fields = await client.fetch_org_extra_field_ids(org_id="orgId")
 ```
 
-### 消息與媒體
+## 4. 訊息與媒體
 
 #### 機器人私聊——最常用
 
@@ -159,7 +144,7 @@ result = await client.send_markdown(chat_id="staff123", content="**Bold**")
 result = await client.send_file(chat_id="staff123", file_path="/path/to/report.pdf")
 ```
 
-#### 公號公眾帳號通道
+#### 公號通道
 
 ```python
 result = await client.send_account_message(
@@ -168,7 +153,7 @@ result = await client.send_account_message(
 )
 ```
 
-#### 人→人使用者代發通道（需要 userToken）
+#### 人→人 代發通道（需要 userToken）
 
 ```python
 result = await client.send_user_message(
@@ -191,31 +176,31 @@ result = await client.send_group_message(
     user_token="ut",
 )
 
-# 群聊 @提及
-result = await client.send_text(
-    chat_id="group123", content="Important!", is_group=True, reminder_all=True,
-)
-
 # 群聊支援所有訊息類型（text、formatText、oacard、appCard、linkCard 等）
 result = await client.send_group_message(
     group_id="group123", msg_type="appCard",
     msg_data={"appCard": {"bodyTitle": "審批", "isDynamic": True}},
     user_token="ut",
 )
+
+# 群聊 @提及
+result = await client.send_text(
+    chat_id="group123", content="Important!", is_group=True, reminder_all=True,
+)
 ```
 
 #### 富卡片
 
 ```python
-result = await client.send_app_card(chat_id="staff123", body_title="Approval", is_dynamic=True)
-result = await client.send_link_card(chat_id="staff123", title="Article", link="https://...")
+result = await client.send_app_card(chat_id="staff123", body_title="審批", is_dynamic=True)
+result = await client.send_link_card(chat_id="staff123", title="文章", link="https://...")
 result = await client.send_app_articles(chat_id="staff123", articles=[...])
 
 # 更新動態卡片狀態
 result = await client.update_dynamic_card(msg_id="msg123", is_last_update=True)
 ```
 
-#### 流式消息（用於 AI Agent）
+#### 流式訊息（用於 AI Agent）
 
 ```python
 result = await client.create_stream_message(receiver_id="staff1", receiver_type="staff", stream_id="s1")
@@ -231,26 +216,26 @@ upload = await client.upload_media(file_path="/path/to/file.pdf")
 # 下載
 download = await client.download_media(media_id="media123")
 
-# 撤回消息
+# 撤回訊息
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
-### 群組
+## 5. 群組
 
 ```python
 # 建立群組
-group = await client.create_group(name="Project Chat", org_id="orgId", staff_id_list=["s1","s2","s3"])
+group = await client.create_group(name="專案討論", org_id="orgId", staff_id_list=["s1","s2","s3"])
 
 # 取得資訊與成員
 info = await client.fetch_group_info(group_id="groupOpenId")
 members = await client.fetch_group_members(group_id="groupOpenId")
 groups = await client.fetch_group_list()
 
-# 檢查成員身份
+# 檢查成員身分
 result = await client.check_is_in_group(group_id="groupOpenId", staff_id="staff1")
 
 # 更新設定
-await client.update_group_info(group_id="groupId", name="New Name", manage_mode=1)
+await client.update_group_info(group_id="groupId", name="新名稱", manage_mode=1)
 
 # 新增/移除成員
 await client.update_group_members(
@@ -258,17 +243,15 @@ await client.update_group_members(
 )
 ```
 
-### 日曆日程
+## 6. 日曆日程
 
 ```python
-from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
-
 # 取得主日曆（需要 userToken 或 userId）
 cal = await client.fetch_primary_calendar(user_token="ut")
 
 # 建立日程
 schedule = await client.create_schedule(
-    calendar_id=cal.calendar_id, summary="Team Meeting",
+    calendar_id=cal.calendar_id, summary="團隊會議",
     start_time={"date": "2024-01-15", "time": "10:00", "timeZone": "Asia/Shanghai"},
     end_time={"date": "2024-01-15", "time": "11:00", "timeZone": "Asia/Shanghai"},
     attendees=[{"staffId": "staff1", "attendeeFlag": "required"}],
@@ -290,12 +273,14 @@ await client.add_schedule_attendees(calendar_id="cal1", schedule_id="sch1", atte
 await client.delete_schedule_attendees(calendar_id="cal1", schedule_id="sch1", attendees=["staff2"], user_token="ut")
 ```
 
-### 統一待辦
+## 7. 統一待辦
 
 ```python
+from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
+
 # 建立待辦任務
 todo = await client.create_todo_task(
-    title="Approval Request", link="https://app.com/a/1", pc_link="https://pc.app.com/a/1",
+    title="審批請求", link="https://app.com/a/1", pc_link="https://pc.app.com/a/1",
     executor_ids=["staff1"], org_id="org1", type=TODO_TYPE_APPROVAL,
 )
 
@@ -303,7 +288,7 @@ todo = await client.create_todo_task(
 await client.update_todo_task_status(todotask_id="taskId", status=TODO_TODO_STATUS_DONE, org_id="org1")
 
 # 更新內容
-await client.update_todo_task(todotask_id="taskId", title="Updated", link="l", pc_link="p", org_id="org1")
+await client.update_todo_task(todotask_id="taskId", title="已更新", link="l", pc_link="p", org_id="org1")
 
 # 刪除（僅限發送者）
 await client.delete_todo_task(todotask_id="taskId", org_id="org1")
@@ -324,12 +309,12 @@ await client.update_executor_status(
 )
 ```
 
-### 回調事件
+## 8. 回調事件
 
 ```python
 from lansenger_sdk import parse_callback_payload, verify_callback_signature
 
-# 解析 webhook 消息
+# 解析 webhook 訊息
 events = parse_callback_payload(encrypted_data, encoding_key="your_key")
 
 # 驗證簽名
@@ -341,15 +326,23 @@ types = client.get_callback_event_types()  # 14 大類共 26 種事件類型
 
 ## 訊息類型能力矩陣
 
-| msgType     | Markdown | @提及    | 附件      | 私聊通道                   | 群聊 |
-|-------------|----------|----------|----------|----------------------------|------|
-| `text`      | ✗        | ✓(群聊)  | ✓        | 機器人、公號、人→人        | ✓    |
-| `formatText`| ✓        | ✗        | ✗        | 僅人→人                    | ✓    |
-| `oacard`    | ✗        | ✗        | ✗        | 機器人、公號、人→人        | ✓    |
-| `appCard`   | ✗ (div)  | ✗        | ✗        | 機器人、公號、人→人        | ✓    |
-| `appArticles`| ✗       | ✗        | ✗        | 僅機器人私聊               | ✓    |
-| `linkCard`  | ✗        | ✗        | ✗        | 機器人、公號              | ✓    |
-| `verifyCard`| ✗        | ✗        | ✗        | 機器人、公號              | ✓    |
+| msgType | Markdown | @提及 | 附件 | 私聊通道 | 群聊 | 備註 |
+|---------|----------|-------|------|----------|------|------|
+| `text` | ✗ | ✓(群聊) | ✓ | 機器人、公號、人→人 | ✓ | 上限 6000 字節 |
+| `formatText` | ✓ | ✗ | ✗ | 僅人→人 | ✓ | Markdown（formatType=1） |
+| `oacard` | ✗ | ✗ | ✗ | 機器人、公號、人→人 | ✓ | 簡單卡片含欄位 |
+| `appCard` | ✓(div) | ✗ | ✗ | 機器人、公號、人→人 | ✓ | 富卡片，支援動態更新 |
+| `linkCard` | ✗ | ✗ | ✗ | 機器人、公號 | ✓ | 連結預覽卡片 |
+| `appArticles` | ✗ | ✗ | ✗ | 僅機器人私聊 | ✓ | 文章列表（1+篇） |
+| `verifyCard` | ✗ | ✗ | ✗ | 機器人、公號 | ✓ | 驗證卡片含按鈕 |
+| `system` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統通知 |
+| `systemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統操作含圖標 |
+| `redPacket` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 紅包 |
+| `transferOrder` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 轉帳通知 |
+| `document` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 公文卡片 |
+| `i18nAppCard` | ✓(div) | ✗ | ✗ | 機器人、公號、人→人 | ✓ | 多語 appCard |
+| `i18nSystemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統操作 |
+| `i18nSystem` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統訊息 |
 
 **群聊**支援所有訊息類型。只有群聊支援 @提及。
 
@@ -396,13 +389,13 @@ lansenger-skills-official/
 │   ├── user_messages.py     # 人→人通道
 │   ├── group_messages.py    # 群聊通道
 │   ├── media.py             # 上傳/下載
-│   ├── streaming.py         # SSE 流式消息
+│   ├── streaming.py         # SSE 流式訊息
 │   ├── callbacks.py         # 回調事件
 │   ├── groups.py            # 群組 API
 │   ├── todos.py             # 統一待辦
 │   ├── calendars.py         # 日曆日程
 │   └── users.py             # 使用者資訊
-├── tests/                   # 267 個測試，全部通過
+├── tests/                   # 268 個測試，全部通過
 ├── skills/                  # 9 個 skill 文件 + manifest
 ├── pyproject.toml
 └── README*.md               # 5 語言 README
@@ -417,4 +410,4 @@ pytest tests/ -v
 
 ## 授權
 
-MIT — 见 [LICENSE](LICENSE)。
+MIT — 見 [LICENSE](LICENSE)。
