@@ -26,7 +26,7 @@
 - **OAuth2 使用者認證** — 構建授權 URL、換取 userToken、刷新令牌
 - **組織與部門** — 組織資訊、部門詳情/子部門/員工
 - **員工與通訊錄** — 基礎/詳細資訊、ID 映射、部門祖先鏈、搜尋
-- **訊息傳遞** — 3 種私聊通道（機器人、公號、人→人）+ 群聊，支援所有訊息類型，含 @提及和真人/機器人發送身分
+- **訊息傳遞** — 3 種私聊通道（機器人、公眾號、人→人）+ 群聊，支援所有訊息類型，含 @提及和真人/機器人發送身分
 - **富卡片** — appCard（支援動態狀態更新）、oacard、linkCard、verifyCard、appArticles
 - **流式訊息** — SSE 即時投遞，專為 AI Agent 設計
 - **媒體上傳/下載** — 檔案、圖片、影片，自動偵測類型
@@ -144,7 +144,7 @@ result = await client.send_markdown(chat_id="staff123", content="**Bold**")
 result = await client.send_file(chat_id="staff123", file_path="/path/to/report.pdf")
 ```
 
-#### 公號通道
+#### 公眾號通道
 
 ```python
 result = await client.send_account_message(
@@ -328,19 +328,19 @@ types = client.get_callback_event_types()  # 14 大類共 26 種事件類型
 
 | msgType | Markdown | @提及 | 附件 | 私聊通道 | 群聊 | 備註 |
 |---------|----------|-------|------|----------|------|------|
-| `text` | ✗ | ✓(群聊) | ✓ | 機器人、公號、人→人 | ✓ | 上限 6000 字節 |
+| `text` | ✗ | ✓(群聊) | ✓ | 機器人、公眾號、人→人 | ✓ | 上限 6000 字節 |
 | `formatText` | ✓ | ✗ | ✗ | 僅人→人 | ✓ | Markdown（formatType=1） |
-| `oacard` | ✗ | ✗ | ✗ | 機器人、公號、人→人 | ✓ | 簡單卡片含欄位 |
-| `appCard` | ✓(div) | ✗ | ✗ | 機器人、公號、人→人 | ✓ | 富卡片，支援動態更新 |
-| `linkCard` | ✗ | ✗ | ✗ | 機器人、公號 | ✓ | 連結預覽卡片 |
+| `oacard` | ✗ | ✗ | ✗ | 機器人、公眾號、人→人 | ✓ | 簡單卡片含欄位 |
+| `appCard` | ✓(div) | ✗ | ✗ | 機器人、公眾號、人→人 | ✓ | 富卡片，支援動態更新 |
+| `linkCard` | ✗ | ✗ | ✗ | 機器人、公眾號 | ✓ | 連結預覽卡片 |
 | `appArticles` | ✗ | ✗ | ✗ | 僅機器人私聊 | ✓ | 文章列表（1+篇） |
-| `verifyCard` | ✗ | ✗ | ✗ | 機器人、公號 | ✓ | 驗證卡片含按鈕 |
+| `verifyCard` | ✗ | ✗ | ✗ | 機器人、公眾號 | ✓ | 驗證卡片含按鈕 |
 | `system` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統通知 |
 | `systemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統操作含圖標 |
 | `redPacket` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 紅包 |
 | `transferOrder` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 轉帳通知 |
 | `document` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 公文卡片 |
-| `i18nAppCard` | ✓(div) | ✗ | ✗ | 機器人、公號、人→人 | ✓ | 多語 appCard |
+| `i18nAppCard` | ✓(div) | ✗ | ✗ | 機器人、公眾號、人→人 | ✓ | 多語 appCard |
 | `i18nSystemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統操作 |
 | `i18nSystem` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統訊息 |
 
@@ -385,7 +385,7 @@ lansenger-skills-official/
 │   ├── models.py            # 35+ dataclass 结果类型
 │   ├── contacts.py          # 員工與組織資訊 API
 │   ├── departments.py       # 部門 API
-│   ├── account_messages.py  # 公號通道
+│   ├── account_messages.py  # 公眾號通道
 │   ├── user_messages.py     # 人→人通道
 │   ├── group_messages.py    # 群聊通道
 │   ├── media.py             # 上傳/下載

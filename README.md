@@ -26,7 +26,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **OAuth2 user authentication** — authorize URL, code exchange, token refresh
 - **Organization & departments** — org info, department detail/children/staff
 - **Staff & contacts** — basic/detailed info, ID mapping, department ancestors, search
-- **Messaging** — 3 private chat channels (bot, public account, user impersonate) + group chat, all message types, @mention, human/bot sender identity
+- **Messaging** — 3 private chat channels (bot, official account, user impersonate) + group chat, all message types, @mention, human/bot sender identity
 - **Rich cards** — appCard (with dynamic status updates), oacard, linkCard, verifyCard, appArticles
 - **Streaming messages** — SSE-based real-time delivery for AI agents
 - **Media upload/download** — files, images, videos with auto type detection
@@ -328,19 +328,19 @@ types = client.get_callback_event_types()  # 26 event types across 14 categories
 
 | msgType | Markdown | @mention | Attachments | Private Channels | Group Chat | Notes |
 |---------|----------|----------|-------------|------------------|------------|-------|
-| `text` | ✗ | ✓ (group) | ✓ | Bot, Public Account, User Impersonate | ✓ | Up to 6000 bytes |
+| `text` | ✗ | ✓ (group) | ✓ | Bot, Official Account, User Impersonate | ✓ | Up to 6000 bytes |
 | `formatText` | ✓ | ✗ | ✗ | User Impersonate only | ✓ | Markdown via formatType=1 |
-| `oacard` | ✗ | ✗ | ✗ | Bot, Public Account, User Impersonate | ✓ | Simple card with fields |
-| `appCard` | ✓ (div tags) | ✗ | ✗ | Bot, Public Account, User Impersonate | ✓ | Rich card, dynamic updates |
-| `linkCard` | ✗ | ✗ | ✗ | Bot, Public Account | ✓ | Link preview card |
+| `oacard` | ✗ | ✗ | ✗ | Bot, Official Account, User Impersonate | ✓ | Simple card with fields |
+| `appCard` | ✓ (div tags) | ✗ | ✗ | Bot, Official Account, User Impersonate | ✓ | Rich card, dynamic updates |
+| `linkCard` | ✗ | ✗ | ✗ | Bot, Official Account | ✓ | Link preview card |
 | `appArticles` | ✗ | ✗ | ✗ | Bot private only | ✓ | Article list (1+ articles) |
-| `verifyCard` | ✗ | ✗ | ✗ | Bot, Public Account | ✓ | Verification card with buttons |
+| `verifyCard` | ✗ | ✗ | ✗ | Bot, Official Account | ✓ | Verification card with buttons |
 | `system` | ✗ | ✗ | ✗ | Platform internal | ✓ | System notification |
 | `systemAction` | ✗ | ✗ | ✗ | Platform internal | ✓ | System action with icon |
 | `redPacket` | ✗ | ✗ | ✗ | Platform internal | ✓ | Red packet (gift money) |
 | `transferOrder` | ✗ | ✗ | ✗ | Platform internal | ✓ | Transfer notification |
 | `document` | ✗ | ✗ | ✗ | Platform internal | ✓ | Document card |
-| `i18nAppCard` | ✓ (div tags) | ✗ | ✗ | Bot, Public Account, User Impersonate | ✓ | Multilingual appCard (zhHans/zhHant/zhHantHK/en/fr) |
+| `i18nAppCard` | ✓ (div tags) | ✗ | ✗ | Bot, Official Account, User Impersonate | ✓ | Multilingual appCard (zhHans/zhHant/zhHantHK/en/fr) |
 | `i18nSystemAction` | ✗ | ✗ | ✗ | Platform internal | ✓ | Multilingual systemAction |
 | `i18nSystem` | ✗ | ✗ | ✗ | Platform internal | ✓ | Multilingual system message |
 

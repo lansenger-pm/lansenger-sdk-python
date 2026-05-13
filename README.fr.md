@@ -26,7 +26,7 @@ Les trois types de bots utilisent le même mécanisme d'authentification : `appT
 - **Authentification utilisateur OAuth2** — URL d'autorisation, échange de code, refresh de token
 - **Organisation & départements** — infos org, détail/children/staff de département
 - **Staff & contacts** — infos basiques/détaillées, mapping d'ID, ancêtres de département, recherche
-- **Messagerie** — 3 canaux de chat privé (bot, compte public, impersonnation utilisateur) + chat de groupe, tous les types de messages, @mention, identité humain/bot
+- **Messagerie** — 3 canaux de chat privé (bot, compte officiel, impersonnation utilisateur) + chat de groupe, tous les types de messages, @mention, identité humain/bot
 - **Cartes riches** — appCard (avec mises à jour dynamiques), oacard, linkCard, verifyCard, appArticles
 - **Messages en streaming** — delivery en temps réel basé sur SSE pour les agents IA
 - **Upload/download de médias** — fichiers, images, vidéos avec detection automatique du type
@@ -144,7 +144,7 @@ result = await client.send_markdown(chat_id="staff123", content="**Bold**")
 result = await client.send_file(chat_id="staff123", file_path="/path/to/report.pdf")
 ```
 
-#### Canal compte public
+#### Canal compte officiel
 
 ```python
 result = await client.send_account_message(
@@ -328,19 +328,19 @@ types = client.get_callback_event_types()  # 26 types d'événements sur 14 cat�
 
 | msgType | Markdown | @mention | Attachments | Canaux privés | Chat de groupe | Notes |
 |---------|----------|----------|-------------|----------------|----------------|-------|
-| `text` | ✗ | ✓ (groupe) | ✓ | Bot, Compte public, Impersonnation | ✓ | Max 6000 octets |
+| `text` | ✗ | ✓ (groupe) | ✓ | Bot, Compte officiel, Impersonnation | ✓ | Max 6000 octets |
 | `formatText` | ✓ | ✗ | ✗ | Impersonnation uniquement | ✓ | Markdown (formatType=1) |
-| `oacard` | ✗ | ✗ | ✗ | Bot, Compte public, Impersonnation | ✓ | Carte simple avec champs |
-| `appCard` | ✓ (div) | ✗ | ✗ | Bot, Compte public, Impersonnation | ✓ | Carte riche, mises à jour dynamiques |
-| `linkCard` | ✗ | ✗ | ✗ | Bot, Compte public | ✓ | Carte de lien preview |
+| `oacard` | ✗ | ✗ | ✗ | Bot, Compte officiel, Impersonnation | ✓ | Carte simple avec champs |
+| `appCard` | ✓ (div) | ✗ | ✗ | Bot, Compte officiel, Impersonnation | ✓ | Carte riche, mises à jour dynamiques |
+| `linkCard` | ✗ | ✗ | ✗ | Bot, Compte officiel | ✓ | Carte de lien preview |
 | `appArticles` | ✗ | ✗ | ✗ | Bot privé uniquement | ✓ | Liste d'articles (1+ articles) |
-| `verifyCard` | ✗ | ✗ | ✗ | Bot, Compte public | ✓ | Carte de vérification avec boutons |
+| `verifyCard` | ✗ | ✗ | ✗ | Bot, Compte officiel | ✓ | Carte de vérification avec boutons |
 | `system` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Notification système |
 | `systemAction` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Action système avec icône |
 | `redPacket` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Enveloppe rouge (cadeau) |
 | `transferOrder` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Notification de transfert |
 | `document` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Carte de document |
-| `i18nAppCard` | ✓ (div) | ✗ | ✗ | Bot, Compte public, Impersonnation | ✓ | appCard multilingue |
+| `i18nAppCard` | ✓ (div) | ✗ | ✗ | Bot, Compte officiel, Impersonnation | ✓ | appCard multilingue |
 | `i18nSystemAction` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Action système multilingue |
 | `i18nSystem` | ✗ | ✗ | ✗ | Interne plateforme | ✓ | Message système multilingue |
 
@@ -385,7 +385,7 @@ lansenger-skills-official/
 │   ├── models.py            # 35+ types de résultat dataclass
 │   ├── contacts.py          # API Staff & infos org
 │   ├── departments.py       # API Départements
-│   ├── account_messages.py  # Canal compte public
+│   ├── account_messages.py  # Canal compte officiel
 │   ├── user_messages.py     # Canal impersonnation utilisateur
 │   ├── group_messages.py    # Canal Chat de groupe
 │   ├── media.py             # Upload/download

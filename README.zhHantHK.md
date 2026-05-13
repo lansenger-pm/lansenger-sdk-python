@@ -26,12 +26,12 @@
 - **OAuth2 使用者認證** — 建構授權 URL、換取 userToken、更新令牌
 - **組織與部門** — 組織資訊、部門詳情/子部門/員工列表
 - **員工與通訊錄** — 基本/詳細資訊、ID 映射、部門祖先鏈、搜尋
-- **訊息傳遞** — 3 種私聊通道（機械人、公號、人→人）+ 羣聊，支援所有訊息類型，含 @提及和真人/機械人發送身分
+- **訊息傳遞** — 3 種私聊通道（機械人、公眾號、人→人）+ 群聊，支援所有訊息類型，含 @提及和真人/機械人發送身分
 - **富卡片** — appCard（支援動態狀態更新）、oacard、linkCard、verifyCard、appArticles
 - **串流訊息** — SSE 即時投遞，專為 AI Agent 設計
 - **媒體上傳/下載** — 檔案、圖片、影片，自動偵測類型
 - **訊息管理** — 撤回、動態卡片更新
-- **羣組** — 建立、查詢資訊/成員/列表、成員檢查、更新設定與成員
+- **群組** — 建立、查詢資訊/成員/列表、成員檢查、更新設定與成員
 - **日曆日程** — 主日曆、日程 CRUD、參會人管理
 - **統一待辦** — 建立、更新、刪除、查詢、執行人管理、狀態統計
 - **回呼事件** — 26 種事件類型、訊息解析、簽名驗證
@@ -72,7 +72,7 @@ client.invalidate_token()  # 強制下次呼叫時更新
 `userToken` 代表特定藍信使用者的授權（透過 OAuth2 取得），僅在以下情況需要：
 - 使用者級資訊（fetch_user_info、fetch_staff_detail、search_staff）
 - 日曆日程操作（fetch_primary_calendar、create_schedule 等）
-- 以真人發送身分進行羣組操作
+- 以真人發送身分進行群組操作
 
 ### 取得憑證
 
@@ -144,7 +144,7 @@ result = await client.send_markdown(chat_id="staff123", content="**Bold**")
 result = await client.send_file(chat_id="staff123", file_path="/path/to/report.pdf")
 ```
 
-#### 公號通道
+#### 公眾號通道
 
 ```python
 result = await client.send_account_message(
@@ -163,27 +163,27 @@ result = await client.send_user_message(
 )
 ```
 
-#### 羣聊
+#### 群聊
 
 ```python
-# 機械人 → 羣組
+# 機械人 → 群組
 result = await client.send_text(chat_id="group123", content="Notice", is_group=True)
 
-# 真人 → 羣組（使用 userToken）
+# 真人 → 群組（使用 userToken）
 result = await client.send_group_message(
     group_id="group123", msg_type="text",
     msg_data={"text": {"content": "I'll handle it"}},
     user_token="ut",
 )
 
-# 羣聊支援所有訊息類型（text、formatText、oacard、appCard、linkCard 等）
+# 群聊支援所有訊息類型（text、formatText、oacard、appCard、linkCard 等）
 result = await client.send_group_message(
     group_id="group123", msg_type="appCard",
     msg_data={"appCard": {"bodyTitle": "審批", "isDynamic": True}},
     user_token="ut",
 )
 
-# 羣聊 @提及
+# 群聊 @提及
 result = await client.send_text(
     chat_id="group123", content="Important!", is_group=True, reminder_all=True,
 )
@@ -220,10 +220,10 @@ download = await client.download_media(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
-## 5. 羣組
+## 5. 群組
 
 ```python
-# 建立羣組
+# 建立群組
 group = await client.create_group(name="專案討論", org_id="orgId", staff_id_list=["s1","s2","s3"])
 
 # 查詢資訊與成員
@@ -326,25 +326,25 @@ types = client.get_callback_event_types()  # 14 個類別共 26 種事件類型
 
 ## 訊息類型能力矩陣
 
-| msgType | Markdown | @提及 | 附件 | 私聊通道 | 羣聊 | 備註 |
+| msgType | Markdown | @提及 | 附件 | 私聊通道 | 群聊 | 備註 |
 |---------|----------|-------|------|----------|------|------|
-| `text` | ✗ | ✓(羣聊) | ✓ | 機械人、公號、人→人 | ✓ | 上限 6000 字節 |
+| `text` | ✗ | ✓(群聊) | ✓ | 機械人、公眾號、人→人 | ✓ | 上限 6000 字節 |
 | `formatText` | ✓ | ✗ | ✗ | 僅人→人 | ✓ | Markdown（formatType=1） |
-| `oacard` | ✗ | ✗ | ✗ | 機械人、公號、人→人 | ✓ | 簡單卡片含欄位 |
-| `appCard` | ✓(div) | ✗ | ✗ | 機械人、公號、人→人 | ✓ | 富卡片，支援動態更新 |
-| `linkCard` | ✗ | ✗ | ✗ | 機械人、公號 | ✓ | 連結預覽卡片 |
+| `oacard` | ✗ | ✗ | ✗ | 機械人、公眾號、人→人 | ✓ | 簡單卡片含欄位 |
+| `appCard` | ✓(div) | ✗ | ✗ | 機械人、公眾號、人→人 | ✓ | 富卡片，支援動態更新 |
+| `linkCard` | ✗ | ✗ | ✗ | 機械人、公眾號 | ✓ | 連結預覽卡片 |
 | `appArticles` | ✗ | ✗ | ✗ | 僅機械人私聊 | ✓ | 文章列表（1+篇） |
-| `verifyCard` | ✗ | ✗ | ✗ | 機械人、公號 | ✓ | 驗證卡片含按鈕 |
+| `verifyCard` | ✗ | ✗ | ✗ | 機械人、公眾號 | ✓ | 驗證卡片含按鈕 |
 | `system` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統通知 |
 | `systemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統操作含圖標 |
 | `redPacket` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 紅包 |
 | `transferOrder` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 轉帳通知 |
 | `document` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 公文卡片 |
-| `i18nAppCard` | ✓(div) | ✗ | ✗ | 機械人、公號、人→人 | ✓ | 多語 appCard |
+| `i18nAppCard` | ✓(div) | ✗ | ✗ | 機械人、公眾號、人→人 | ✓ | 多語 appCard |
 | `i18nSystemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統操作 |
 | `i18nSystem` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統訊息 |
 
-**羣聊**支援所有訊息類型。只有羣聊支援 @提及。
+**群聊**支援所有訊息類型。只有群聊支援 @提及。
 
 ## 配置
 
@@ -385,13 +385,13 @@ lansenger-skills-official/
 │   ├── models.py            # 35+ dataclass 結果類型
 │   ├── contacts.py          # 員工與組織資訊 API
 │   ├── departments.py       # 部門 API
-│   ├── account_messages.py  # 公號通道
+│   ├── account_messages.py  # 公眾號通道
 │   ├── user_messages.py     # 人→人通道
-│   ├── group_messages.py    # 羣聊通道
+│   ├── group_messages.py    # 群聊通道
 │   ├── media.py             # 上傳/下載
 │   ├── streaming.py         # SSE 串流
 │   ├── callbacks.py         # 回呼事件
-│   ├── groups.py            # 羣組 API
+│   ├── groups.py            # 群組 API
 │   ├── todos.py             # 統一待辦
 │   ├── calendars.py         # 日曆日程
 │   └── users.py             # 使用者資訊
