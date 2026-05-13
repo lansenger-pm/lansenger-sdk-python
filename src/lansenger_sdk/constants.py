@@ -1,0 +1,105 @@
+"""Lansenger API constants — endpoints, defaults, media type definitions."""
+
+from __future__ import annotations
+
+API_ENDPOINTS = {
+    "auth": {
+        "tenant_access_token": "/auth/v3/tenant_access_token/internal",
+    },
+    "app_token": {
+        "create": "/v1/apptoken/create",
+    },
+    "oauth2": {
+        "authorize": "/oauth2/authorize",
+        "user_token_create": "/v2/user_token/create",
+        "refresh_token_create": "/v1/refresh_token/create",
+    },
+    "users": {
+        "fetch": "/v1/users/fetch",
+    },
+    "staffs": {
+        "fetch": "/v1/staffs/{staff_id}/fetch",
+        "detail_fetch": "/v1/staffs/{staff_id}/infor/fetch",
+        "department_ancestors": "/v1/staffs/{staff_id}/departmentancestors/fetch",
+        "id_mapping": "/v2/staffs/id_mapping/fetch",
+        "search": "/v2/staffs/search",
+    },
+    "departments": {
+        "fetch": "/v1/departments/{department_id}/fetch",
+        "children_fetch": "/v1/departments/{department_id}/children/fetch",
+        "staffs_fetch": "/v1/departments/{department_id}/staffs/fetch",
+    },
+    "org": {
+        "fetch": "/v1/org/{org_id}/fetch",
+        "extra_field_ids": "/v1/org/{org_id}/extrafieldids/fetch",
+    },
+    "websocket": {
+        "endpoint": "/v1/ws/endpoint/create",
+    },
+    "smart_bot": {
+        "private_message": "/v1/bot/messages/create",
+        "group_message": "/v1/messages/group/create",
+    },
+    "account_message": {
+        "create": "/v1/messages/create",
+    },
+    "user_message": {
+        "create": "/v1/messages/chat/create",
+    },
+    "bot": {
+        "message_create": "/v1/bot/messages/create",
+    },
+    "sse": {
+        "msg_create": "/v1/sse/msg/create",
+        "msg_fetch": "/v1/sse/msg/fetch",
+    },
+    "media": {
+        "create": "/v1/app/medias/create",
+        "fetch": "/v1/medias/{media_id}/fetch",
+    },
+    "message": {
+        "revoke": "/v1/messages/revoke",
+        "dynamic_update": "/v1/messages/dynamic/update",
+    },
+    "groups": {
+        "fetch": "/v2/groups/fetch",
+    },
+    "groups_v2": {
+        "create": "/v2/groups/create",
+        "info_fetch": "/v2/groups/{group_id}/info/fetch",
+        "info_update": "/v2/groups/{group_id}/info/update",
+        "members_fetch": "/v2/groups/{group_id}/members/fetch",
+        "members_update": "/v2/groups/{group_id}/members/update",
+        "groups_fetch": "/v2/groups/fetch",
+        "is_in_group": "/v2/groups/{group_id}/members/is_in_group",
+    },
+}
+
+OAUTH2_SCOPE_BASIC_USER_INFO = "basic_userinfor"
+
+OAUTH2_SCOPES = {
+    "basic_user_info": OAUTH2_SCOPE_BASIC_USER_INFO,
+}
+
+MEDIA_TYPE_VIDEO = 1
+MEDIA_TYPE_IMAGE = 2
+MEDIA_TYPE_FILE = 3
+
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
+
+MAX_MESSAGE_LENGTH = 4000
+
+RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
+
+
+def guess_media_type(file_path: str) -> int:
+    """Guess media_type (1=video, 2=image, 3=file) from file extension."""
+    import os
+
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in IMAGE_EXTENSIONS:
+        return MEDIA_TYPE_IMAGE
+    if ext in VIDEO_EXTENSIONS:
+        return MEDIA_TYPE_VIDEO
+    return MEDIA_TYPE_FILE

@@ -1,0 +1,105 @@
+{
+  "version": "1.0.0",
+  "sdk": "lansenger-sdk",
+  "skills": [
+    {
+      "id": "lansenger-messaging",
+      "file": "lansenger-messaging.md",
+      "name": "Lansenger Messaging Strategy",
+      "category": "messaging",
+      "description": "Lansenger messaging strategy — understand 3 messaging channels (bot/private/account), text/formatText/appCard/appArticles capability boundaries, and SDK method selection",
+      "trigger_keywords": ["lansenger", "蓝信", "send_text", "send_markdown", "send_file", "send_app_card", "send_link_card", "send_bot_message", "send_account_message", "send_user_message", "公号", "private message", "revoke_message", "query_groups"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-oauth",
+      "file": "lansenger-oauth.md",
+      "name": "Lansenger OAuth2 & User Authentication",
+      "category": "auth",
+      "description": "Lansenger OAuth2 user authentication flow — build authorize URL, exchange code for userToken, refresh userToken, fetch user info, and the appToken/userToken hierarchy",
+      "trigger_keywords": ["oauth2", "user auth", "authorize", "userToken", "refreshToken", "exchange_code", "passport_url", "fetch_user_info", "build_authorize_url"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET", "LANSENGER_PASSPORT_URL"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-contacts-staff",
+      "file": "lansenger-contacts-staff.md",
+      "name": "Lansenger Contacts & Staff API",
+      "category": "contacts",
+      "description": "Lansenger staff/contacts APIs — fetch staff basic/detailed info, department ancestors, ID mapping (phone/email→staffId), org extra fields, and staff search",
+      "trigger_keywords": ["staff", "contacts", "fetch_staff", "search_staff", "id_mapping", "extra_field", "department_ancestors", "org_info", "fetch_org_info", "org"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-groups",
+      "file": "lansenger-groups.md",
+      "name": "Lansenger Groups V2 API",
+      "category": "groups",
+      "description": "Lansenger group V2 APIs — create groups, fetch group info/members, list groups, check membership, update group settings and members",
+      "trigger_keywords": ["group", "create_group", "fetch_group_info", "fetch_group_members", "fetch_group_list", "is_in_group", "update_group_info", "update_group_members", "群更新", "群成员"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-departments",
+      "file": "lansenger-departments.md",
+      "name": "Lansenger Departments API",
+      "category": "org_structure",
+      "description": "Lansenger department APIs — navigate org hierarchy, fetch department detail/children, and list department staff",
+      "trigger_keywords": ["department", "fetch_department", "org tree", "department children", "department staffs"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-streaming",
+      "file": "lansenger-streaming.md",
+      "name": "Lansenger Streaming Messages (AI-Agent SSE)",
+      "category": "streaming",
+      "description": "Lansenger streaming message APIs for AI-agent real-time message delivery — create and fetch stream messages",
+      "trigger_keywords": ["streaming", "sse", "stream message", "ai agent", "create_stream_message", "fetch_stream_message", "typing"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-callbacks",
+      "file": "lansenger-callbacks.md",
+      "name": "Lansenger Callback Events (Webhook)",
+      "category": "callbacks",
+      "description": "Lansenger callback event parsing — 26 event types across 14 categories, payload parsing, signature verification, and event data handling",
+      "trigger_keywords": ["callback", "webhook", "event", "bot_private_message", "bot_group_message", "parse_callback", "verify_signature", "CallbackEvent"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-todos",
+      "file": "lansenger-todos.md",
+      "name": "Lansenger Unified Todo (4.33)",
+      "category": "todo",
+      "description": "Lansenger unified todo/task APIs — create, update, query, delete todo tasks, manage executors, and track status counts",
+      "trigger_keywords": ["todo", "待办", "todotask", "create_todo_task", "fetch_todo_task", "update_todo_task_status", "delete_todo_task", "executor", "待阅", "已阅", "已办", "通知", "审批"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-calendars",
+      "file": "lansenger-calendars.md",
+      "name": "Lansenger Calendar & Schedule (4.23)",
+      "category": "calendar",
+      "description": "Lansenger calendar/schedule APIs — fetch primary calendar, create/query/delete schedules, manage attendees",
+      "trigger_keywords": ["calendar", "schedule", "日历", "日程", "会议", "fetch_primary_calendar", "create_schedule", "fetch_schedule", "attendees"],
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    }
+  ]
+}

@@ -1,0 +1,286 @@
+"""Lansenger SDK — framework-independent Python SDK for Lansenger Smart Bot API.
+
+Provides async (LansengerClient) and sync (LansengerSyncClient) clients
+for sending messages, files, images, cards, and managing messages via
+the Lansenger (蓝信) enterprise messaging platform.
+
+Also provides OAuth2 helpers for user identity verification in org bot apps.
+
+Quick start:
+    # Async
+    from lansenger_sdk import LansengerClient
+    client = LansengerClient.from_env()
+    result = await client.send_text(chat_id="user123", content="Hello")
+
+    # Sync
+    from lansenger_sdk import LansengerSyncClient
+    client = LansengerSyncClient.from_env()
+    result = client.send_text(chat_id="user123", content="Hello")
+
+    # OAuth2 user auth
+    client = LansengerClient(app_id="...", app_secret="...", passport_url="https://passport-xxx.domain")
+    auth_url = client.build_authorize_url(redirect_uri="https://myapp.com/callback")
+"""
+
+from .client import LansengerClient
+from .config import LansengerConfig
+from .constants import (
+    API_ENDPOINTS,
+    MEDIA_TYPE_FILE,
+    MEDIA_TYPE_IMAGE,
+    MEDIA_TYPE_VIDEO,
+    OAUTH2_SCOPE_BASIC_USER_INFO,
+    OAUTH2_SCOPES,
+    guess_media_type,
+)
+from .exceptions import (
+    LansengerAPIError,
+    LansengerAuthError,
+    LansengerConfigError,
+    LansengerError,
+    LansengerFileError,
+    LansengerNetworkError,
+)
+from .models import (
+    AccountMessageResult,
+    AppCardParams,
+    BotMessageResult,
+    CreateGroupResult,
+    DepartmentAncestorsResult,
+    DepartmentChildrenResult,
+    DepartmentDetailResult,
+    DepartmentStaffsResult,
+    DownloadMediaResult,
+    DynamicCardUpdateParams,
+    ExtraFieldIdsResult,
+    GroupCreateInfo,
+    GroupInfoResult,
+    GroupListResult,
+    GroupMemberResult,
+    IsInGroupResult,
+    LinkCardParams,
+    QueryGroupsResult,
+    SendMessageResult,
+    StaffBasicInfoResult,
+    StaffDetailResult,
+    StaffIdMappingResult,
+    StaffSearchResult,
+    StreamMessageResult,
+    UserMessageResult,
+    UploadMediaResult,
+    CalendarPrimaryResult,
+    ScheduleAttendeesResult,
+    ScheduleCreateResult,
+    ScheduleInfoResult,
+    ScheduleListResult,
+    UserTokenResult,
+    UserInfoResult,
+)
+from .oauth import (
+    build_authorize_url,
+    exchange_code_for_user_token,
+    parse_authorize_callback,
+    refresh_user_token,
+    validate_callback_state,
+)
+from .users import fetch_user_info
+from .contacts import (
+    fetch_staff_basic_info,
+    fetch_staff_detail,
+    fetch_department_ancestors,
+    fetch_staff_id_mapping,
+    fetch_org_extra_field_ids,
+    search_staff,
+    fetch_org_info,
+)
+from .groups import (
+    create_group,
+    fetch_group_info,
+    fetch_group_members,
+    fetch_group_list,
+    check_is_in_group,
+    update_group_info,
+    update_group_members,
+)
+from .departments import (
+    fetch_department_detail,
+    fetch_department_children,
+    fetch_department_staffs,
+)
+from .streaming import (
+    create_stream_message,
+    fetch_stream_message,
+)
+from .account_messages import (
+    send_account_message,
+)
+from .user_messages import (
+    send_user_message,
+)
+from .group_messages import (
+    send_group_message,
+)
+from .todos import (
+    create_todo_task,
+    update_todo_task,
+    update_todo_task_status,
+    delete_todo_task,
+    fetch_todo_task_list,
+    fetch_todo_task_by_source_id,
+    fetch_todo_task_by_id,
+    fetch_todo_task_status_counts,
+    update_executor_status,
+    add_executors,
+    delete_executors,
+    fetch_executor_list,
+    TODO_TODO_STATUS_PENDING_READ,
+    TODO_TODO_STATUS_READ,
+    TODO_TODO_STATUS_PENDING_DO,
+    TODO_TODO_STATUS_DONE,
+    TODO_TYPE_NOTIFICATION,
+    TODO_TYPE_APPROVAL,
+)
+from .calendars import (
+    fetch_primary_calendar,
+    create_schedule,
+    fetch_schedule,
+    delete_schedule,
+    fetch_schedule_list,
+    fetch_schedule_attendees,
+    add_schedule_attendees,
+    delete_schedule_attendees,
+)
+from .callbacks import (
+    parse_callback_payload,
+    verify_callback_signature,
+    get_callback_event_types,
+    CallbackEvent,
+    CALLBACK_EVENT_TYPES,
+)
+from .sync_client import LansengerSyncClient
+
+__all__ = [
+    "LansengerClient",
+    "LansengerSyncClient",
+    "LansengerConfig",
+    "SendMessageResult",
+    "QueryGroupsResult",
+    "UploadMediaResult",
+    "DownloadMediaResult",
+    "AppCardParams",
+    "LinkCardParams",
+    "DynamicCardUpdateParams",
+    "UserTokenResult",
+    "UserInfoResult",
+    "StaffBasicInfoResult",
+    "StaffDetailResult",
+    "DepartmentAncestorsResult",
+    "StaffIdMappingResult",
+    "OrgInfoResult",
+    "TodoTaskCreateResult",
+    "TodoTaskInfoResult",
+    "TodoTaskListResult",
+    "TodoTaskStatusCountResult",
+    "TodoTaskExecutorListResult",
+    "CalendarPrimaryResult",
+    "ScheduleCreateResult",
+    "ScheduleInfoResult",
+    "ScheduleListResult",
+    "ScheduleAttendeesResult",
+    "ExtraFieldIdsResult",
+    "StaffSearchResult",
+    "AccountMessageResult",
+    "BotMessageResult",
+    "UserMessageResult",
+    "StreamMessageResult",
+    "GroupCreateInfo",
+    "CreateGroupResult",
+    "GroupInfoResult",
+    "GroupMemberResult",
+    "GroupListResult",
+    "IsInGroupResult",
+    "TodoTaskCreateResult",
+    "TodoTaskInfoResult",
+    "TodoTaskListResult",
+    "TodoTaskStatusCountResult",
+    "TodoTaskExecutorListResult",
+    "UpdateGroupResult",
+    "UpdateGroupMembersResult",
+    "DepartmentDetailResult",
+    "DepartmentChildrenResult",
+    "DepartmentStaffsResult",
+    "LansengerError",
+    "LansengerConfigError",
+    "LansengerAuthError",
+    "LansengerAPIError",
+    "LansengerNetworkError",
+    "LansengerFileError",
+    "API_ENDPOINTS",
+    "OAUTH2_SCOPE_BASIC_USER_INFO",
+    "OAUTH2_SCOPES",
+    "MEDIA_TYPE_VIDEO",
+    "MEDIA_TYPE_IMAGE",
+    "MEDIA_TYPE_FILE",
+    "guess_media_type",
+    "build_authorize_url",
+    "exchange_code_for_user_token",
+    "refresh_user_token",
+    "parse_authorize_callback",
+    "validate_callback_state",
+    "fetch_user_info",
+    "fetch_staff_basic_info",
+    "fetch_staff_detail",
+    "fetch_department_ancestors",
+    "fetch_staff_id_mapping",
+    "fetch_org_extra_field_ids",
+    "search_staff",
+    "fetch_org_info",
+    "create_todo_task",
+    "update_todo_task",
+    "update_todo_task_status",
+    "delete_todo_task",
+    "fetch_todo_task_list",
+    "fetch_todo_task_by_source_id",
+    "fetch_todo_task_by_id",
+    "fetch_todo_task_status_counts",
+    "update_executor_status",
+    "add_executors",
+    "delete_executors",
+    "fetch_executor_list",
+    "TODO_TODO_STATUS_PENDING_READ",
+    "TODO_TODO_STATUS_READ",
+    "TODO_TODO_STATUS_PENDING_DO",
+    "TODO_TODO_STATUS_DONE",
+    "TODO_TYPE_NOTIFICATION",
+    "TODO_TYPE_APPROVAL",
+    "fetch_primary_calendar",
+    "create_schedule",
+    "fetch_schedule",
+    "delete_schedule",
+    "fetch_schedule_list",
+    "fetch_schedule_attendees",
+    "add_schedule_attendees",
+    "delete_schedule_attendees",
+    "create_group",
+    "fetch_group_info",
+    "fetch_group_members",
+    "fetch_group_list",
+    "check_is_in_group",
+    "update_group_info",
+    "update_group_members",
+    "fetch_department_detail",
+    "fetch_department_children",
+    "fetch_department_staffs",
+    "create_stream_message",
+    "fetch_stream_message",
+    "send_account_message",
+    "send_user_message",
+    "send_group_message",
+    "parse_callback_payload",
+    "verify_callback_signature",
+    "get_callback_event_types",
+    "CallbackEvent",
+    "CALLBACK_EVENT_TYPES",
+]
+
+__version__ = "1.0.0"

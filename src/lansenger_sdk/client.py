@@ -1,0 +1,2581 @@
+"""Lansenger SDK async client — framework-independent API client.
+
+This is the core SDK client. It provides all Lansenger Smart Bot API
+operations as async methods, with zero dependency on any agent framework.
+
+Lansenger (蓝信) has multiple message types with different capabilities:
+
+  ┌──────────────┬──────────────┬──────────────┬──────────────┐
+  │  msgType     │  Markdown    │  @mention    │  Attachments │
+  ├──────────────┼──────────────┼──────────────┼──────────────┤
+  │  text        │  ✗           │  ✓           │  ✓           │
+  │  formatText  │  ✓           │  ✗           │  ✗           │
+  │  appArticles │  ✗           │  ✗           │  ✗           │
+  │  appCard     │  ✗ (div)     │  ✗           │  ✗           │
+  └──────────────┴──────────────┴──────────────┴──────────────┘
+
+This constraint shapes the API:
+- send_text:       msgType=text   → plain text + optional file/image/video
+- send_markdown:   msgType=formatText → Markdown text, NO attachments
+- send_file:       msgType=text   → file/image/video only, optional caption
+- send_image_url:  msgType=text   → image from URL, optional caption
+- send_link_card:  msgType=linkCard → link preview card
+- send_app_articles: msgType=appArticles → multi-article card
+- send_app_card:    msgType=appCard → rich card with dynamic update support
+- update_dynamic_card: POST → update appCard status in-place
+- revoke_message:    POST → retract previously sent messages
+- query_groups:      GET → list bot's group IDs
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import tempfile
+from typing import Any, Dict, List, Optional
+
+import httpx
+
+from .auth import TokenManager
+from .config import LansengerConfig
+from .constants import API_ENDPOINTS, MEDIA_TYPE_FILE, guess_media_type
+from .exceptions import LansengerAPIError, LansengerFileError, LansengerNetworkError
+from .oauth import exchange_code_for_user_token, refresh_user_token
+from .media import download_media, upload_media
+from .models import (
+    AccountMessageResult,
+    AppCardParams,
+    BotMessageResult,
+    CalendarPrimaryResult,
+    CreateGroupResult,
+    DepartmentAncestorsResult,
+    DepartmentChildrenResult,
+    DepartmentDetailResult,
+    DepartmentStaffsResult,
+    DownloadMediaResult,
+    DynamicCardUpdateParams,
+    ExtraFieldIdsResult,
+    GroupInfoResult,
+    GroupListResult,
+    GroupMemberResult,
+    IsInGroupResult,
+    LinkCardParams,
+    OrgInfoResult,
+    QueryGroupsResult,
+    ScheduleAttendeesResult,
+    ScheduleCreateResult,
+    ScheduleInfoResult,
+    ScheduleListResult,
+    SendMessageResult,
+    StaffBasicInfoResult,
+    StaffDetailResult,
+    StaffIdMappingResult,
+    StaffSearchResult,
+    StreamMessageResult,
+    TodoTaskCreateResult,
+    TodoTaskExecutorListResult,
+    TodoTaskInfoResult,
+    TodoTaskListResult,
+    TodoTaskStatusCountResult,
+    UpdateGroupMembersResult,
+    UpdateGroupResult,
+    UserMessageResult,
+    UserInfoResult,
+    UserTokenResult,
+)
+
+logger = logging.getLogger("lansenger_sdk.client")
+
+
+def _parse_send_response(data: dict, msg_type: str = "", operation: str = "") -> SendMessageResult:
+    """Parse a Lansenger API response into a SendMessageResult."""
+    err_code = data.get("errCode", -1)
+    if err_code != 0:
+        msg = data.get("errMsg", "Unknown error")
+        return SendMessageResult(
+            success=False,
+            error=f"API error (errCode={err_code}): {msg}",
+            msg_type=msg_type,
+            operation=operation,
+            retryable=True,
+        )
+
+    msg_id = data.get("data", {}).get("msgId")
+    return SendMessageResult(
+        success=True,
+        message_id=msg_id,
+        msg_type=msg_type,
+        operation=operation,
+        raw_response=data,
+    )
+
+
+class LansengerClient:
+    """Framework-independent async client for Lansenger Smart Bot API.
+
+    Usage:
+        # From env vars
+        client = LansengerClient.from_env()
+
+        # Direct params
+        client = LansengerClient(app_id="...", app_secret="...")
+
+        # Send messages
+        result = await client.send_text(chat_id="user123", content="Hello")
+        result = await client.send_markdown(chat_id="user123", content="**Bold**")
+    """
+
+    def __init__(
+        self,
+        app_id: str,
+        app_secret: str,
+        api_gateway_url: str = "https://open.e.lanxin.cn/open/apigw",
+        passport_url: str = "",
+        http_timeout: float = 30.0,
+    ):
+        self._config = LansengerConfig(
+            app_id=app_id,
+            app_secret=app_secret,
+            api_gateway_url=api_gateway_url,
+            passport_url=passport_url,
+            http_timeout=http_timeout,
+        )
+        self._http_client: Optional[httpx.AsyncClient] = None
+        self._token_manager: Optional[TokenManager] = None
+        self._owns_http_client = True
+
+    @classmethod
+    def from_env(cls) -> LansengerClient:
+        """Create client from environment variables."""
+        config = LansengerConfig.from_env()
+        return cls(
+            app_id=config.app_id,
+            app_secret=config.app_secret,
+            api_gateway_url=config.api_gateway_url,
+            passport_url=config.passport_url,
+            http_timeout=config.http_timeout,
+        )
+
+    @classmethod
+    def from_config(cls, config: LansengerConfig) -> LansengerClient:
+        """Create client from a LansengerConfig instance."""
+        return cls(
+            app_id=config.app_id,
+            app_secret=config.app_secret,
+            api_gateway_url=config.api_gateway_url,
+            passport_url=config.passport_url,
+            http_timeout=config.http_timeout,
+        )
+
+    def _ensure_clients(self) -> None:
+        """Lazily initialize HTTP client and token manager."""
+        if self._http_client is None:
+            self._http_client = httpx.AsyncClient(timeout=self._config.http_timeout)
+            self._token_manager = TokenManager(self._config, self._http_client)
+            self._owns_http_client = True
+
+    def attach_http_client(self, http_client: httpx.AsyncClient) -> None:
+        """Attach an external httpx.AsyncClient (e.g. shared from an agent framework).
+
+        When attached, close() will NOT close the external client.
+        """
+        self._http_client = http_client
+        self._token_manager = TokenManager(self._config, http_client)
+        self._owns_http_client = False
+
+    async def close(self) -> None:
+        """Close the HTTP client if we own it."""
+        if self._owns_http_client and self._http_client is not None:
+            await self._http_client.aclose()
+            self._http_client = None
+            self._token_manager = None
+
+    async def __aenter__(self) -> LansengerClient:
+        self._ensure_clients()
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        await self.close()
+
+    # ── Internal helpers ────────────────────────────────────────────────
+
+    async def _get_token(self) -> str:
+        self._ensure_clients()
+        return await self._token_manager.get_token()
+
+    def _private_msg_url(self, token: str) -> str:
+        return (
+            f"{self._config.api_gateway_url}"
+            f"{API_ENDPOINTS['smart_bot']['private_message']}"
+            f"?app_token={token}"
+        )
+
+    def _group_msg_url(self, token: str) -> str:
+        return (
+            f"{self._config.api_gateway_url}"
+            f"{API_ENDPOINTS['smart_bot']['group_message']}"
+            f"?app_token={token}"
+        )
+
+    async def _send_private(self, chat_id: str, msg_type: str, msg_data: dict) -> SendMessageResult:
+        token = await self._get_token()
+        url = self._private_msg_url(token)
+        payload = {
+            "userIdList": [chat_id],
+            "msgType": msg_type,
+            "msgData": msg_data,
+        }
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
+
+        if not response.text or not response.text.strip():
+            return SendMessageResult(
+                success=False, error="Empty API response — likely a payload format issue", retryable=True
+            )
+
+        return _parse_send_response(data, msg_type=msg_type)
+
+    async def _send_group(self, group_id: str, msg_type: str, msg_data: dict, *, user_token: str = "", sender_id: str = "") -> SendMessageResult:
+        token = await self._get_token()
+        url = self._group_msg_url(token)
+        if user_token:
+            url += f"&user_token={user_token}"
+        payload: Dict[str, Any] = {
+            "groupId": group_id,
+            "msgType": msg_type,
+            "msgData": msg_data,
+        }
+        if sender_id:
+            payload["senderId"] = sender_id
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
+
+        return _parse_send_response(data, msg_type=msg_type)
+
+    # ── Public API: Message sending ─────────────────────────────────────
+
+    async def send_text(
+        self,
+        chat_id: str,
+        content: str,
+        *,
+        file_path: str = "",
+        media_type: Optional[int] = None,
+        reminder_all: bool = False,
+        reminder_user_ids: Optional[List[str]] = None,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
+    ) -> SendMessageResult:
+        """Send a plain text message (msgType=text).
+
+        For private chat (is_group=False): uses 4.6.12 bot channel.
+        For group chat (is_group=True): uses 4.6.2 group channel.
+          - With user_token: sender appears as human user
+          - Without user_token: sender appears as bot
+
+        msgType=text supports: plain text, @mentions (group only),
+        and optional file/image/video attachments.
+
+        Args:
+            chat_id: Recipient user ID or group chat ID.
+            content: Plain text content (no Markdown).
+            file_path: Optional local file/image/video to attach.
+            media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+            reminder_all: @mention all members in group chat.
+            reminder_user_ids: @mention specific user IDs in group chat.
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId (if no user_token).
+        """
+        self._ensure_clients()
+
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not content and not file_path:
+            return SendMessageResult(success=False, error="content or file_path is required")
+
+        reminder: Optional[Dict[str, Any]] = None
+        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0):
+            reminder = {"all": reminder_all, "userIds": reminder_user_ids or []}
+
+        text_data: Dict[str, Any] = {"content": content}
+        if reminder:
+            text_data["reminder"] = reminder
+
+        if file_path and os.path.isfile(file_path):
+            mt = media_type or guess_media_type(file_path) or MEDIA_TYPE_FILE
+            upload_result = await upload_media(
+                self._config, self._token_manager, self._http_client, file_path, mt
+            )
+            if upload_result.success and upload_result.media_id:
+                text_data["mediaType"] = mt
+                text_data["mediaIds"] = [upload_result.media_id]
+            else:
+                logger.warning("Media upload failed, sending plain text only: %s", upload_result.error)
+
+        msg_data = {"text": text_data}
+
+        if is_group:
+            return await self._send_group(chat_id, "text", msg_data, user_token=user_token, sender_id=sender_id)
+        return await self._send_private(chat_id, "text", msg_data)
+
+    async def send_markdown(
+        self,
+        chat_id: str,
+        content: str,
+    ) -> SendMessageResult:
+        """Send a Markdown-formatted message (msgType=formatText).
+
+        msgType=formatText supports: Markdown formatting (headings, bold,
+        italic, code blocks, lists, links, tables).
+        Does NOT support: @mentions or file/image/video attachments.
+
+        If you need both Markdown AND a file, send them as two separate
+        messages: send_markdown() for formatted text, then send_file()
+        for the attachment.
+
+        Args:
+            chat_id: Recipient user ID.
+            content: Markdown-formatted content.
+        """
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not content:
+            return SendMessageResult(success=False, error="content is required")
+
+        msg_data = {
+            "formatText": {
+                "formatType": 1,
+                "text": content,
+            }
+        }
+        return await self._send_private(chat_id, "formatText", msg_data)
+
+    async def send_file(
+        self,
+        chat_id: str,
+        file_path: str,
+        *,
+        caption: str = "",
+        media_type: Optional[int] = None,
+    ) -> SendMessageResult:
+        """Send a local file/image/video (msgType=text, attachment only).
+
+        Caption is plain text (no Markdown). If you need Markdown text
+        alongside a file, use send_markdown() first, then send_file().
+
+        Args:
+            chat_id: Recipient user ID.
+            file_path: Path to the local file. Must exist on disk.
+            caption: Optional plain-text caption.
+            media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+        """
+        self._ensure_clients()
+
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not file_path:
+            return SendMessageResult(success=False, error="file_path is required")
+
+        if not os.path.isabs(file_path):
+            file_path = os.path.abspath(file_path)
+        if not os.path.isfile(file_path):
+            return SendMessageResult(success=False, error=f"File not found: {file_path}")
+
+        mt = media_type or guess_media_type(file_path) or MEDIA_TYPE_FILE
+
+        upload_result = await upload_media(
+            self._config, self._token_manager, self._http_client, file_path, mt
+        )
+        if not upload_result.success or not upload_result.media_id:
+            return SendMessageResult(
+                success=False,
+                error=f"Failed to upload file: {upload_result.error}",
+            )
+
+        text_data: Dict[str, Any] = {
+            "content": caption,
+            "mediaType": mt,
+            "mediaIds": [upload_result.media_id],
+        }
+        msg_data = {"text": text_data}
+        return await self._send_private(chat_id, "text", msg_data)
+
+    async def send_image_url(
+        self,
+        chat_id: str,
+        image_url: str,
+        *,
+        caption: str = "",
+    ) -> SendMessageResult:
+        """Send an image from a URL (download first, then upload to Lansenger).
+
+        Args:
+            chat_id: Recipient user ID.
+            image_url: URL of the image to download and send.
+            caption: Optional plain-text caption (no Markdown).
+        """
+        self._ensure_clients()
+
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not image_url:
+            return SendMessageResult(success=False, error="image_url is required")
+
+        try:
+            resp = await self._http_client.get(image_url, timeout=30, follow_redirects=True)
+            resp.raise_for_status()
+            image_bytes = resp.content
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"Failed to download image: {e}")
+
+        ct = resp.headers.get("content-type", "")
+        if "png" in ct:
+            suffix = ".png"
+        elif "gif" in ct:
+            suffix = ".gif"
+        elif "webp" in ct:
+            suffix = ".webp"
+        else:
+            suffix = ".jpg"
+
+        fd, temp_path = tempfile.mkstemp(suffix=suffix, prefix="lansenger_url_image_")
+        os.write(fd, image_bytes)
+        os.close(fd)
+
+        try:
+            result = await self.send_file(chat_id, temp_path, caption=caption, media_type=MEDIA_TYPE_IMAGE)
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+            return result
+        except Exception as e:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+            return SendMessageResult(success=False, error=str(e))
+
+    async def send_link_card(
+        self,
+        chat_id: str,
+        title: str,
+        link: str,
+        *,
+        description: str = "",
+        icon_link: str = "",
+        pc_link: str = "",
+        from_name: str = "",
+        from_icon_link: str = "",
+    ) -> SendMessageResult:
+        """Send a linkCard message (rich link preview card).
+
+        Args:
+            chat_id: Recipient user ID.
+            title: Card title (required).
+            link: Card click-through link (required).
+            description: Card description text.
+            icon_link: Card icon image link.
+            pc_link: PC client redirect link.
+            from_name: Card source name.
+            from_icon_link: Source icon image link.
+        """
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not title:
+            return SendMessageResult(success=False, error="title is required")
+        if not link:
+            return SendMessageResult(success=False, error="link is required")
+
+        msg_data = {
+            "linkCard": {
+                "title": title,
+                "link": link,
+                "description": description,
+                "iconLink": icon_link,
+                "pcLink": pc_link,
+                "fromName": from_name,
+                "fromIconLink": from_icon_link,
+            }
+        }
+        return await self._send_private(chat_id, "linkCard", msg_data)
+
+    async def send_link_card_with_params(
+        self,
+        params: LinkCardParams,
+    ) -> SendMessageResult:
+        """Send a linkCard using a LinkCardParams object."""
+        return await self.send_link_card(
+            chat_id=params.chat_id,
+            title=params.title,
+            link=params.link,
+            description=params.description,
+            icon_link=params.icon_link,
+            pc_link=params.pc_link,
+            from_name=params.from_name,
+            from_icon_link=params.from_icon_link,
+        )
+
+    async def send_app_articles(
+        self,
+        chat_id: str,
+        articles: List[Dict[str, str]],
+    ) -> SendMessageResult:
+        """Send an appArticles (图文卡片) multi-article card.
+
+        Each article dict must contain:
+            - imgUrl (required): Image URL
+            - title (required): Article title
+            - url (required): Content link URL
+            - pcUrl (required): PC content link URL
+            Optional: summary
+
+        Args:
+            chat_id: Recipient user ID.
+            articles: List of article dicts (1+ entries).
+        """
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not articles:
+            return SendMessageResult(success=False, error="articles is required")
+
+        msg_data = {"appArticles": articles}
+        return await self._send_private(chat_id, "appArticles", msg_data)
+
+    async def send_app_card(
+        self,
+        chat_id: str,
+        body_title: str,
+        *,
+        head_title: str = "",
+        body_sub_title: str = "",
+        body_content: str = "",
+        signature: str = "",
+        fields: Optional[List[Dict[str, str]]] = None,
+        links: Optional[List[Dict[str, str]]] = None,
+        card_link: str = "",
+        pc_card_link: str = "",
+        is_dynamic: bool = False,
+        head_status_info: Optional[Dict[str, str]] = None,
+        staff_id: str = "",
+        head_icon_url: str = "",
+    ) -> SendMessageResult:
+        """Send an appCard (应用卡片) rich formatted card.
+
+        appCard supports div-style HTML formatting (color, font-size,
+        text-align, text-indent) in body_title, body_sub_title,
+        body_content, and signature fields.
+
+        NOTE: appCard vs i18nAppCard:
+        - appCard: supports isDynamic + headStatusInfo for in-place status
+          updates, but uses a SINGLE language.
+        - i18nAppCard: supports 5 languages but NO dynamic updates or
+          headStatusInfo.
+
+        Args:
+            chat_id: Recipient user ID.
+            body_title: Card body title (required, max 600 bytes).
+            head_title: Card header title.
+            body_sub_title: Card body subtitle (max 1200 bytes).
+            body_content: Card body content (max 3000 bytes).
+            signature: Card signature line.
+            fields: Key-value pairs (max 10).
+            links: Link entries (max 3).
+            card_link: Card click-through link.
+            pc_card_link: PC client click-through link.
+            is_dynamic: Enable dynamic card status updates.
+            head_status_info: Dynamic card status dict (iconLink/description/colour).
+            staff_id: Staff ID for sender avatar.
+            head_icon_url: Header icon URL.
+        """
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not body_title:
+            return SendMessageResult(success=False, error="body_title is required for appCard")
+
+        token = await self._get_token()
+        url = self._private_msg_url(token)
+
+        app_card_data: Dict[str, Any] = {
+            "headTitle": head_title,
+            "headIconUrl": head_icon_url,
+            "isDynamic": is_dynamic,
+            "bodyTitle": body_title,
+            "cardLink": card_link,
+            "pcCardLink": pc_card_link,
+        }
+
+        if is_dynamic and not head_status_info:
+            head_status_info = {
+                "description": '<div style="color:rgba(0,0,0,.47)">Active</div>',
+                "colour": "rgba(0,0,0,.47)",
+            }
+        if is_dynamic and head_status_info:
+            app_card_data["headStatusInfo"] = head_status_info
+
+        if body_sub_title:
+            app_card_data["bodySubTitle"] = body_sub_title
+        if body_content:
+            app_card_data["bodyContent"] = body_content
+        if signature:
+            app_card_data["signature"] = signature
+        if staff_id:
+            app_card_data["staffId"] = staff_id
+        if fields:
+            app_card_data["fields"] = fields
+        if links:
+            app_card_data["links"] = links
+
+        payload = {
+            "userIdList": [chat_id],
+            "msgType": "appCard",
+            "msgData": {"appCard": app_card_data},
+        }
+
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+
+            if not response.text or not response.text.strip():
+                return SendMessageResult(
+                    success=False, error="Empty API response — likely a payload format issue", retryable=True
+                )
+
+            data = response.json()
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
+
+        return _parse_send_response(data, msg_type="appCard", operation="appCard")
+
+    async def send_app_card_with_params(
+        self,
+        params: AppCardParams,
+    ) -> SendMessageResult:
+        """Send an appCard using an AppCardParams object."""
+        return await self.send_app_card(
+            chat_id=params.chat_id,
+            body_title=params.body_title,
+            head_title=params.head_title,
+            body_sub_title=params.body_sub_title,
+            body_content=params.body_content,
+            signature=params.signature,
+            fields=params.fields,
+            links=params.links,
+            card_link=params.card_link,
+            pc_card_link=params.pc_card_link,
+            is_dynamic=params.is_dynamic,
+            head_status_info=params.head_status_info,
+            staff_id=params.staff_id,
+            head_icon_url=params.head_icon_url,
+        )
+
+    # ── Public API: Dynamic card update ─────────────────────────────────
+
+    async def update_dynamic_card(
+        self,
+        msg_id: str,
+        *,
+        head_status_info: Optional[Dict[str, str]] = None,
+        links: Optional[List[Dict[str, str]]] = None,
+        is_last_update: bool = False,
+    ) -> SendMessageResult:
+        """Update a dynamic appCard's status in-place.
+
+        The card must have been sent with is_dynamic=True.
+        Uses POST /v1/messages/dynamic/update.
+
+        Args:
+            msg_id: The message ID from the original send_app_card response.
+            head_status_info: Updated status dict (description/colour/iconLink).
+            links: Updated link entries (max 3).
+            is_last_update: True = final state, card becomes static after this.
+        """
+        self._ensure_clients()
+
+        if not msg_id:
+            return SendMessageResult(success=False, error="msg_id is required")
+
+        token = await self._get_token()
+        url = (
+            f"{self._config.api_gateway_url}"
+            f"{API_ENDPOINTS['message']['dynamic_update']}"
+            f"?app_token={token}"
+        )
+
+        app_card_update: Dict[str, Any] = {"isLastUpdate": is_last_update}
+        if head_status_info:
+            app_card_update["headStatusInfo"] = head_status_info
+        if links:
+            app_card_update["links"] = links
+
+        payload = {
+            "msgId": msg_id,
+            "msgType": "appCard",
+            "msgData": {"appCardUpdateMsg": app_card_update},
+        }
+
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
+
+        return _parse_send_response(data, operation="dynamic_card_update")
+
+    async def update_dynamic_card_with_params(
+        self,
+        params: DynamicCardUpdateParams,
+    ) -> SendMessageResult:
+        """Update a dynamic card using a DynamicCardUpdateParams object."""
+        return await self.update_dynamic_card(
+            msg_id=params.msg_id,
+            head_status_info=params.head_status_info,
+            links=params.links,
+            is_last_update=params.is_last_update,
+        )
+
+    # ── Public API: Message management ──────────────────────────────────
+
+    async def revoke_message(
+        self,
+        message_ids: List[str],
+        *,
+        chat_type: str = "bot",
+        sender_id: str = "",
+    ) -> SendMessageResult:
+        """Revoke previously sent messages.
+
+        Args:
+            message_ids: List of message IDs to revoke.
+            chat_type: Message type: staff, group, notification, account, bot.
+            sender_id: Sender ID (required for staff/group chat types).
+        """
+        self._ensure_clients()
+
+        if not message_ids:
+            return SendMessageResult(success=False, error="message_ids is required")
+        if chat_type in ("staff", "group") and not sender_id:
+            return SendMessageResult(
+                success=False, error=f"chat_type='{chat_type}' requires sender_id"
+            )
+
+        token = await self._get_token()
+        url = f"{self._config.api_gateway_url}{API_ENDPOINTS['message']['revoke']}?app_token={token}"
+
+        payload: Dict[str, Any] = {
+            "chatType": chat_type,
+            "messageIds": message_ids,
+        }
+        if sender_id:
+            payload["senderId"] = sender_id
+
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
+
+        return _parse_send_response(data, operation="revoke")
+
+    async def query_groups(
+        self,
+        *,
+        page_offset: int = 1,
+        page_size: int = 100,
+    ) -> QueryGroupsResult:
+        """Query the bot's group ID list via GET /v2/groups/fetch.
+
+        Args:
+            page_offset: Page number (default: 1).
+            page_size: Per-page count (max 100, default: 100).
+
+        Returns:
+            QueryGroupsResult with total_group_ids and group_ids.
+        """
+        self._ensure_clients()
+
+        token = await self._get_token()
+        url = (
+            f"{self._config.api_gateway_url}"
+            f"{API_ENDPOINTS['groups']['fetch']}"
+            f"?app_token={token}&page_offset={page_offset}&page_size={page_size}"
+        )
+
+        try:
+            response = await self._http_client.get(url)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            return QueryGroupsResult(success=False, error=f"HTTP error: {e}")
+
+        err_code = data.get("errCode", -1)
+        if err_code != 0:
+            msg = data.get("errMsg", "Unknown error")
+            return QueryGroupsResult(
+                success=False, error=f"API error (errCode={err_code}): {msg}"
+            )
+
+        result_data = data.get("data", {})
+        return QueryGroupsResult(
+            success=True,
+            total_group_ids=result_data.get("totalGroupIds", 0),
+            group_ids=result_data.get("groupIds", []),
+            raw_response=data,
+        )
+
+    # ── Public API: Media operations ────────────────────────────────────
+
+    async def upload_media(
+        self,
+        file_path: str,
+        *,
+        media_type: Optional[int] = None,
+    ) -> SendMessageResult:
+        """Upload a media file and return result with media_id in message_id field.
+
+        Args:
+            file_path: Path to the local file.
+            media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+        """
+        self._ensure_clients()
+        mt = media_type or guess_media_type(file_path) or MEDIA_TYPE_FILE
+        result = await upload_media(
+            self._config, self._token_manager, self._http_client, file_path, mt
+        )
+        if result.success:
+            return SendMessageResult(
+                success=True, message_id=result.media_id, operation="upload_media"
+            )
+        return SendMessageResult(success=False, error=result.error, operation="upload_media")
+
+    async def download_media(
+        self,
+        media_id: str,
+    ) -> DownloadMediaResult:
+        """Download media bytes from Lansenger by media ID.
+
+        Args:
+            media_id: Lansenger media ID.
+
+        Returns:
+            DownloadMediaResult with data bytes on success.
+        """
+        self._ensure_clients()
+        return await download_media(
+            self._config, self._token_manager, self._http_client, media_id
+        )
+
+    async def download_media_to_file(
+        self,
+        media_id: str,
+        *,
+        target_path: Optional[str] = None,
+        media_type: str = "file",
+    ) -> str:
+        """Download media and save to a file.
+
+        Args:
+            media_id: Lansenger media ID.
+            target_path: Target path. None = auto temp file.
+            media_type: "image"/"video"/"file"/"voice" for extension hint.
+
+        Returns:
+            Path to the saved file.
+        """
+        self._ensure_clients()
+        from .media import download_media_to_file
+
+        return await download_media_to_file(
+            self._config,
+            self._token_manager,
+            self._http_client,
+            media_id,
+            target_path=target_path,
+            media_type=media_type,
+        )
+
+    # ── Utility: Token management ───────────────────────────────────────
+
+    async def get_token(self) -> str:
+        """Get the current app access token (public accessor)."""
+        return await self._get_token()
+
+    def invalidate_token(self) -> None:
+        """Force token refresh on next API call."""
+        if self._token_manager:
+            self._token_manager.invalidate()
+
+    # ── Utility: Health check ───────────────────────────────────────────
+
+    async def health_check(self) -> bool:
+        """Verify credentials work by attempting to get a token.
+
+        Returns True if token was obtained successfully, False otherwise.
+        """
+        try:
+            await self._get_token()
+            return True
+        except Exception:
+            return False
+
+    # ── OAuth2: User authentication ─────────────────────────────────────
+
+    def build_authorize_url(
+        self,
+        redirect_uri: str,
+        *,
+        scope: str | list[str] | None = None,
+        state: str | None = None,
+    ) -> str:
+        """Build the OAuth2 authorize URL for user identity verification.
+
+        Lansenger uses OAuth2 when an org bot/app needs to identify a
+        specific user. The flow:
+        1. Build this URL and redirect the user to it
+        2. User logs in on the Lansenger passport page
+        3. Lansenger redirects back to redirect_uri with code + state
+        4. Exchange the code for a user access token (future API)
+
+        This is different from appToken auth:
+        - appToken: authenticates the bot itself (for sending messages)
+        - OAuth2 code: authenticates a specific Lansenger user (for user-level ops)
+
+        Args:
+            redirect_uri: URL Lansenger redirects to after authorization.
+                Domain must be in the app's trusted domain list.
+            scope: OAuth2 scope(s). Default: "basic_userinfor".
+                Pass a list for multiple scopes: ["basic_userinfor", ...]
+            state: CSRF protection string. Auto-generated UUID if None.
+
+        Returns:
+            Full authorize URL string.
+
+        Raises:
+            LansengerConfigError: if passport_url is not configured.
+        """
+        from .oauth import build_authorize_url
+
+        return build_authorize_url(
+            self._config,
+            redirect_uri=redirect_uri,
+            scope=scope,
+            state=state,
+        )
+
+    @staticmethod
+    def parse_authorize_callback(query_string: str | dict) -> dict:
+        """Parse the OAuth2 authorize callback redirect parameters.
+
+        After the user authorizes, Lansenger redirects to redirect_uri
+        with code and state. Use this to parse them.
+
+        Args:
+            query_string: Dict or raw query string "code=XXX&state=YYY".
+
+        Returns:
+            Dict with: code, state, (optional) error, error_description.
+        """
+        from .oauth import parse_authorize_callback
+
+        return parse_authorize_callback(query_string)
+
+    @staticmethod
+    def validate_callback_state(callback_state: str, expected_state: str) -> bool:
+        """Validate OAuth2 callback state matches expected (CSRF protection).
+
+        Args:
+            callback_state: State received in the callback.
+            expected_state: State that was sent in the authorize request.
+
+        Returns:
+            True if match, False otherwise.
+        """
+        from .oauth import validate_callback_state
+
+        return validate_callback_state(callback_state, expected_state)
+
+    # ── OAuth2: Code exchange ───────────────────────────────────────────
+
+    async def exchange_code(
+        self,
+        code: str,
+        *,
+        redirect_uri: str = "",
+    ) -> UserTokenResult:
+        """Exchange an OAuth2 authorization code for userToken + refreshToken.
+
+        This is step 2 of the OAuth2 flow. Uses GET /v2/user_token/create
+        with the bot's appToken + the authorization code obtained from the
+        authorize callback.
+
+        Authentication hierarchy:
+        - appToken: bot's credential → used by this method to prove bot identity
+        - code: user's authorization → proves user consented
+        - userToken: returned here → authenticates the specific user for future calls
+        - refreshToken: returned here → long-lived (30 days), used to refresh userToken
+
+        Args:
+            code: The authorization code from the OAuth2 callback.
+                Valid for 5 minutes, one-time use only.
+            redirect_uri: Optional, same redirect_uri used in authorize URL.
+
+        Returns:
+            UserTokenResult with userToken, refreshToken, staffId, scope, state.
+        """
+        self._ensure_clients()
+
+        app_token = await self._get_token()
+        return await exchange_code_for_user_token(
+            self._config,
+            app_token=app_token,
+            code=code,
+            http_client=self._http_client,
+            redirect_uri=redirect_uri,
+        )
+
+    async def refresh_user_token(
+        self,
+        refresh_token: str,
+        *,
+        scope: str = "",
+    ) -> UserTokenResult:
+        """Refresh an expired userToken using a refreshToken.
+
+        Uses GET /v1/refresh_token/create. The returned refreshToken
+        replaces the old one (old becomes invalid). Total validity
+        does NOT extend — only the remaining time from the original
+        30-day grant.
+
+        If refreshToken has expired, must re-initiate the full OAuth2
+        authorize flow (build_authorize_url → exchange_code).
+
+        Args:
+            refresh_token: The refreshToken from a previous exchange_code
+                or refresh_user_token call.
+            scope: Optional scope (can only narrow from original grant).
+
+        Returns:
+            UserTokenResult with new userToken, new refreshToken, staffId.
+            IMPORTANT: Always use the returned refreshToken for subsequent
+            refreshes — the old one is invalidated.
+        """
+        self._ensure_clients()
+
+        app_token = await self._get_token()
+        return await refresh_user_token(
+            self._config,
+            app_token=app_token,
+            refresh_token=refresh_token,
+            http_client=self._http_client,
+            scope=scope,
+        )
+
+    # ── User information ──────────────────────────────────────────────
+
+    async def fetch_user_info(
+        self,
+        user_token: str,
+    ) -> UserInfoResult:
+        """Fetch a Lansenger user's basic information.
+
+        Uses GET /v1/users/fetch with appToken + userToken. Returns the
+        user's name, org, department, phone, email, avatar, etc.
+
+        Requires both tokens:
+        - appToken: bot's credential (obtained automatically by this method)
+        - userToken: user's OAuth2 credential (obtained via exchange_code)
+
+        Args:
+            user_token: The user's userToken from a previous exchange_code
+                or refresh_user_token call.
+
+        Returns:
+            UserInfoResult with staffId, name, org, department, email, phone, etc.
+        """
+        self._ensure_clients()
+        from .users import fetch_user_info
+
+        app_token = await self._get_token()
+        return await fetch_user_info(
+            self._config,
+            app_token=app_token,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Contacts / Staff ────────────────────────────────────────
+
+    async def fetch_staff_basic_info(
+        self,
+        staff_id: str,
+        *,
+        user_token: str = "",
+    ) -> StaffBasicInfoResult:
+        """Fetch a staff member's basic information.
+
+        Uses GET /v1/staffs/:staffid/fetch with appToken (and optional
+        userToken).
+
+        Args:
+            staff_id: Staff openId.
+            user_token: Optional userToken for user-scoped access.
+
+        Returns:
+            StaffBasicInfoResult with orgId, name, gender, avatar, departments, etc.
+        """
+        if not staff_id:
+            return StaffBasicInfoResult(success=False, error="staff_id is required")
+        self._ensure_clients()
+        from .contacts import fetch_staff_basic_info
+
+        app_token = await self._get_token()
+        return await fetch_staff_basic_info(
+            self._config,
+            app_token=app_token,
+            staff_id=staff_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_staff_detail(
+        self,
+        staff_id: str,
+        *,
+        user_token: str = "",
+    ) -> StaffDetailResult:
+        """Fetch a staff member's detailed information.
+
+        Uses GET /v1/staffs/:staffid/infor/fetch. Requires org or personal
+        auth — providing userToken is recommended.
+
+        Args:
+            staff_id: Staff openId.
+            user_token: Optional userToken (recommended for personal auth).
+
+        Returns:
+            StaffDetailResult with full profile: email, phone, education, career, etc.
+        """
+        if not staff_id:
+            return StaffDetailResult(success=False, error="staff_id is required")
+        self._ensure_clients()
+        from .contacts import fetch_staff_detail
+
+        app_token = await self._get_token()
+        return await fetch_staff_detail(
+            self._config,
+            app_token=app_token,
+            staff_id=staff_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_department_ancestors(
+        self,
+        staff_id: str,
+        *,
+        user_token: str = "",
+    ) -> DepartmentAncestorsResult:
+        """Fetch ancestor department chain for a staff member.
+
+        Uses GET /v1/staffs/:staffid/departmentancestors/fetch.
+
+        Args:
+            staff_id: Staff openId.
+            user_token: Optional userToken.
+
+        Returns:
+            DepartmentAncestorsResult with ancestor_groups (list of ancestor chains).
+        """
+        if not staff_id:
+            return DepartmentAncestorsResult(success=False, error="staff_id is required")
+        self._ensure_clients()
+        from .contacts import fetch_department_ancestors
+
+        app_token = await self._get_token()
+        return await fetch_department_ancestors(
+            self._config,
+            app_token=app_token,
+            staff_id=staff_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_staff_id_mapping(
+        self,
+        org_id: str,
+        id_type: str,
+        id_value: str,
+        *,
+        user_token: str = "",
+    ) -> StaffIdMappingResult:
+        """Map a unique identifier (phone/email/etc) to staffId.
+
+        Uses GET /v2/staffs/id_mapping/fetch.
+
+        Args:
+            org_id: Organization ID.
+            id_type: One of: "employ_id", "mobile", "mail", "login", "external_id".
+            id_value: The identifier value to look up.
+            user_token: Optional userToken.
+
+        Returns:
+            StaffIdMappingResult with staff_id.
+        """
+        if not org_id:
+            return StaffIdMappingResult(success=False, error="org_id is required")
+        if not id_type:
+            return StaffIdMappingResult(success=False, error="id_type is required")
+        if not id_value:
+            return StaffIdMappingResult(success=False, error="id_value is required")
+        self._ensure_clients()
+        from .contacts import fetch_staff_id_mapping
+
+        app_token = await self._get_token()
+        return await fetch_staff_id_mapping(
+            self._config,
+            app_token=app_token,
+            org_id=org_id,
+            id_type=id_type,
+            id_value=id_value,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_org_extra_field_ids(
+        self,
+        org_id: str,
+        *,
+        user_token: str = "",
+        page: int = 1,
+        page_size: int = 1000,
+    ) -> ExtraFieldIdsResult:
+        """Fetch organization extra field ID list.
+
+        Uses GET /v1/org/:orgid/extrafieldids/fetch.
+
+        Args:
+            org_id: Organization ID.
+            user_token: Optional userToken.
+            page: Page offset (default 1).
+            page_size: Per-page count (default 1000, max 100000).
+
+        Returns:
+            ExtraFieldIdsResult with has_more, total, extra_field_ids.
+        """
+        if not org_id:
+            return ExtraFieldIdsResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .contacts import fetch_org_extra_field_ids
+
+        app_token = await self._get_token()
+        return await fetch_org_extra_field_ids(
+            self._config,
+            app_token=app_token,
+            org_id=org_id,
+            user_token=user_token,
+            page=page,
+            page_size=page_size,
+            http_client=self._http_client,
+        )
+
+    async def fetch_org_info(
+        self,
+        org_id: str,
+        *,
+        user_token: str = "",
+    ) -> OrgInfoResult:
+        """Fetch organization basic information.
+
+        Uses GET /v1/org/:orgid/fetch.
+
+        Args:
+            org_id: Organization ID.
+            user_token: Optional userToken.
+
+        Returns:
+            OrgInfoResult with org_id, org_name, icon_url, org_order_type, etc.
+        """
+        if not org_id:
+            return OrgInfoResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .contacts import fetch_org_info
+
+        app_token = await self._get_token()
+        return await fetch_org_info(
+            self._config,
+            app_token=app_token,
+            org_id=org_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def search_staff(
+        self,
+        keyword: str,
+        *,
+        user_token: str = "",
+        user_id: str = "",
+        recursive: bool = True,
+        sector_ids: Optional[List[str]] = None,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+    ) -> StaffSearchResult:
+        """Search staff by keyword with optional department scope.
+
+        Uses POST /v2/staffs/search. Requires user_token or user_id for auth.
+
+        Args:
+            keyword: Search keyword.
+            user_token: Optional userToken (one of user_token/user_id required).
+            user_id: Optional staff openId (one of user_token/user_id required).
+            recursive: Whether to search sub-departments (default True).
+            sector_ids: Optional department openId list to limit scope.
+            page: Optional page number.
+            page_size: Optional page size (max 100).
+
+        Returns:
+            StaffSearchResult with has_more, total, staff_info.
+        """
+        if not keyword:
+            return StaffSearchResult(success=False, error="keyword is required")
+        self._ensure_clients()
+        from .contacts import search_staff
+
+        app_token = await self._get_token()
+        return await search_staff(
+            self._config,
+            app_token=app_token,
+            keyword=keyword,
+            user_token=user_token,
+            user_id=user_id,
+            recursive=recursive,
+            sector_ids=sector_ids,
+            page=page,
+            page_size=page_size,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Bot channel messages ──────────────────────────────
+
+    async def send_bot_message(
+        self,
+        msg_type: str,
+        msg_data: dict,
+        chat_ids: Optional[List[str]] = None,
+        department_ids: Optional[List[str]] = None,
+        *,
+        user_token: str = "",
+        entry_id: str = "",
+    ) -> BotMessageResult:
+        self._ensure_clients()
+        if not chat_ids and not department_ids:
+            return BotMessageResult(success=False, error="at least one of chat_ids or department_ids is required")
+        valid_msg_types = ("text", "oacard", "linkCard", "appCard", "verifyCard")
+        if msg_type not in valid_msg_types:
+            return BotMessageResult(success=False, error=f"msg_type must be one of: {', '.join(valid_msg_types)}")
+        if not msg_data:
+            return BotMessageResult(success=False, error="msg_data is required")
+        token = await self._get_token()
+        url = f"{self._config.api_gateway_url}{API_ENDPOINTS['bot']['message_create']}?app_token={token}"
+        if user_token:
+            url += f"&user_token={user_token}"
+        payload: Dict[str, Any] = {
+            "userIdList": chat_ids or [],
+            "departmentIdList": department_ids or [],
+            "msgType": msg_type,
+            "msgData": msg_data,
+        }
+        if entry_id:
+            payload["entryId"] = entry_id
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            return BotMessageResult(success=False, error=f"HTTP error: {e}")
+        err_code = data.get("errCode", -1)
+        if err_code != 0:
+            msg = data.get("errMsg", "Unknown error")
+            return BotMessageResult(success=False, error=f"API error (errCode={err_code}): {msg}")
+        result_data = data.get("data", {})
+        return BotMessageResult(
+            success=True,
+            message_id=result_data.get("msgId"),
+            invalid_staff=result_data.get("invalidStaff"),
+            invalid_department=result_data.get("invalidDepartment"),
+            raw_response=data,
+        )
+
+    # ── Public API: Account message (4.6.1 公号通道) ────────────────
+
+    async def send_account_message(
+        self,
+        msg_type: str,
+        msg_data: dict,
+        chat_ids: Optional[List[str]] = None,
+        department_ids: Optional[List[str]] = None,
+        *,
+        account_id: str = "",
+        entry_id: str = "",
+        attach: str = "",
+        user_token: str = "",
+    ) -> AccountMessageResult:
+        """Send a message via the public account channel (4.6.1).
+
+        Messages appear as if from the application's Public Account (公号).
+        The sender identity is determined by accountId or entryId.
+
+        Args:
+            msg_type: text, oacard, linkCard, appCard, verifyCard.
+            msg_data: Message body dict (msgData field).
+            chat_ids: Recipient user openId list.
+            department_ids: Recipient department openId list.
+            account_id: Public account ID to send as.
+            entry_id: App entry ID (selects associated public account).
+            attach: Extra data string for blueprint app context.
+            user_token: Optional userToken.
+        """
+        if not chat_ids and not department_ids:
+            return AccountMessageResult(success=False, error="at least one of chat_ids or department_ids is required")
+        valid_msg_types = ("text", "oacard", "linkCard", "appCard", "verifyCard")
+        if msg_type not in valid_msg_types:
+            return AccountMessageResult(success=False, error=f"msg_type must be one of: {', '.join(valid_msg_types)}")
+        if not msg_data:
+            return AccountMessageResult(success=False, error="msg_data is required")
+        self._ensure_clients()
+        from .account_messages import send_account_message
+
+        app_token = await self._get_token()
+        return await send_account_message(
+            self._config,
+            app_token=app_token,
+            msg_type=msg_type,
+            msg_data=msg_data,
+            chat_ids=chat_ids,
+            department_ids=department_ids,
+            account_id=account_id,
+            entry_id=entry_id,
+            attach=attach,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: User private chat message (4.6.3) ────────────────
+
+    async def send_user_message(
+        self,
+        receiver_id: str,
+        msg_type: str,
+        msg_data: dict,
+        *,
+        user_token: str = "",
+        common: Optional[Dict[str, Any]] = None,
+        uuid: str = "",
+    ) -> UserMessageResult:
+        """Send a private chat message impersonating a user (4.6.3).
+
+        Messages appear as if from the actual human user whose userToken
+        is provided. Creates a 1:1 private chat conversation. userToken
+        is REQUIRED — must be obtained via OAuth2 flow.
+
+        Args:
+            receiver_id: Single recipient's openId.
+            msg_type: Message type (text, formatText, appCard, etc.).
+            msg_data: Message body dict.
+            user_token: REQUIRED userToken from OAuth2 flow.
+            common: Optional "common" sub-object in msgData.
+            uuid: Optional deduplication UUID.
+        """
+        if not user_token:
+            return UserMessageResult(success=False, error="user_token is required for user private chat messages")
+        if not receiver_id:
+            return UserMessageResult(success=False, error="receiver_id is required")
+        if not msg_type:
+            return UserMessageResult(success=False, error="msg_type is required")
+        if not msg_data:
+            return UserMessageResult(success=False, error="msg_data is required")
+        self._ensure_clients()
+        from .user_messages import send_user_message
+
+        app_token = await self._get_token()
+        return await send_user_message(
+            self._config,
+            app_token=app_token,
+            user_token=user_token,
+            receiver_id=receiver_id,
+            msg_type=msg_type,
+            msg_data=msg_data,
+            common=common,
+            uuid=uuid,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Group message (4.6.2) ────────────────────────────────
+
+    async def send_group_message(
+        self,
+        group_id: str,
+        msg_type: str,
+        msg_data: dict,
+        *,
+        user_token: str = "",
+        sender_id: str = "",
+        outlines: str = "",
+        uuid: str = "",
+        entry_id: str = "",
+    ) -> SendMessageResult:
+        """Send a message in a group chat (4.6.2).
+
+        Sender identity determined by auth:
+        - With user_token: appears from the human user
+        - Without user_token, with sender_id: appears from specified person
+        - Without both: appears from the bot
+
+        Only text and oacard msgType are supported in group messages.
+        Only group messages support @mentions (reminder).
+
+        Args:
+            group_id: Group openId.
+            msg_type: text or oacard only.
+            msg_data: Message body dict.
+            user_token: Optional — makes sender appear as human.
+            sender_id: Optional — explicit sender openId (used if no user_token).
+            outlines: Optional group notification digest text.
+            uuid: Optional deduplication key.
+            entry_id: Optional app entry selector.
+        """
+        valid_msg_types = ("text", "oacard")
+        if msg_type not in valid_msg_types:
+            return SendMessageResult(
+                success=False, error=f"group msg_type must be one of: {', '.join(valid_msg_types)}"
+            )
+        if not group_id:
+            return SendMessageResult(success=False, error="group_id is required")
+        if not msg_data:
+            return SendMessageResult(success=False, error="msg_data is required")
+        self._ensure_clients()
+        from .group_messages import send_group_message
+
+        app_token = await self._get_token()
+        return await send_group_message(
+            self._config,
+            app_token=app_token,
+            group_id=group_id,
+            msg_type=msg_type,
+            msg_data=msg_data,
+            user_token=user_token,
+            sender_id=sender_id,
+            outlines=outlines,
+            uuid=uuid,
+            entry_id=entry_id,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Streaming messages ────────────────────────────────
+
+    async def create_stream_message(
+        self,
+        receiver_id: str,
+        receiver_type: str,
+        stream_id: str,
+    ) -> StreamMessageResult:
+        if not receiver_id:
+            return StreamMessageResult(success=False, error="receiver_id is required")
+        if receiver_type not in ("staff", "group"):
+            return StreamMessageResult(success=False, error="receiver_type must be 'staff' or 'group'")
+        if not stream_id:
+            return StreamMessageResult(success=False, error="stream_id is required")
+        self._ensure_clients()
+        from .streaming import create_stream_message
+
+        app_token = await self._get_token()
+        return await create_stream_message(
+            self._config,
+            app_token=app_token,
+            receiver_id=receiver_id,
+            receiver_type=receiver_type,
+            stream_id=stream_id,
+            http_client=self._http_client,
+        )
+
+    async def fetch_stream_message(
+        self,
+        msg_id: str,
+    ) -> StreamMessageResult:
+        if not msg_id:
+            return StreamMessageResult(success=False, error="msg_id is required")
+        self._ensure_clients()
+        from .streaming import fetch_stream_message
+
+        app_token = await self._get_token()
+        return await fetch_stream_message(
+            self._config,
+            app_token=app_token,
+            msg_id=msg_id,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Groups V2 ─────────────────────────────────────────
+
+    async def create_group(
+        self,
+        name: str,
+        org_id: str,
+        *,
+        owner_id: str = "",
+        description: str = "",
+        avatar_id: str = "",
+        staff_id_list: Optional[List[str]] = None,
+        department_id_list: Optional[List[str]] = None,
+        user_token: str = "",
+        apply_request_id: str = "",
+        apply_notes: str = "",
+        apply_global_unique_id: str = "",
+        apply_session_unique_id: str = "",
+    ) -> CreateGroupResult:
+        if not name:
+            return CreateGroupResult(success=False, error="name is required")
+        if not org_id:
+            return CreateGroupResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .groups import create_group
+
+        app_token = await self._get_token()
+        return await create_group(
+            self._config,
+            app_token=app_token,
+            name=name,
+            org_id=org_id,
+            owner_id=owner_id,
+            description=description,
+            avatar_id=avatar_id,
+            staff_id_list=staff_id_list,
+            department_id_list=department_id_list,
+            user_token=user_token,
+            apply_request_id=apply_request_id,
+            apply_notes=apply_notes,
+            apply_global_unique_id=apply_global_unique_id,
+            apply_session_unique_id=apply_session_unique_id,
+            http_client=self._http_client,
+        )
+
+    async def fetch_group_info(
+        self,
+        group_id: str,
+        *,
+        user_token: str = "",
+    ) -> GroupInfoResult:
+        if not group_id:
+            return GroupInfoResult(success=False, error="group_id is required")
+        self._ensure_clients()
+        from .groups import fetch_group_info
+
+        app_token = await self._get_token()
+        return await fetch_group_info(
+            self._config,
+            app_token=app_token,
+            group_id=group_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_group_members(
+        self,
+        group_id: str,
+        *,
+        user_token: str = "",
+        page_offset: int = 0,
+        page_size: int = 100,
+    ) -> GroupMemberResult:
+        if not group_id:
+            return GroupMemberResult(success=False, error="group_id is required")
+        self._ensure_clients()
+        from .groups import fetch_group_members
+
+        app_token = await self._get_token()
+        return await fetch_group_members(
+            self._config,
+            app_token=app_token,
+            group_id=group_id,
+            user_token=user_token,
+            page_offset=page_offset,
+            page_size=page_size,
+            http_client=self._http_client,
+        )
+
+    async def fetch_group_list(
+        self,
+        *,
+        user_token: str = "",
+        page_offset: int = 0,
+        page_size: int = 100,
+    ) -> GroupListResult:
+        self._ensure_clients()
+        from .groups import fetch_group_list
+
+        app_token = await self._get_token()
+        return await fetch_group_list(
+            self._config,
+            app_token=app_token,
+            user_token=user_token,
+            page_offset=page_offset,
+            page_size=page_size,
+            http_client=self._http_client,
+        )
+
+    async def check_is_in_group(
+        self,
+        group_id: str,
+        *,
+        user_token: str = "",
+        staff_id: str = "",
+    ) -> IsInGroupResult:
+        if not group_id:
+            return IsInGroupResult(success=False, error="group_id is required")
+        self._ensure_clients()
+        from .groups import check_is_in_group
+
+        app_token = await self._get_token()
+        return await check_is_in_group(
+            self._config,
+            app_token=app_token,
+            group_id=group_id,
+            user_token=user_token,
+            staff_id=staff_id,
+            http_client=self._http_client,
+        )
+
+    async def update_group_info(
+        self,
+        group_id: str,
+        *,
+        name: str = "",
+        description: str = "",
+        avatar_id: str = "",
+        owner_id: str = "",
+        assistant: Optional[List[str]] = None,
+        demote_assistant: Optional[List[str]] = None,
+        manage_mode: Optional[int] = None,
+        location_share: Optional[bool] = None,
+        needs_confirm: Optional[bool] = None,
+        is_public: Optional[bool] = None,
+        max_members: Optional[int] = None,
+        max_history_msg_count: Optional[int] = None,
+        remind_all: Optional[bool] = None,
+        send_msg_status: Optional[bool] = None,
+        user_token: str = "",
+    ) -> UpdateGroupResult:
+        """Update a group's basic information (4.28.2).
+
+        Only sends keys you provide. App must have robot capability.
+
+        Args:
+            group_id: Group openId.
+            name: New group name.
+            description: New description.
+            owner_id: New owner (must be group member).
+            manage_mode: 0=all manage, 1=owner only.
+            remind_all: @mention enabled/disabled.
+            send_msg_status: Group mute enabled/disabled.
+            user_token: Optional userToken.
+        """
+        if not group_id:
+            return UpdateGroupResult(success=False, error="group_id is required")
+        self._ensure_clients()
+        from .groups import update_group_info
+
+        app_token = await self._get_token()
+        return await update_group_info(
+            self._config,
+            app_token=app_token,
+            group_id=group_id,
+            name=name,
+            description=description,
+            avatar_id=avatar_id,
+            owner_id=owner_id,
+            assistant=assistant,
+            demote_assistant=demote_assistant,
+            manage_mode=manage_mode,
+            location_share=location_share,
+            needs_confirm=needs_confirm,
+            is_public=is_public,
+            max_members=max_members,
+            max_history_msg_count=max_history_msg_count,
+            remind_all=remind_all,
+            send_msg_status=send_msg_status,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def update_group_members(
+        self,
+        group_id: str,
+        *,
+        add_user_list: Optional[List[str]] = None,
+        del_user_list: Optional[List[str]] = None,
+        add_department_id_list: Optional[List[str]] = None,
+        user_token: str = "",
+    ) -> UpdateGroupMembersResult:
+        """Update group members — add/remove (4.28.5).
+
+        Robot identity cannot add department members.
+
+        Args:
+            group_id: Group openId.
+            add_user_list: Staff IDs to add.
+            del_user_list: Staff IDs to remove.
+            add_department_id_list: Dept IDs to add (not with robot identity).
+            user_token: Optional userToken.
+        """
+        if not group_id:
+            return UpdateGroupMembersResult(success=False, error="group_id is required")
+        if not add_user_list and not del_user_list and not add_department_id_list:
+            return UpdateGroupMembersResult(
+                success=False, error="at least one of add_user_list, del_user_list, or add_department_id_list is required"
+            )
+        self._ensure_clients()
+        from .groups import update_group_members
+
+        app_token = await self._get_token()
+        return await update_group_members(
+            self._config,
+            app_token=app_token,
+            group_id=group_id,
+            add_user_list=add_user_list,
+            del_user_list=del_user_list,
+            add_department_id_list=add_department_id_list,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Departments ───────────────────────────────────────
+
+    async def fetch_department_detail(
+        self,
+        department_id: str,
+        *,
+        user_token: str = "",
+        tag_id: str = "",
+    ) -> DepartmentDetailResult:
+        if not department_id:
+            return DepartmentDetailResult(success=False, error="department_id is required")
+        self._ensure_clients()
+        from .departments import fetch_department_detail
+
+        app_token = await self._get_token()
+        return await fetch_department_detail(
+            self._config,
+            app_token=app_token,
+            department_id=department_id,
+            user_token=user_token,
+            tag_id=tag_id,
+            http_client=self._http_client,
+        )
+
+    async def fetch_department_children(
+        self,
+        department_id: str,
+        *,
+        user_token: str = "",
+    ) -> DepartmentChildrenResult:
+        if not department_id:
+            return DepartmentChildrenResult(success=False, error="department_id is required")
+        self._ensure_clients()
+        from .departments import fetch_department_children
+
+        app_token = await self._get_token()
+        return await fetch_department_children(
+            self._config,
+            app_token=app_token,
+            department_id=department_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_department_staffs(
+        self,
+        department_id: str,
+        *,
+        user_token: str = "",
+        page: int = 1,
+        page_size: int = 100,
+    ) -> DepartmentStaffsResult:
+        if not department_id:
+            return DepartmentStaffsResult(success=False, error="department_id is required")
+        self._ensure_clients()
+        from .departments import fetch_department_staffs
+
+        app_token = await self._get_token()
+        return await fetch_department_staffs(
+            self._config,
+            app_token=app_token,
+            department_id=department_id,
+            user_token=user_token,
+            page=page,
+            page_size=page_size,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Unified Todo (4.33) ──────────────────────────────────
+
+    async def create_todo_task(
+        self,
+        title: str,
+        link: str,
+        pc_link: str,
+        executor_ids: List[str],
+        org_id: str,
+        type: int = 1,
+        *,
+        source_id: str = "",
+        desc: str = "",
+        sender_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskCreateResult:
+        """Create a unified todo task (4.33.1)."""
+        if not title:
+            return TodoTaskCreateResult(success=False, error="title is required")
+        if not link:
+            return TodoTaskCreateResult(success=False, error="link is required")
+        if not pc_link:
+            return TodoTaskCreateResult(success=False, error="pc_link is required")
+        if not executor_ids:
+            return TodoTaskCreateResult(success=False, error="executor_ids is required")
+        if not org_id:
+            return TodoTaskCreateResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import create_todo_task
+
+        app_token = await self._get_token()
+        return await create_todo_task(
+            self._config,
+            app_token=app_token,
+            title=title,
+            link=link,
+            pc_link=pc_link,
+            executor_ids=executor_ids,
+            org_id=org_id,
+            type=type,
+            source_id=source_id,
+            desc=desc,
+            sender_id=sender_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def update_todo_task(
+        self,
+        todotask_id: str,
+        title: str,
+        link: str,
+        pc_link: str,
+        org_id: str,
+        *,
+        desc: str = "",
+        user_token: str = "",
+    ) -> TodoTaskCreateResult:
+        """Update a todo task's content (4.33.2)."""
+        if not todotask_id:
+            return TodoTaskCreateResult(success=False, error="todotask_id is required")
+        if not title:
+            return TodoTaskCreateResult(success=False, error="title is required")
+        if not org_id:
+            return TodoTaskCreateResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import update_todo_task
+
+        app_token = await self._get_token()
+        return await update_todo_task(
+            self._config,
+            app_token=app_token,
+            todotask_id=todotask_id,
+            title=title,
+            link=link,
+            pc_link=pc_link,
+            org_id=org_id,
+            desc=desc,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def update_todo_task_status(
+        self,
+        todotask_id: str,
+        status: str,
+        org_id: str,
+        *,
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskCreateResult:
+        """Update a todo task's status (4.33.3)."""
+        if not todotask_id:
+            return TodoTaskCreateResult(success=False, error="todotask_id is required")
+        if not org_id:
+            return TodoTaskCreateResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import update_todo_task_status
+
+        app_token = await self._get_token()
+        return await update_todo_task_status(
+            self._config,
+            app_token=app_token,
+            todotask_id=todotask_id,
+            status=status,
+            org_id=org_id,
+            staff_id=staff_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def delete_todo_task(
+        self,
+        todotask_id: str,
+        org_id: str,
+        *,
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskCreateResult:
+        """Delete a todo task (4.33.4 — sender only)."""
+        if not todotask_id:
+            return TodoTaskCreateResult(success=False, error="todotask_id is required")
+        if not org_id:
+            return TodoTaskCreateResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import delete_todo_task
+
+        app_token = await self._get_token()
+        return await delete_todo_task(
+            self._config,
+            app_token=app_token,
+            todotask_id=todotask_id,
+            org_id=org_id,
+            staff_id=staff_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_todo_task_list(
+        self,
+        org_id: str,
+        *,
+        app_ids: Optional[List[str]] = None,
+        staff_id: str = "",
+        status_list: Optional[List[str]] = None,
+        user_token: str = "",
+    ) -> TodoTaskListResult:
+        """Fetch todo task list (4.33.5)."""
+        if not org_id:
+            return TodoTaskListResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import fetch_todo_task_list
+
+        app_token = await self._get_token()
+        return await fetch_todo_task_list(
+            self._config,
+            app_token=app_token,
+            org_id=org_id,
+            app_ids=app_ids,
+            staff_id=staff_id,
+            status_list=status_list,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_todo_task_by_source_id(
+        self,
+        source_id: str,
+        org_id: str,
+        *,
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskInfoResult:
+        """Fetch todo task by sourceId (4.33.6)."""
+        if not source_id:
+            return TodoTaskInfoResult(success=False, error="source_id is required")
+        if not org_id:
+            return TodoTaskInfoResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import fetch_todo_task_by_source_id
+
+        app_token = await self._get_token()
+        return await fetch_todo_task_by_source_id(
+            self._config,
+            app_token=app_token,
+            source_id=source_id,
+            org_id=org_id,
+            staff_id=staff_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_todo_task_by_id(
+        self,
+        todotask_id: str,
+        org_id: str,
+        *,
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskInfoResult:
+        """Fetch todo task by todotaskId (4.33.7)."""
+        if not todotask_id:
+            return TodoTaskInfoResult(success=False, error="todotask_id is required")
+        if not org_id:
+            return TodoTaskInfoResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import fetch_todo_task_by_id
+
+        app_token = await self._get_token()
+        return await fetch_todo_task_by_id(
+            self._config,
+            app_token=app_token,
+            todotask_id=todotask_id,
+            org_id=org_id,
+            staff_id=staff_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_todo_task_status_counts(
+        self,
+        staff_id: str,
+        org_id: str,
+        *,
+        app_id: str = "",
+        status_list: Optional[List[str]] = None,
+        user_token: str = "",
+    ) -> TodoTaskStatusCountResult:
+        """Fetch todo task status counts (4.33.9)."""
+        if not staff_id:
+            return TodoTaskStatusCountResult(success=False, error="staff_id is required")
+        if not org_id:
+            return TodoTaskStatusCountResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import fetch_todo_task_status_counts
+
+        app_token = await self._get_token()
+        return await fetch_todo_task_status_counts(
+            self._config,
+            app_token=app_token,
+            staff_id=staff_id,
+            org_id=org_id,
+            app_id=app_id,
+            status_list=status_list,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def update_executor_status(
+        self,
+        executor_status_list: List[Dict[str, str]],
+        org_id: str,
+        *,
+        todotask_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskCreateResult:
+        """Update executor status for a todo task (4.33.10)."""
+        if not executor_status_list:
+            return TodoTaskCreateResult(success=False, error="executor_status_list is required")
+        if not org_id:
+            return TodoTaskCreateResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import update_executor_status
+
+        app_token = await self._get_token()
+        return await update_executor_status(
+            self._config,
+            app_token=app_token,
+            executor_status_list=executor_status_list,
+            org_id=org_id,
+            todotask_id=todotask_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def add_executors(
+        self,
+        executor_ids: List[str],
+        org_id: str,
+        *,
+        todotask_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskCreateResult:
+        """Add executors to a todo task (4.33.11)."""
+        if not executor_ids:
+            return TodoTaskCreateResult(success=False, error="executor_ids is required")
+        if not org_id:
+            return TodoTaskCreateResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import add_executors
+
+        app_token = await self._get_token()
+        return await add_executors(
+            self._config,
+            app_token=app_token,
+            executor_ids=executor_ids,
+            org_id=org_id,
+            todotask_id=todotask_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def delete_executors(
+        self,
+        executor_ids: List[str],
+        org_id: str,
+        *,
+        todotask_id: str = "",
+        user_token: str = "",
+    ) -> TodoTaskCreateResult:
+        """Delete executors from a todo task (4.33.12)."""
+        if not executor_ids:
+            return TodoTaskCreateResult(success=False, error="executor_ids is required")
+        if not org_id:
+            return TodoTaskCreateResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import delete_executors
+
+        app_token = await self._get_token()
+        return await delete_executors(
+            self._config,
+            app_token=app_token,
+            executor_ids=executor_ids,
+            org_id=org_id,
+            todotask_id=todotask_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_executor_list(
+        self,
+        todotask_id: str,
+        org_id: str,
+        *,
+        staff_id: str = "",
+        status_list: Optional[List[str]] = None,
+        user_token: str = "",
+    ) -> TodoTaskExecutorListResult:
+        """Fetch executor list for a todo task (4.33.13)."""
+        if not todotask_id:
+            return TodoTaskExecutorListResult(success=False, error="todotask_id is required")
+        if not org_id:
+            return TodoTaskExecutorListResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .todos import fetch_executor_list
+
+        app_token = await self._get_token()
+        return await fetch_executor_list(
+            self._config,
+            app_token=app_token,
+            todotask_id=todotask_id,
+            org_id=org_id,
+            staff_id=staff_id,
+            status_list=status_list,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Calendar & Schedule (4.23) ──────────────────────────
+
+    async def fetch_primary_calendar(
+        self,
+        *,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> CalendarPrimaryResult:
+        """Get the primary calendar (4.23.9)."""
+        self._ensure_clients()
+        from .calendars import fetch_primary_calendar
+
+        app_token = await self._get_token()
+        return await fetch_primary_calendar(
+            self._config,
+            app_token=app_token,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def create_schedule(
+        self,
+        calendar_id: str,
+        summary: str,
+        start_time: dict,
+        end_time: dict,
+        attendees: List[Dict[str, str]],
+        *,
+        description: str = "",
+        all_day: str = "no",
+        repeat_type: str = "no",
+        rule: str = "",
+        expire_date_type: str = "no",
+        reminder_type: str = "yes",
+        attendee_permissions: str = "can_see",
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleCreateResult:
+        """Create a schedule/event (4.23.10)."""
+        if not calendar_id:
+            return ScheduleCreateResult(success=False, error="calendar_id is required")
+        if not summary:
+            return ScheduleCreateResult(success=False, error="summary is required")
+        self._ensure_clients()
+        from .calendars import create_schedule
+
+        app_token = await self._get_token()
+        return await create_schedule(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            summary=summary,
+            start_time=start_time,
+            end_time=end_time,
+            attendees=attendees,
+            description=description,
+            all_day=all_day,
+            repeat_type=repeat_type,
+            rule=rule,
+            expire_date_type=expire_date_type,
+            reminder_type=reminder_type,
+            attendee_permissions=attendee_permissions,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def fetch_schedule(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleInfoResult:
+        """Query a schedule (4.23.11)."""
+        if not calendar_id:
+            return ScheduleInfoResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleInfoResult(success=False, error="schedule_id is required")
+        self._ensure_clients()
+        from .calendars import fetch_schedule
+
+        app_token = await self._get_token()
+        return await fetch_schedule(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def delete_schedule(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        reminder_type: str = "no",
+        operation_type: str = "delete_all",
+        current_time: int = 0,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleCreateResult:
+        """Delete a schedule (4.23.13)."""
+        if not calendar_id:
+            return ScheduleCreateResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleCreateResult(success=False, error="schedule_id is required")
+        self._ensure_clients()
+        from .calendars import delete_schedule
+
+        app_token = await self._get_token()
+        return await delete_schedule(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            reminder_type=reminder_type,
+            operation_type=operation_type,
+            current_time=current_time,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def fetch_schedule_list(
+        self,
+        calendar_id: str,
+        start_time: int,
+        end_time: int,
+        *,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleListResult:
+        """Get schedule list in a time range (4.23.14)."""
+        if not calendar_id:
+            return ScheduleListResult(success=False, error="calendar_id is required")
+        if not start_time or not end_time:
+            return ScheduleListResult(success=False, error="start_time and end_time are required")
+        self._ensure_clients()
+        from .calendars import fetch_schedule_list
+
+        app_token = await self._get_token()
+        return await fetch_schedule_list(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            start_time=start_time,
+            end_time=end_time,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def fetch_schedule_attendees(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        page: int = 1,
+        page_size: int = 500,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleAttendeesResult:
+        """Get schedule attendee list (4.23.15)."""
+        if not calendar_id:
+            return ScheduleAttendeesResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleAttendeesResult(success=False, error="schedule_id is required")
+        self._ensure_clients()
+        from .calendars import fetch_schedule_attendees
+
+        app_token = await self._get_token()
+        return await fetch_schedule_attendees(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            page=page,
+            page_size=page_size,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def add_schedule_attendees(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        attendees: List[str],
+        *,
+        reminder_type: str = "yes",
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleCreateResult:
+        """Add attendees to a schedule (4.23.16)."""
+        if not calendar_id:
+            return ScheduleCreateResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleCreateResult(success=False, error="schedule_id is required")
+        if not attendees:
+            return ScheduleCreateResult(success=False, error="attendees is required")
+        self._ensure_clients()
+        from .calendars import add_schedule_attendees
+
+        app_token = await self._get_token()
+        return await add_schedule_attendees(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            attendees=attendees,
+            reminder_type=reminder_type,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def delete_schedule_attendees(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        attendees: List[str],
+        *,
+        reminder_type: str = "no",
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleCreateResult:
+        """Delete attendees from a schedule (4.23.18)."""
+        if not calendar_id:
+            return ScheduleCreateResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleCreateResult(success=False, error="schedule_id is required")
+        if not attendees:
+            return ScheduleCreateResult(success=False, error="attendees is required")
+        self._ensure_clients()
+        from .calendars import delete_schedule_attendees
+
+        app_token = await self._get_token()
+        return await delete_schedule_attendees(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            attendees=attendees,
+            reminder_type=reminder_type,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    # ── Utility: Callback event parsing ───────────────────────────────
+
+    @staticmethod
+    def parse_callback_payload(
+        encrypted_data: str,
+        *,
+        encoding_key: str = "",
+        verify_signature: bool = False,
+        timestamp: str = "",
+        nonce: str = "",
+        signature: str = "",
+    ) -> list:
+        from .callbacks import parse_callback_payload
+
+        return parse_callback_payload(
+            encrypted_data,
+            encoding_key=encoding_key,
+            verify_signature=verify_signature,
+            timestamp=timestamp,
+            nonce=nonce,
+            signature=signature,
+        )
+
+    @staticmethod
+    def verify_callback_signature(
+        timestamp: str,
+        nonce: str,
+        signature: str,
+        encoding_key: str,
+    ) -> bool:
+        from .callbacks import verify_callback_signature
+
+        return verify_callback_signature(timestamp, nonce, signature, encoding_key)
+
+    @staticmethod
+    def get_callback_event_types() -> dict:
+        from .callbacks import CALLBACK_EVENT_TYPES
+
+        return CALLBACK_EVENT_TYPES
