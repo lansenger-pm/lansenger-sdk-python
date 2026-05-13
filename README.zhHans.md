@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 268](https://img.shields.io/badge/Tests-268-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 296](https://img.shields.io/badge/Tests-296-green)](https://github.com/lansenger-pm/lansenger-skills-official)
 
 > 💠 零框架依赖 — 仅依赖 `httpx`。兼容任何异步或同步 Python 项目。
 
@@ -23,6 +23,7 @@
 ## 功能特性
 
 - **异步与同步客户端** — `LansengerClient`（异步）+ `LansengerSyncClient`（阻塞）
+- **凭据与令牌持久化** — `CredentialStore` 将 app_id、app_secret、URL、appToken、userToken 保存到文件（重启后不丢失）
 - **OAuth2 用户认证** — 授权 URL、code 换取、令牌刷新
 - **组织与部门** — 组织信息、部门详情/子部门/员工列表
 - **员工与通讯录** — 基础/详细信息、ID 映射、部门祖辈链、搜索
@@ -34,7 +35,7 @@
 - **群组** — 创建、信息、成员、列表、成员检查、更新设置与成员
 - **日历与日程** — 主日历、日程 CRUD、参会人管理
 - **统一待办** — 创建、更新、删除、查询、执行人管理、状态计数
-- **回调事件** — 26 种事件类型、载荷解析、签名验证
+- **回调事件** — 25 种事件类型、结构化数据解析、签名验证
 
 ## 快速安装
 
@@ -352,7 +353,30 @@ types = client.get_callback_event_types()  # 14 个类别下的 26 种事件类�
 | `LANSENGER_API_GATEWAY_URL` | ✗ | API 网关 URL | `https://open.e.lanxin.cn/open/apigw` |
 | `LANSENGER_PASSPORT_URL` | ✗ | 通行证 URL（用于 OAuth2） | — |
 
-### 同步客户端
+### 凭据与令牌持久化
+
+默认情况下，凭据和令牌仅保存在内存中（进程退出即丢失）。通过 `store_path` 开启文件持久化：
+
+```python
+from lansenger_sdk import LansengerClient, CredentialStore
+
+# 持久化到 ~/.lansenger/sdk_state.json（0600 权限）
+client = LansengerClient(app_id="...", app_secret="...", store_path="~/.lansenger/sdk_state.json")
+
+# 或从环境变量创建并持久化
+client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
+
+# 手动操作存储
+store = CredentialStore(path="~/.lansenger/sdk_state.json")
+store.save_credentials("app_id", "app_secret", api_gateway_url="...", passport_url="...")
+store.save_user_token("user_token", refresh_token="refresh_token")
+token = store.load_app_token()  # 过期则返回 None
+```
+
+开启持久化后：
+- **appToken** 每次获取后自动保存，重启时复用（避免重复请求）
+- **userToken + refreshToken** 在 OAuth2 换取后自动保存
+- **凭据 + URL** 一同保存，完整恢复配置
 
 `LansengerSyncClient` 提供所有方法，签名完全一致（阻塞式）：
 
@@ -385,12 +409,13 @@ lansenger-skills-official/
 │   ├── group_messages.py    # 群聊通道
 │   ├── media.py             # 上传/下载
 │   ├── streaming.py         # SSE 流式推送
+│   ├── persistence.py       # CredentialStore — 凭据与令牌文件持久化
 │   ├── callbacks.py         # 回调事件
 │   ├── groups.py            # 群组 API
 │   ├── todos.py             # 统一待办
 │   ├── calendars.py         # 日历与日程
 │   └── users.py             # 用户信息
-├── tests/                   # 268 项测试，全部通过
+├── tests/                   # 296 项测试，全部通过
 ├── skills/                  # 9 项技能文档 + manifest
 ├── pyproject.toml
 └── README*.md               # 5 语言 README

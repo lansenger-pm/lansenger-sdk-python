@@ -6,7 +6,7 @@ Framework-independent Python SDK for the Lansenger (蓝信) platform — support
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 268](https://img.shields.io/badge/Tests-268-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 296](https://img.shields.io/badge/Tests-296-green)](https://github.com/lansenger-pm/lansenger-skills-official)
 
 > 💠 Zero framework dependencies — only `httpx`. Works with any async or sync Python codebase.
 
@@ -23,6 +23,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 ## Features
 
 - **Async & Sync clients** — `LansengerClient` (async) + `LansengerSyncClient` (blocking)
+- **Credential & token persistence** — `CredentialStore` saves app_id, app_secret, URLs, appToken, userToken to file (survives restarts)
 - **OAuth2 user authentication** — authorize URL, code exchange, token refresh
 - **Organization & departments** — org info, department detail/children/staff
 - **Staff & contacts** — basic/detailed info, ID mapping, department ancestors, search
@@ -34,7 +35,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Groups** — create, info, members, list, membership check, update settings & members
 - **Calendar & schedule** — primary calendar, schedule CRUD, attendee management
 - **Unified todo** — create, update, delete, query, executor management, status counts
-- **Callback events** — 26 event types, payload parsing, signature verification
+- **Callback events** — 25 event types, structured data parsing, signature verification
 
 ## Quick Install
 
@@ -352,6 +353,31 @@ types = client.get_callback_event_types()  # 26 event types across 14 categories
 | `LANSENGER_API_GATEWAY_URL` | ✗ | API Gateway URL | `https://open.e.lanxin.cn/open/apigw` |
 | `LANSENGER_PASSPORT_URL` | ✗ | Passport URL (for OAuth2) | — |
 
+### Credential & Token Persistence
+
+By default, credentials and tokens stay in memory only (lost on process exit). Enable file persistence with `store_path`:
+
+```python
+from lansenger_sdk import LansengerClient, CredentialStore
+
+# Auto-persist to ~/.lansenger/sdk_state.json (0600 permissions)
+client = LansengerClient(app_id="...", app_secret="...", store_path="~/.lansenger/sdk_state.json")
+
+# Or from env with persistence
+client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
+
+# Manual store operations
+store = CredentialStore(path="~/.lansenger/sdk_state.json")
+store.save_credentials("app_id", "app_secret", api_gateway_url="...", passport_url="...")
+store.save_user_token("user_token", refresh_token="refresh_token")
+token = store.load_app_token()  # None if expired
+```
+
+When persistence is enabled:
+- **appToken** is saved after each API fetch and restored on restart (skips redundant API calls)
+- **userToken + refreshToken** are saved after OAuth2 exchange
+- **Credentials + URLs** are saved together for full config recovery
+
 ### Sync Client
 
 All methods available on `LansengerSyncClient` with identical signatures (blocking):
@@ -385,12 +411,13 @@ lansenger-skills-official/
 │   ├── group_messages.py    # Group chat channel
 │   ├── media.py             # Upload/download
 │   ├── streaming.py         # SSE streaming
+│   ├── persistence.py       # CredentialStore — file-based token & credential persistence
 │   ├── callbacks.py         # Callback events
 │   ├── groups.py            # Group APIs
 │   ├── todos.py             # Unified Todo
 │   ├── calendars.py         # Calendar & Schedule
 │   └── users.py             # User info
-├── tests/                   # 268 tests, all passing
+├── tests/                   # 296 tests, all passing
 ├── skills/                  # 9 skill docs + manifest
 ├── pyproject.toml
 └── README*.md               # 5-language READMEs

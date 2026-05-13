@@ -6,7 +6,7 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 268](https://img.shields.io/badge/Tests-268-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 296](https://img.shields.io/badge/Tests-296-green)](https://github.com/lansenger-pm/lansenger-skills-official)
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
@@ -23,6 +23,7 @@ Les trois types de bots utilisent le même mécanisme d'authentification : `appT
 ## Fonctionnalités
 
 - **Clients async & sync** — `LansengerClient` (async) + `LansengerSyncClient` (bloquant)
+- **Persistance des identifiants & tokens** — `CredentialStore` sauvegarde app_id, app_secret, URLs, appToken, userToken dans un fichier (survit aux redémarrages)
 - **Authentification utilisateur OAuth2** — URL d'autorisation, échange de code, refresh de token
 - **Organisation & départements** — infos org, détail/children/staff de département
 - **Staff & contacts** — infos basiques/détaillées, mapping d'ID, ancêtres de département, recherche
@@ -34,7 +35,7 @@ Les trois types de bots utilisent le même mécanisme d'authentification : `appT
 - **Groups** — créer, infos, membres, liste, vérification de membership, mise à jour des paramètres & membres
 - **Calendrier & Schedule** — calendrier principal, CRUD de schedule, gestion des participants
 - **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
-- **Événements de callback** — 26 types d'événements, parsing de payload, vérification de signature
+- **Événements de callback** — 25 types d'événements, parsing structuré, vérification de signature
 
 ## Installation rapide
 
@@ -352,7 +353,30 @@ types = client.get_callback_event_types()  # 26 types d'événements sur 14 cat�
 | `LANSENGER_API_GATEWAY_URL` | ✗ | URL de la passerelle API | `https://open.e.lanxin.cn/open/apigw` |
 | `LANSENGER_PASSPORT_URL` | ✗ | URL Passport (pour OAuth2) | — |
 
-### Client sync
+### Persistance des identifiants & tokens
+
+Par défaut, les identifiants et tokens restent en mémoire uniquement (perdus à la sortie du processus). Activez la persistance fichier avec `store_path` :
+
+```python
+from lansenger_sdk import LansengerClient, CredentialStore
+
+# Persistance auto vers ~/.lansenger/sdk_state.json (permissions 0600)
+client = LansengerClient(app_id="...", app_secret="...", store_path="~/.lansenger/sdk_state.json")
+
+# Ou depuis les variables d'environnement avec persistance
+client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
+
+# Opérations manuelles sur le store
+store = CredentialStore(path="~/.lansenger/sdk_state.json")
+store.save_credentials("app_id", "app_secret", api_gateway_url="...", passport_url="...")
+store.save_user_token("user_token", refresh_token="refresh_token")
+token = store.load_app_token()  # None si expiré
+```
+
+Avec la persistance activée :
+- **appToken** est sauvegardé après chaque fetch et restauré au redémarrage (évite les appels API redondants)
+- **userToken + refreshToken** sont sauvegardés après l'échange OAuth2
+- **Identifiants + URLs** sont sauvegardés ensemble pour une récupération complète
 
 Toutes les méthodes sont disponibles sur `LansengerSyncClient` avec des signatures identiques (bloquant) :
 
