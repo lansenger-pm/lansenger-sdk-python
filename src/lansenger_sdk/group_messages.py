@@ -11,7 +11,7 @@ Sender identity is determined by auth:
 - Without user_token, with senderId: message appears from the specified person
 - Without both: message appears from the application bot (requires bot capability)
 
-Supported msgType: text, oacard (only these two for group messages)
+Supported msgType: all developer-accessible types (text, formatText, oacard, appCard, linkCard, appArticles, verifyCard, i18nAppCard, i18nSystemAction, i18nSystem)
 
 Key fields:
 - groupId: target group openId (required)

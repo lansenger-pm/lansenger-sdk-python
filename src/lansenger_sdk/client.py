@@ -3,16 +3,9 @@
 This is the core SDK client. It provides all Lansenger Smart Bot API
 operations as async methods, with zero dependency on any agent framework.
 
-Lansenger (蓝信) has multiple message types with different capabilities:
-
-  ┌──────────────┬──────────────┬──────────────┬──────────────┐
-  │  msgType     │  Markdown    │  @mention    │  Attachments │
-  ├──────────────┼──────────────┼──────────────┼──────────────┤
-  │  text        │  ✗           │  ✓           │  ✓           │
-  │  formatText  │  ✓           │  ✗           │  ✗           │
-  │  appArticles │  ✗           │  ✗           │  ✗           │
-  │  appCard     │  ✗ (div)     │  ✗           │  ✗           │
-  └──────────────┴──────────────┴──────────────┴──────────────┘
+Lansenger (蓝信) has multiple message types with different capabilities.
+Developer-accessible msgType: text, formatText, oacard, appCard, linkCard,
+appArticles, verifyCard, i18nAppCard, i18nSystemAction, i18nSystem.
 
 This constraint shapes the API:
 - send_text:       msgType=text   → plain text + optional file/image/video
@@ -1543,7 +1536,7 @@ class LansengerClient:
         - Without user_token, with sender_id: appears from specified person
         - Without both: appears from the bot
 
-        Only text and oacard msgType are supported in group messages.
+        Group chat supports all developer-accessible msgType.
         Only group messages support @mentions (reminder).
 
         Args:
