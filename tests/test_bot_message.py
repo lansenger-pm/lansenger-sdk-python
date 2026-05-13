@@ -25,19 +25,7 @@ async def test_send_bot_message_no_msg_type():
         chat_ids=["user1"],
     )
     assert result.success is False
-    assert "msg_type must be one of" in result.error
-    await client.close()
-
-
-@pytest.mark.asyncio
-async def test_send_bot_message_invalid_msg_type():
-    client = LansengerClient(app_id="id", app_secret="secret")
-    result = await client.send_bot_message(
-        msg_type="invalidType", msg_data={"text": {"content": "hi"}},
-        chat_ids=["user1"],
-    )
-    assert result.success is False
-    assert "msg_type must be one of" in result.error
+    assert "msg_type is required" in result.error
     await client.close()
 
 

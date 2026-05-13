@@ -24,15 +24,15 @@ async def test_send_account_message_no_chat_ids_or_department_ids():
 
 
 @pytest.mark.asyncio
-async def test_send_account_message_invalid_msg_type():
+async def test_send_account_message_no_msg_type():
     config = _make_config()
     result = await send_account_message(
         config, app_token="token",
-        msg_type="formatText", msg_data={"formatText": {"text": "hi"}},
+        msg_type="", msg_data={"text": {"content": "hi"}},
         chat_ids=["user1"],
     )
     assert result.success is False
-    assert "msg_type must be one of" in result.error
+    assert "msg_type is required" in result.error
 
 
 @pytest.mark.asyncio
@@ -130,14 +130,14 @@ async def test_client_send_account_message_validation():
 
 
 @pytest.mark.asyncio
-async def test_client_send_account_message_invalid_msg_type():
+async def test_client_send_account_message_no_msg_type():
     client = LansengerClient(app_id="id", app_secret="secret")
     result = await client.send_account_message(
-        msg_type="formatText", msg_data={"text": {"content": "hi"}},
+        msg_type="", msg_data={"text": {"content": "hi"}},
         chat_ids=["user1"],
     )
     assert result.success is False
-    assert "msg_type must be one of" in result.error
+    assert "msg_type is required" in result.error
     await client.close()
 
 

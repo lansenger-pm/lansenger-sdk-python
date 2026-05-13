@@ -6,7 +6,7 @@ account) or entryId (which app entry's associated public account).
 
 Endpoint: POST /v1/messages/create?app_token=TOKEN&user_token=TOKEN
 
-Supported msgType: text, oacard, linkCard, appCard, verifyCard
+Supported msgType: all developer-accessible types
 
 Key fields:
 - userIdList / departmentIdList / tagUnitList: recipient targeting
@@ -48,7 +48,7 @@ async def send_account_message(
     Args:
         config: LansengerConfig.
         app_token: Bot's appToken.
-        msg_type: Message type — text, oacard, linkCard, appCard, verifyCard.
+        msg_type: Message type (all developer-accessible types supported).
         msg_data: Message body dict (msgData field).
         chat_ids: Recipient user openId list.
         department_ids: Recipient department openId list.
@@ -58,11 +58,8 @@ async def send_account_message(
         user_token: Optional userToken.
         http_client: Optional httpx client.
     """
-    valid_msg_types = ("text", "oacard", "linkCard", "appCard", "verifyCard")
-    if msg_type not in valid_msg_types:
-        return AccountMessageResult(
-            success=False, error=f"msg_type must be one of: {', '.join(valid_msg_types)}"
-        )
+    if not msg_type:
+        return AccountMessageResult(success=False, error="msg_type is required")
     if not chat_ids and not department_ids:
         return AccountMessageResult(
             success=False, error="at least one of chat_ids or department_ids is required"

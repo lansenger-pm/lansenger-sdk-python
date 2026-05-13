@@ -1375,9 +1375,8 @@ class LansengerClient:
         self._ensure_clients()
         if not chat_ids and not department_ids:
             return BotMessageResult(success=False, error="at least one of chat_ids or department_ids is required")
-        valid_msg_types = ("text", "oacard", "linkCard", "appCard", "verifyCard")
-        if msg_type not in valid_msg_types:
-            return BotMessageResult(success=False, error=f"msg_type must be one of: {', '.join(valid_msg_types)}")
+        if not msg_type:
+            return BotMessageResult(success=False, error="msg_type is required")
         if not msg_data:
             return BotMessageResult(success=False, error="msg_data is required")
         token = await self._get_token()
@@ -1431,7 +1430,7 @@ class LansengerClient:
         The sender identity is determined by accountId or entryId.
 
         Args:
-            msg_type: text, oacard, linkCard, appCard, verifyCard.
+            msg_type: Message type (all developer-accessible types supported).
             msg_data: Message body dict (msgData field).
             chat_ids: Recipient user openId list.
             department_ids: Recipient department openId list.
@@ -1442,9 +1441,8 @@ class LansengerClient:
         """
         if not chat_ids and not department_ids:
             return AccountMessageResult(success=False, error="at least one of chat_ids or department_ids is required")
-        valid_msg_types = ("text", "oacard", "linkCard", "appCard", "verifyCard")
-        if msg_type not in valid_msg_types:
-            return AccountMessageResult(success=False, error=f"msg_type must be one of: {', '.join(valid_msg_types)}")
+        if not msg_type:
+            return AccountMessageResult(success=False, error="msg_type is required")
         if not msg_data:
             return AccountMessageResult(success=False, error="msg_data is required")
         self._ensure_clients()
