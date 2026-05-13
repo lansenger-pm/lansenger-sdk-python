@@ -55,7 +55,7 @@ async def send_group_message(
         config: LansengerConfig.
         app_token: Bot's appToken.
         group_id: Group openId (required).
-        msg_type: Message type — text or oacard only.
+        msg_type: Message type (all developer-accessible types supported).
         msg_data: Message body dict (msgData field).
         user_token: Optional userToken — determines sender identity as human.
         sender_id: Optional sender openId — used if no user_token.
