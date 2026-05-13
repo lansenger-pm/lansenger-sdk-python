@@ -64,11 +64,8 @@ async def send_group_message(
         entry_id: Optional app entry selector.
         http_client: Optional httpx client.
     """
-    valid_msg_types = ("text", "oacard")
-    if msg_type not in valid_msg_types:
-        return SendMessageResult(
-            success=False, error=f"group msg_type must be one of: {', '.join(valid_msg_types)}"
-        )
+    if not msg_type:
+        return SendMessageResult(success=False, error="msg_type is required")
     if not group_id:
         return SendMessageResult(success=False, error="group_id is required")
     if not msg_data:

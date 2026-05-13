@@ -24,15 +24,15 @@ async def test_send_group_message_no_group_id():
 
 
 @pytest.mark.asyncio
-async def test_send_group_message_invalid_msg_type():
+async def test_send_group_message_no_msg_type():
     config = _make_config()
     result = await send_group_message(
         config, app_token="token",
-        group_id="grp1", msg_type="appCard",
-        msg_data={"appCard": {"bodyTitle": "hi"}},
+        group_id="grp1", msg_type="",
+        msg_data={"text": {"content": "hi"}},
     )
     assert result.success is False
-    assert "group msg_type must be one of" in result.error
+    assert "msg_type is required" in result.error
 
 
 @pytest.mark.asyncio
@@ -187,14 +187,14 @@ async def test_client_send_group_message_validation():
 
 
 @pytest.mark.asyncio
-async def test_client_send_group_message_invalid_msg_type():
+async def test_client_send_group_message_no_msg_type():
     client = LansengerClient(app_id="id", app_secret="secret")
     result = await client.send_group_message(
-        group_id="grp1", msg_type="appCard",
+        group_id="grp1", msg_type="",
         msg_data={"appCard": {"bodyTitle": "hi"}},
     )
     assert result.success is False
-    assert "group msg_type must be one of" in result.error
+    assert "msg_type is required" in result.error
     await client.close()
 
 
@@ -208,3 +208,26 @@ async def test_client_send_group_message_no_msg_data():
     assert result.success is False
     assert "msg_data is required" in result.error
     await client.close()
+
+
+@pytest.mark.asyncio
+async def test_send_group_message_app_card():
+    config = _make_config()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = MagicMock(return_value={
+        "errCode": 0,
+        "data": {"msgId": "grpmsg4"},
+    })
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    result = await send_group_message(
+        config, app_token="token",
+        group_id="grp1", msg_type="appCard",
+        msg_data={"appCard": {"bodyTitle": "Approval"}},
+        http_client=mock_client,
+    )
+    assert result.success is True
+    assert result.message_id == "grpmsg4"

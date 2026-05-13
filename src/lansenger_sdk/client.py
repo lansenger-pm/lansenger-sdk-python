@@ -1548,7 +1548,7 @@ class LansengerClient:
 
         Args:
             group_id: Group openId.
-            msg_type: text or oacard only.
+            msg_type: Message type (text, oacard, linkCard, appCard, formatText, appArticles, verifyCard, etc.).
             msg_data: Message body dict.
             user_token: Optional — makes sender appear as human.
             sender_id: Optional — explicit sender openId (used if no user_token).
@@ -1556,11 +1556,8 @@ class LansengerClient:
             uuid: Optional deduplication key.
             entry_id: Optional app entry selector.
         """
-        valid_msg_types = ("text", "oacard")
-        if msg_type not in valid_msg_types:
-            return SendMessageResult(
-                success=False, error=f"group msg_type must be one of: {', '.join(valid_msg_types)}"
-            )
+        if not msg_type:
+            return SendMessageResult(success=False, error="msg_type is required")
         if not group_id:
             return SendMessageResult(success=False, error="group_id is required")
         if not msg_data:
