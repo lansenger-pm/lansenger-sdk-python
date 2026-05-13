@@ -335,11 +335,6 @@ types = client.get_callback_event_types()  # 26 event types across 14 categories
 | `linkCard` | ✗ | ✗ | ✗ | Bot, Official Account | ✓ | Link preview card |
 | `appArticles` | ✗ | ✗ | ✗ | Bot private only | ✓ | Article list (1+ articles) |
 | `verifyCard` | ✗ | ✗ | ✗ | Bot, Official Account | ✓ | Verification card with buttons |
-| `system` | ✗ | ✗ | ✗ | Platform internal | ✓ | System notification |
-| `systemAction` | ✗ | ✗ | ✗ | Platform internal | ✓ | System action with icon |
-| `redPacket` | ✗ | ✗ | ✗ | Platform internal | ✓ | Red packet (gift money) |
-| `transferOrder` | ✗ | ✗ | ✗ | Platform internal | ✓ | Transfer notification |
-| `document` | ✗ | ✗ | ✗ | Platform internal | ✓ | Document card |
 | `i18nAppCard` | ✓ (div tags) | ✗ | ✗ | Bot, Official Account, User Impersonate | ✓ | Multilingual appCard (zhHans/zhHant/zhHantHK/en/fr) |
 | `i18nSystemAction` | ✗ | ✗ | ✗ | Platform internal | ✓ | Multilingual systemAction |
 | `i18nSystem` | ✗ | ✗ | ✗ | Platform internal | ✓ | Multilingual system message |

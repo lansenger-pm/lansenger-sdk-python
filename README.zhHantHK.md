@@ -335,11 +335,6 @@ types = client.get_callback_event_types()  # 14 個類別共 26 種事件類型
 | `linkCard` | ✗ | ✗ | ✗ | 機械人、公眾號 | ✓ | 連結預覽卡片 |
 | `appArticles` | ✗ | ✗ | ✗ | 僅機械人私聊 | ✓ | 文章列表（1+篇） |
 | `verifyCard` | ✗ | ✗ | ✗ | 機械人、公眾號 | ✓ | 驗證卡片含按鈕 |
-| `system` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統通知 |
-| `systemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 系統操作含圖標 |
-| `redPacket` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 紅包 |
-| `transferOrder` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 轉帳通知 |
-| `document` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 公文卡片 |
 | `i18nAppCard` | ✓(div) | ✗ | ✗ | 機械人、公眾號、人→人 | ✓ | 多語 appCard |
 | `i18nSystemAction` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統操作 |
 | `i18nSystem` | ✗ | ✗ | ✗ | 平台內部 | ✓ | 多語系統訊息 |
