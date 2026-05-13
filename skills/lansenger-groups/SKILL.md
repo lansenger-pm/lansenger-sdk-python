@@ -2,7 +2,6 @@
 name: lansenger-groups
 description: Lansenger group V2 APIs — create groups, fetch group info/members, list groups, check membership, update group settings and members
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger

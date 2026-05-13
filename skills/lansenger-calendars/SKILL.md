@@ -2,7 +2,6 @@
 name: lansenger-calendars
 description: Lansenger calendar/schedule APIs — fetch primary calendar, create/query/delete schedules, manage attendees
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger

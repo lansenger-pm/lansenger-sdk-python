@@ -2,7 +2,6 @@
 name: lansenger-callbacks
 description: Lansenger callback event parsing — 25 event types across 14 categories, structured dataclass parsing, payload parsing, signature verification
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger

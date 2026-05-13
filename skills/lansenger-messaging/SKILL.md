@@ -2,7 +2,6 @@
 name: lansenger-messaging
 description: Lansenger messaging strategy — understand 3 messaging channels (bot/private/account), text/formatText/appCard/appArticles capability boundaries, and SDK method selection
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger

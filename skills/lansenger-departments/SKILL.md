@@ -2,7 +2,6 @@
 name: lansenger-departments
 description: Lansenger department APIs — navigate org hierarchy, fetch department detail/children, and list department staff
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger

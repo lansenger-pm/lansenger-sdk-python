@@ -2,7 +2,6 @@
 name: lansenger-oauth
 description: Lansenger OAuth2 user authentication flow — build authorize URL, exchange code for userToken, refresh userToken, fetch user info, and the appToken/userToken hierarchy
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger

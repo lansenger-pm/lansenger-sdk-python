@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lansenger-sdk"
-version = "1.0.0"
+version = "1.0.1"
 description = "Framework-independent Python SDK for Lansenger (蓝信) Smart Bot API — send messages, files, images, cards, manage messages"
-readme = "README.md"
+readme = "README.pypi.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
@@ -40,5 +40,5 @@ where = ["src"]
 lansenger_sdk = ["py.typed"]
 
 [project.urls]
-Homepage = "https://github.com/lansenger-pm/lansenger-sdk"
-Repository = "https://github.com/lansenger-pm/lansenger-sdk"
+Homepage = "https://github.com/lansenger-pm/lansenger-skills-official"
+Repository = "https://github.com/lansenger-pm/lansenger-skills-official"

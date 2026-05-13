@@ -2,7 +2,6 @@
 name: lansenger-todos
 description: Lansenger unified todo/task APIs — create, update, query, delete todo tasks, manage executors, and track status counts
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger

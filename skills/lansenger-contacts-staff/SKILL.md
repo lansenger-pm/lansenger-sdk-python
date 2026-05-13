@@ -2,7 +2,6 @@
 name: lansenger-contacts-staff
 description: Lansenger staff/contacts APIs — fetch staff basic/detailed info, department ancestors, ID mapping (phone/email→staffId), org extra fields, and staff search
 license: MIT
-compatibility: opencode
 metadata:
   sdk: lansenger-sdk
   platform: lansenger
