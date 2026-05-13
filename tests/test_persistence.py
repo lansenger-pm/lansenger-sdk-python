@@ -25,16 +25,21 @@ def test_credential_store_init(tmp_store):
 
 
 def test_credential_store_save_and_load_credentials(tmp_store):
-    tmp_store.save_credentials("app123", "secret456")
+    tmp_store.save_credentials("app123", "secret456", api_gateway_url="https://gw.example.com", passport_url="https://passport.example.com")
     creds = tmp_store.load_credentials()
     assert creds["app_id"] == "app123"
     assert creds["app_secret"] == "secret456"
+    assert creds["api_gateway_url"] == "https://gw.example.com"
+    assert creds["passport_url"] == "https://passport.example.com"
 
 
 def test_credential_store_has_credentials(tmp_store):
     assert tmp_store.has_credentials() is False
     tmp_store.save_credentials("app123", "secret456")
     assert tmp_store.has_credentials() is True
+    assert tmp_store.has_full_config() is False
+    tmp_store.save_credentials("app123", "secret456", api_gateway_url="https://gw.example.com")
+    assert tmp_store.has_full_config() is True
 
 
 def test_credential_store_load_empty(tmp_store):
@@ -83,11 +88,13 @@ def test_credential_store_file_permissions(tmp_store):
 
 
 def test_credential_store_preserves_state(tmp_store):
-    tmp_store.save_credentials("app1", "secret1")
+    tmp_store.save_credentials("app1", "secret1", api_gateway_url="https://gw.example.com", passport_url="https://pp.example.com")
     tmp_store.save_app_token("token1", expires_in=7200)
     state = tmp_store.load()
     assert state["app_id"] == "app1"
     assert state["app_secret"] == "secret1"
+    assert state["api_gateway_url"] == "https://gw.example.com"
+    assert state["passport_url"] == "https://pp.example.com"
     assert state["app_token"] == "token1"
 
 

@@ -64,18 +64,30 @@ class CredentialStore:
         logger.debug("Saved SDK state to %s", self._path)
 
     def load_credentials(self) -> Dict[str, str]:
-        """Load app_id and app_secret from store."""
+        """Load app_id, app_secret, api_gateway_url, passport_url from store."""
         state = self.load()
         return {
             "app_id": state.get("app_id", ""),
             "app_secret": state.get("app_secret", ""),
+            "api_gateway_url": state.get("api_gateway_url", ""),
+            "passport_url": state.get("passport_url", ""),
         }
 
-    def save_credentials(self, app_id: str, app_secret: str) -> None:
-        """Save app_id and app_secret to store."""
+    def save_credentials(
+        self,
+        app_id: str,
+        app_secret: str,
+        api_gateway_url: str = "",
+        passport_url: str = "",
+    ) -> None:
+        """Save app_id, app_secret, api_gateway_url, passport_url to store."""
         state = self.load()
         state["app_id"] = app_id
         state["app_secret"] = app_secret
+        if api_gateway_url:
+            state["api_gateway_url"] = api_gateway_url
+        if passport_url:
+            state["passport_url"] = passport_url
         self.save(state)
 
     def load_app_token(self) -> Optional[str]:
@@ -127,6 +139,11 @@ class CredentialStore:
             logger.debug("Cleared SDK state file %s", self._path)
 
     def has_credentials(self) -> bool:
-        """Check if stored credentials exist."""
+        """Check if stored credentials (app_id + app_secret) exist."""
         creds = self.load_credentials()
         return bool(creds["app_id"] and creds["app_secret"])
+
+    def has_full_config(self) -> bool:
+        """Check if stored credentials AND URLs exist."""
+        creds = self.load_credentials()
+        return bool(creds["app_id"] and creds["app_secret"] and creds["api_gateway_url"])
