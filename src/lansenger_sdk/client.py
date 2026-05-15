@@ -41,6 +41,11 @@ from .models import (
     AppCardParams,
     BotMessageResult,
     CalendarPrimaryResult,
+    ChatGroupInfo,
+    ChatListResult,
+    ChatMessageInfo,
+    ChatMessagesResult,
+    ChatStaffInfo,
     CreateGroupResult,
     DepartmentAncestorsResult,
     DepartmentChildrenResult,
@@ -334,33 +339,58 @@ class LansengerClient:
         self,
         chat_id: str,
         content: str,
+        *,
+        reminder_all: bool = False,
+        reminder_user_ids: Optional[List[str]] = None,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send a Markdown-formatted message (msgType=formatText).
 
         msgType=formatText supports: Markdown formatting (headings, bold,
         italic, code blocks, lists, links, tables).
-        Does NOT support: @mentions or file/image/video attachments.
 
-        If you need both Markdown AND a file, send them as two separate
-        messages: send_markdown() for formatted text, then send_file()
-        for the attachment.
+        If reminder fails, automatically retries without reminder.
 
         Args:
-            chat_id: Recipient user ID.
+            chat_id: Recipient user ID or group chat ID.
             content: Markdown-formatted content.
+            reminder_all: @mention all members in group chat.
+            reminder_user_ids: @mention specific user IDs in group chat.
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
         """
         if not chat_id:
             return SendMessageResult(success=False, error="chat_id is required")
         if not content:
             return SendMessageResult(success=False, error="content is required")
 
-        msg_data = {
-            "formatText": {
-                "formatType": 1,
-                "text": content,
-            }
-        }
-        return await self._send_private(chat_id, "formatText", msg_data)
+        reminder: Optional[Dict[str, Any]] = None
+        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0):
+            reminder = {"all": reminder_all, "userIds": reminder_user_ids or []}
+
+        fmt_data: Dict[str, Any] = {"formatType": 1, "text": content}
+        if reminder:
+            fmt_data["reminder"] = reminder
+
+        msg_data = {"formatText": fmt_data}
+
+        if is_group:
+            result = await self._send_group(chat_id, "formatText", msg_data, user_token=user_token, sender_id=sender_id)
+        else:
+            result = await self._send_private(chat_id, "formatText", msg_data)
+
+        if not result.success and reminder:
+            logger.info("send_markdown with reminder failed, retrying without reminder")
+            fmt_data_no_reminder = {"formatType": 1, "text": content}
+            msg_data_no_reminder = {"formatText": fmt_data_no_reminder}
+            if is_group:
+                return await self._send_group(chat_id, "formatText", msg_data_no_reminder, user_token=user_token, sender_id=sender_id)
+            return await self._send_private(chat_id, "formatText", msg_data_no_reminder)
+
+        return result
 
     async def send_file(
         self,
@@ -369,17 +399,25 @@ class LansengerClient:
         *,
         caption: str = "",
         media_type: Optional[int] = None,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send a local file/image/video (msgType=text, attachment only).
 
         Caption is plain text (no Markdown). If you need Markdown text
         alongside a file, use send_markdown() first, then send_file().
 
+        Files do NOT support @mention/reminder (even though msgType=text).
+
         Args:
-            chat_id: Recipient user ID.
+            chat_id: Recipient user ID or group chat ID.
             file_path: Path to the local file. Must exist on disk.
             caption: Optional plain-text caption.
             media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
         """
         self._ensure_clients()
 
@@ -410,6 +448,9 @@ class LansengerClient:
             "mediaIds": [upload_result.media_id],
         }
         msg_data = {"text": text_data}
+
+        if is_group:
+            return await self._send_group(chat_id, "text", msg_data, user_token=user_token, sender_id=sender_id)
         return await self._send_private(chat_id, "text", msg_data)
 
     async def send_image_url(
@@ -418,13 +459,19 @@ class LansengerClient:
         image_url: str,
         *,
         caption: str = "",
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send an image from a URL (download first, then upload to Lansenger).
 
         Args:
-            chat_id: Recipient user ID.
+            chat_id: Recipient user ID or group chat ID.
             image_url: URL of the image to download and send.
             caption: Optional plain-text caption (no Markdown).
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
         """
         self._ensure_clients()
 
@@ -455,7 +502,7 @@ class LansengerClient:
         os.close(fd)
 
         try:
-            result = await self.send_file(chat_id, temp_path, caption=caption, media_type=MEDIA_TYPE_IMAGE)
+            result = await self.send_file(chat_id, temp_path, caption=caption, media_type=MEDIA_TYPE_IMAGE, is_group=is_group, user_token=user_token, sender_id=sender_id)
             try:
                 os.remove(temp_path)
             except OSError:
@@ -479,11 +526,16 @@ class LansengerClient:
         pc_link: str = "",
         from_name: str = "",
         from_icon_link: str = "",
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send a linkCard message (rich link preview card).
 
+        linkCard does NOT support @mention/reminder.
+
         Args:
-            chat_id: Recipient user ID.
+            chat_id: Recipient user ID or group chat ID.
             title: Card title (required).
             link: Card click-through link (required).
             description: Card description text.
@@ -491,6 +543,9 @@ class LansengerClient:
             pc_link: PC client redirect link.
             from_name: Card source name.
             from_icon_link: Source icon image link.
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
         """
         if not chat_id:
             return SendMessageResult(success=False, error="chat_id is required")
@@ -510,6 +565,9 @@ class LansengerClient:
                 "fromIconLink": from_icon_link,
             }
         }
+
+        if is_group:
+            return await self._send_group(chat_id, "linkCard", msg_data, user_token=user_token, sender_id=sender_id)
         return await self._send_private(chat_id, "linkCard", msg_data)
 
     async def send_link_card_with_params(
@@ -526,14 +584,23 @@ class LansengerClient:
             pc_link=params.pc_link,
             from_name=params.from_name,
             from_icon_link=params.from_icon_link,
+            is_group=params.is_group,
+            user_token=params.user_token,
+            sender_id=params.sender_id,
         )
 
     async def send_app_articles(
         self,
         chat_id: str,
         articles: List[Dict[str, str]],
+        *,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send an appArticles (图文卡片) multi-article card.
+
+        appArticles does NOT support @mention/reminder.
 
         Each article dict must contain:
             - imgUrl (required): Image URL
@@ -543,8 +610,11 @@ class LansengerClient:
             Optional: summary
 
         Args:
-            chat_id: Recipient user ID.
+            chat_id: Recipient user ID or group chat ID.
             articles: List of article dicts (1+ entries).
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
         """
         if not chat_id:
             return SendMessageResult(success=False, error="chat_id is required")
@@ -552,6 +622,9 @@ class LansengerClient:
             return SendMessageResult(success=False, error="articles is required")
 
         msg_data = {"appArticles": articles}
+
+        if is_group:
+            return await self._send_group(chat_id, "appArticles", msg_data, user_token=user_token, sender_id=sender_id)
         return await self._send_private(chat_id, "appArticles", msg_data)
 
     async def send_app_card(
@@ -571,12 +644,17 @@ class LansengerClient:
         head_status_info: Optional[Dict[str, str]] = None,
         staff_id: str = "",
         head_icon_url: str = "",
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send an appCard (应用卡片) rich formatted card.
 
         appCard supports div-style HTML formatting (color, font-size,
         text-align, text-indent) in body_title, body_sub_title,
         body_content, and signature fields.
+
+        appCard does NOT support @mention/reminder.
 
         NOTE: appCard vs i18nAppCard:
         - appCard: supports isDynamic + headStatusInfo for in-place status
@@ -585,7 +663,7 @@ class LansengerClient:
           headStatusInfo.
 
         Args:
-            chat_id: Recipient user ID.
+            chat_id: Recipient user ID or group chat ID.
             body_title: Card body title (required, max 600 bytes).
             head_title: Card header title.
             body_sub_title: Card body subtitle (max 1200 bytes).
@@ -599,14 +677,14 @@ class LansengerClient:
             head_status_info: Dynamic card status dict (iconLink/description/colour).
             staff_id: Staff ID for sender avatar.
             head_icon_url: Header icon URL.
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
         """
         if not chat_id:
             return SendMessageResult(success=False, error="chat_id is required")
         if not body_title:
             return SendMessageResult(success=False, error="body_title is required for appCard")
-
-        token = await self._get_token()
-        url = self._private_msg_url(token)
 
         app_card_data: Dict[str, Any] = {
             "headTitle": head_title,
@@ -638,10 +716,18 @@ class LansengerClient:
         if links:
             app_card_data["links"] = links
 
+        msg_data = {"appCard": app_card_data}
+
+        if is_group:
+            return await self._send_group(chat_id, "appCard", msg_data, user_token=user_token, sender_id=sender_id)
+
+        token = await self._get_token()
+        url = self._private_msg_url(token)
+
         payload = {
             "userIdList": [chat_id],
             "msgType": "appCard",
-            "msgData": {"appCard": app_card_data},
+            "msgData": msg_data,
         }
 
         try:
@@ -679,6 +765,9 @@ class LansengerClient:
             head_status_info=params.head_status_info,
             staff_id=params.staff_id,
             head_icon_url=params.head_icon_url,
+            is_group=params.is_group,
+            user_token=params.user_token,
+            sender_id=params.sender_id,
         )
 
     # ── Public API: Dynamic card update ─────────────────────────────────
@@ -1388,8 +1477,58 @@ class LansengerClient:
         *,
         user_token: str = "",
         entry_id: str = "",
+        is_group: bool = False,
     ) -> BotMessageResult:
+        """Send a message via the bot channel (4.6.12).
+
+        Bot channel does NOT support @mention/reminder.
+
+        When is_group=True, chat_ids are treated as group IDs and sent
+        via the group message endpoint instead of the bot endpoint.
+
+        Args:
+            msg_type: Message type (all developer-accessible types).
+            msg_data: Message body dict.
+            chat_ids: Recipient user openId list (or group IDs if is_group=True).
+            department_ids: Recipient department openId list (bot channel only).
+            user_token: Optional userToken.
+            entry_id: Optional app entry selector.
+            is_group: True to send to groups via group message endpoint.
+        """
         self._ensure_clients()
+        if is_group:
+            if not chat_ids:
+                return BotMessageResult(success=False, error="chat_ids (group IDs) is required when is_group=True")
+            if not msg_type:
+                return BotMessageResult(success=False, error="msg_type is required")
+            if not msg_data:
+                return BotMessageResult(success=False, error="msg_data is required")
+            results = []
+            app_token = await self._get_token()
+            from .group_messages import send_group_message
+            for gid in chat_ids:
+                r = await send_group_message(
+                    self._config,
+                    app_token=app_token,
+                    group_id=gid,
+                    msg_type=msg_type,
+                    msg_data=msg_data,
+                    user_token=user_token,
+                    entry_id=entry_id,
+                    http_client=self._http_client,
+                )
+                results.append(r)
+            if not results:
+                return BotMessageResult(success=False, error="no group IDs provided")
+            first = results[0]
+            all_success = all(r.success for r in results)
+            return BotMessageResult(
+                success=all_success,
+                message_id=first.message_id if all_success else "",
+                error=first.error if not all_success else "",
+                raw_response=first.raw_response if all_success else results,
+            )
+
         if not chat_ids and not department_ids:
             return BotMessageResult(success=False, error="at least one of chat_ids or department_ids is required")
         if not msg_type:
@@ -1540,6 +1679,8 @@ class LansengerClient:
         *,
         user_token: str = "",
         sender_id: str = "",
+        reminder_all: bool = False,
+        reminder_user_ids: Optional[List[str]] = None,
         outlines: str = "",
         uuid: str = "",
         entry_id: str = "",
@@ -1552,7 +1693,10 @@ class LansengerClient:
         - Without both: appears from the bot
 
         Group chat supports all developer-accessible msgType.
-        Only group messages support @mentions (reminder).
+        Only text and formatText support @mentions (reminder). Other msgTypes
+        silently ignore reminder parameters.
+
+        If reminder fails for text/formatText, automatically retries without reminder.
 
         Args:
             group_id: Group openId.
@@ -1560,6 +1704,8 @@ class LansengerClient:
             msg_data: Message body dict.
             user_token: Optional — makes sender appear as human.
             sender_id: Optional — explicit sender openId (used if no user_token).
+            reminder_all: @mention all members (only text/formatText).
+            reminder_user_ids: @mention specific users (only text/formatText).
             outlines: Optional group notification digest text.
             uuid: Optional deduplication key.
             entry_id: Optional app entry selector.
@@ -1570,11 +1716,25 @@ class LansengerClient:
             return SendMessageResult(success=False, error="group_id is required")
         if not msg_data:
             return SendMessageResult(success=False, error="msg_data is required")
+
+        reminder: Optional[Dict[str, Any]] = None
+        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0):
+            if msg_type in ("text", "formatText"):
+                reminder = {"all": reminder_all, "userIds": reminder_user_ids or []}
+                if msg_type == "text":
+                    text_data = msg_data.get("text", {})
+                    text_data["reminder"] = reminder
+                    msg_data = {"text": text_data}
+                elif msg_type == "formatText":
+                    fmt_data = msg_data.get("formatText", {})
+                    fmt_data["reminder"] = reminder
+                    msg_data = {"formatText": fmt_data}
+
         self._ensure_clients()
         from .group_messages import send_group_message
 
         app_token = await self._get_token()
-        return await send_group_message(
+        result = await send_group_message(
             self._config,
             app_token=app_token,
             group_id=group_id,
@@ -1587,6 +1747,31 @@ class LansengerClient:
             entry_id=entry_id,
             http_client=self._http_client,
         )
+
+        if not result.success and reminder and msg_type in ("text", "formatText"):
+            logger.info("send_group_message with reminder failed, retrying without reminder")
+            if msg_type == "text":
+                clean_text = msg_data.get("text", {}).get("content", "")
+                clean_msg_data = {"text": {"content": clean_text}}
+            else:
+                clean_text = msg_data.get("formatText", {}).get("text", "")
+                clean_fmt = msg_data.get("formatText", {}).get("formatType", 1)
+                clean_msg_data = {"formatText": {"formatType": clean_fmt, "text": clean_text}}
+            return await send_group_message(
+                self._config,
+                app_token=app_token,
+                group_id=group_id,
+                msg_type=msg_type,
+                msg_data=clean_msg_data,
+                user_token=user_token,
+                sender_id=sender_id,
+                outlines=outlines,
+                uuid=uuid,
+                entry_id=entry_id,
+                http_client=self._http_client,
+            )
+
+        return result
 
     # ── Public API: Streaming messages ────────────────────────────────
 
@@ -2584,3 +2769,92 @@ class LansengerClient:
         from .callbacks import CALLBACK_EVENT_TYPES
 
         return CALLBACK_EVENT_TYPES
+
+    # ── Public API: Chat list & messages (4.24 MCP) ──────────────────
+
+    async def fetch_chat_list(
+        self,
+        *,
+        chat_type: int = 0,
+        keyword: str = "",
+        start_time: int = 0,
+        end_time: int = 0,
+        user_token: str = "",
+    ) -> ChatListResult:
+        """Fetch personal chat list (private + group conversations).
+
+        Args:
+            chat_type: 0=all, 1=private, 2=group (default 0).
+            keyword: Search keyword (only works when chat_type is 1 or 2).
+            start_time: Filter start time in microseconds.
+            end_time: Filter end time in microseconds.
+            user_token: Optional userToken for human identity.
+
+        Returns:
+            ChatListResult with staff_infos and group_infos.
+        """
+        self._ensure_clients()
+        from .chats import fetch_chat_list
+
+        app_token = await self._get_token()
+        return await fetch_chat_list(
+            self._config,
+            app_token=app_token,
+            chat_type=chat_type,
+            keyword=keyword,
+            start_time=start_time,
+            end_time=end_time,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_chat_messages(
+        self,
+        *,
+        staff_id: str = "",
+        group_id: str = "",
+        page_size: int = 100,
+        base_version: str = "0",
+        start_time: int = 0,
+        end_time: int = 0,
+        sender_id: str = "",
+        user_token: str = "",
+    ) -> ChatMessagesResult:
+        """Fetch messages from a specific conversation.
+
+        staff_id and group_id are mutually exclusive (pick one).
+
+        Args:
+            staff_id: Private chat partner's staffId.
+            group_id: Group openId.
+            page_size: Per-page count (max 100, default 100).
+            base_version: Deep pagination cursor. First call: "0".
+            start_time: Filter start time in microseconds.
+            end_time: Filter end time in microseconds.
+            sender_id: Filter by sender staffId.
+            user_token: Optional userToken for human identity.
+
+        Returns:
+            ChatMessagesResult with messages list.
+        """
+        if not staff_id and not group_id:
+            return ChatMessagesResult(
+                success=False, error="staff_id or group_id is required"
+            )
+        self._ensure_clients()
+        from .chats import fetch_chat_messages
+
+        app_token = await self._get_token()
+        return await fetch_chat_messages(
+            self._config,
+            app_token=app_token,
+            staff_id=staff_id,
+            group_id=group_id,
+            page_size=page_size,
+            base_version=base_version,
+            start_time=start_time,
+            end_time=end_time,
+            sender_id=sender_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )

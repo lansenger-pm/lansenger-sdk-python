@@ -21,6 +21,11 @@ from .models import (
     AppCardParams,
     BotMessageResult,
     CalendarPrimaryResult,
+    ChatGroupInfo,
+    ChatListResult,
+    ChatMessageInfo,
+    ChatMessagesResult,
+    ChatStaffInfo,
     CreateGroupResult,
     DepartmentAncestorsResult,
     DepartmentChildrenResult,
@@ -182,12 +187,23 @@ class LansengerSyncClient:
         self,
         chat_id: str,
         content: str,
+        *,
+        reminder_all: bool = False,
+        reminder_user_ids: Optional[List[str]] = None,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send a Markdown message (blocking)."""
         return _run_async(self._ephemeral_call(
             "send_markdown",
             chat_id=chat_id,
             content=content,
+            reminder_all=reminder_all,
+            reminder_user_ids=reminder_user_ids,
+            is_group=is_group,
+            user_token=user_token,
+            sender_id=sender_id,
         ))
 
     def send_file(
@@ -197,6 +213,9 @@ class LansengerSyncClient:
         *,
         caption: str = "",
         media_type: Optional[int] = None,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send a file/image/video (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -205,6 +224,9 @@ class LansengerSyncClient:
             file_path=file_path,
             caption=caption,
             media_type=media_type,
+            is_group=is_group,
+            user_token=user_token,
+            sender_id=sender_id,
         ))
 
     def send_image_url(
@@ -213,6 +235,9 @@ class LansengerSyncClient:
         image_url: str,
         *,
         caption: str = "",
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send an image from URL (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -220,6 +245,9 @@ class LansengerSyncClient:
             chat_id=chat_id,
             image_url=image_url,
             caption=caption,
+            is_group=is_group,
+            user_token=user_token,
+            sender_id=sender_id,
         ))
 
     def send_link_card(
@@ -233,6 +261,9 @@ class LansengerSyncClient:
         pc_link: str = "",
         from_name: str = "",
         from_icon_link: str = "",
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send a linkCard (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -245,6 +276,9 @@ class LansengerSyncClient:
             pc_link=pc_link,
             from_name=from_name,
             from_icon_link=from_icon_link,
+            is_group=is_group,
+            user_token=user_token,
+            sender_id=sender_id,
         ))
 
     def send_link_card_with_params(self, params: LinkCardParams) -> SendMessageResult:
@@ -259,12 +293,19 @@ class LansengerSyncClient:
         self,
         chat_id: str,
         articles: List[Dict[str, str]],
+        *,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send an appArticles card (blocking)."""
         return _run_async(self._ephemeral_call(
             "send_app_articles",
             chat_id=chat_id,
             articles=articles,
+            is_group=is_group,
+            user_token=user_token,
+            sender_id=sender_id,
         ))
 
     def send_app_card(
@@ -284,6 +325,9 @@ class LansengerSyncClient:
         head_status_info: Optional[Dict[str, str]] = None,
         staff_id: str = "",
         head_icon_url: str = "",
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
     ) -> SendMessageResult:
         """Send an appCard (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -302,6 +346,9 @@ class LansengerSyncClient:
             head_status_info=head_status_info,
             staff_id=staff_id,
             head_icon_url=head_icon_url,
+            is_group=is_group,
+            user_token=user_token,
+            sender_id=sender_id,
         ))
 
     def send_app_card_with_params(self, params: AppCardParams) -> SendMessageResult:
@@ -588,6 +635,7 @@ class LansengerSyncClient:
         *,
         user_token: str = "",
         entry_id: str = "",
+        is_group: bool = False,
     ) -> BotMessageResult:
         return _run_async(self._ephemeral_call(
             "send_bot_message",
@@ -597,6 +645,7 @@ class LansengerSyncClient:
             department_ids=department_ids,
             user_token=user_token,
             entry_id=entry_id,
+            is_group=is_group,
         ))
 
     # ── Account message (4.6.1 公号通道) (sync wrapper) ──────────────
@@ -657,6 +706,8 @@ class LansengerSyncClient:
         *,
         user_token: str = "",
         sender_id: str = "",
+        reminder_all: bool = False,
+        reminder_user_ids: Optional[List[str]] = None,
         outlines: str = "",
         uuid: str = "",
         entry_id: str = "",
@@ -668,6 +719,8 @@ class LansengerSyncClient:
             msg_data=msg_data,
             user_token=user_token,
             sender_id=sender_id,
+            reminder_all=reminder_all,
+            reminder_user_ids=reminder_user_ids,
             outlines=outlines,
             uuid=uuid,
             entry_id=entry_id,
@@ -1346,3 +1399,49 @@ class LansengerSyncClient:
         from .callbacks import CALLBACK_EVENT_TYPES
 
         return CALLBACK_EVENT_TYPES
+
+    # ── Chat list & messages (4.24 MCP) (sync wrappers) ────────────────
+
+    def fetch_chat_list(
+        self,
+        *,
+        chat_type: int = 0,
+        keyword: str = "",
+        start_time: int = 0,
+        end_time: int = 0,
+        user_token: str = "",
+    ) -> ChatListResult:
+        """Fetch personal chat list (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_chat_list",
+            chat_type=chat_type,
+            keyword=keyword,
+            start_time=start_time,
+            end_time=end_time,
+            user_token=user_token,
+        ))
+
+    def fetch_chat_messages(
+        self,
+        *,
+        staff_id: str = "",
+        group_id: str = "",
+        page_size: int = 100,
+        base_version: str = "0",
+        start_time: int = 0,
+        end_time: int = 0,
+        sender_id: str = "",
+        user_token: str = "",
+    ) -> ChatMessagesResult:
+        """Fetch messages from a conversation (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_chat_messages",
+            staff_id=staff_id,
+            group_id=group_id,
+            page_size=page_size,
+            base_version=base_version,
+            start_time=start_time,
+            end_time=end_time,
+            sender_id=sender_id,
+            user_token=user_token,
+        ))

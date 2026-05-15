@@ -73,6 +73,10 @@ API_ENDPOINTS = {
         "groups_fetch": "/v2/groups/fetch",
         "is_in_group": "/v2/groups/{group_id}/members/is_in_group",
     },
+    "chats": {
+        "fetch": "/v1/chats/fetch",
+        "messages_fetch": "/v1/messages/fetch",
+    },
 }
 
 OAUTH2_SCOPE_BASIC_USER_INFO = "basic_userinfor"

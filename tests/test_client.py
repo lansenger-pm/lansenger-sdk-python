@@ -280,3 +280,27 @@ async def test_fetch_department_staffs_no_department_id():
     result = await client.fetch_department_staffs(department_id="")
     assert result.success is False
     assert "department_id is required" in result.error
+
+
+@pytest.mark.asyncio
+async def test_send_group_message_reminder_text():
+    client = LansengerClient(app_id="id", app_secret="secret")
+    result = await client.send_group_message(
+        group_id="", msg_type="text",
+        msg_data={"text": {"content": "hi"}},
+        reminder_all=True, reminder_user_ids=["u1"],
+    )
+    assert result.success is False
+    assert "group_id is required" in result.error
+
+
+@pytest.mark.asyncio
+async def test_send_group_message_reminder_non_text_ignored():
+    client = LansengerClient(app_id="id", app_secret="secret")
+    result = await client.send_group_message(
+        group_id="", msg_type="appCard",
+        msg_data={"appCard": {"bodyTitle": "hi"}},
+        reminder_all=True, reminder_user_ids=["u1"],
+    )
+    assert result.success is False
+    assert "group_id is required" in result.error

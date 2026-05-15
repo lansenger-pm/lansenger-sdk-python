@@ -268,6 +268,9 @@ class AppCardParams:
     head_status_info: Optional[Dict[str, str]] = None
     staff_id: str = ""
     head_icon_url: str = ""
+    is_group: bool = False
+    user_token: str = ""
+    sender_id: str = ""
 
 
 @dataclass
@@ -280,6 +283,9 @@ class LinkCardParams:
     pc_link: str = ""
     from_name: str = ""
     from_icon_link: str = ""
+    is_group: bool = False
+    user_token: str = ""
+    sender_id: str = ""
 
 
 @dataclass
@@ -876,3 +882,46 @@ class DepartmentStaffsResult:
         if self.error is not None:
             d["error"] = self.error
         return d
+
+
+@dataclass
+class ChatStaffInfo:
+    staff_id: str = ""
+    staff_name: str = ""
+    sector_names: Optional[List[str]] = None
+
+
+@dataclass
+class ChatGroupInfo:
+    group_id: str = ""
+    group_name: str = ""
+
+
+@dataclass
+class ChatListResult:
+    success: bool
+    staff_infos: Optional[List[ChatStaffInfo]] = None
+    group_infos: Optional[List[ChatGroupInfo]] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ChatMessageInfo:
+    send_time: str = ""
+    sender: str = ""
+    message_type: str = ""
+    content: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ChatMessagesResult:
+    success: bool
+    has_more: bool = False
+    total: int = 0
+    last_version: str = ""
+    name: str = ""
+    chat_type: str = ""
+    messages: Optional[List[ChatMessageInfo]] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None

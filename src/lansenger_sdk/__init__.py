@@ -46,6 +46,11 @@ from .models import (
     AppCardParams,
     BotMessageResult,
     CreateGroupResult,
+    ChatGroupInfo,
+    ChatListResult,
+    ChatMessageInfo,
+    ChatMessagesResult,
+    ChatStaffInfo,
     DepartmentAncestorsResult,
     DepartmentChildrenResult,
     DepartmentDetailResult,
@@ -59,6 +64,7 @@ from .models import (
     GroupMemberResult,
     IsInGroupResult,
     LinkCardParams,
+    OrgInfoResult,
     QueryGroupsResult,
     SendMessageResult,
     StaffBasicInfoResult,
@@ -66,6 +72,13 @@ from .models import (
     StaffIdMappingResult,
     StaffSearchResult,
     StreamMessageResult,
+    TodoTaskCreateResult,
+    TodoTaskExecutorListResult,
+    TodoTaskInfoResult,
+    TodoTaskListResult,
+    TodoTaskStatusCountResult,
+    UpdateGroupMembersResult,
+    UpdateGroupResult,
     UserMessageResult,
     UploadMediaResult,
     CalendarPrimaryResult,
@@ -116,6 +129,10 @@ from .account_messages import (
 )
 from .user_messages import (
     send_user_message,
+)
+from .chats import (
+    fetch_chat_list,
+    fetch_chat_messages,
 )
 from .group_messages import (
     send_group_message,
@@ -236,6 +253,11 @@ __all__ = [
     "DepartmentDetailResult",
     "DepartmentChildrenResult",
     "DepartmentStaffsResult",
+    "ChatStaffInfo",
+    "ChatGroupInfo",
+    "ChatListResult",
+    "ChatMessageInfo",
+    "ChatMessagesResult",
     "LansengerError",
     "LansengerConfigError",
     "LansengerAuthError",
@@ -335,6 +357,8 @@ __all__ = [
     "ScheduleDeleteData",
     "TagMemberData",
     "CredentialStore",
+    "fetch_chat_list",
+    "fetch_chat_messages",
 ]
 
 __version__ = "1.0.0"
