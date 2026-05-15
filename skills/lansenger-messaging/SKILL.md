@@ -70,7 +70,8 @@ Group chat supports **all developer-accessible msgType** (text, formatText, oaca
 │                     │  send_link_card(is_group=True)                │
 │                     │  send_app_articles(is_group=True)             │
 │                     │  send_app_card(is_group=True)                 │
-│                     │  send_bot_message(is_group=True)              │
+│                     │  send_oacard(is_group=True)                    │
+│                     │  send_bot_message(is_group=True)               │
 │                     │  send_group_message(reminder_all=...)         │
 │  Prerequisite       │  Bot/user must be in the group                │
 └─────────────────────┴──────────────────────────────────────────────┘
@@ -107,6 +108,20 @@ Group chat supports **all developer-accessible msgType** (text, formatText, oaca
 ## Card Type Capability Matrix
 
 ```
+┌──────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+│  Card Type   │  Multi-lang  │  Dynamic     │  headStatus  │  Pad Link   │
+│              │  (5 langs)   │  Update      │  Info        │  Fields     │
+├──────────────┼──────────────┼──────────────┼──────────────┼──────────────┤
+│  appCard     │  ✗           │  ✓           │  ✓           │  padCardLink│
+│  i18nAppCard │  ✓           │  ✗           │  ✗           │  ✗          │
+│  linkCard    │  ✗           │  ✗           │  ✗           │  padLink    │
+│  oacard      │  ✗           │  ✗           │  ✗           │  padLink    │
+└──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
+```
+
+## Card Type Capability Matrix
+
+```
 ┌──────────────┬──────────────┬──────────────┬──────────────┐
 │  Card Type   │  Multi-lang  │  Dynamic     │  headStatus  │
 │              │  (5 langs)   │  Update      │  Info        │
@@ -114,6 +129,92 @@ Group chat supports **all developer-accessible msgType** (text, formatText, oaca
 │  appCard     │  ✗           │  ✓           │  ✓           │
 │  i18nAppCard │  ✓           │  ✗           │  ✗           │
 └──────────────┴──────────────┴──────────────┴──────────────┘
+```
+
+## oaCard (OA审批卡片) — Full Reference
+
+oaCard is a special card type for OA approval workflows. Key differences from other cards:
+
+- Uses `staffID` (uppercase) in API JSON (mapped from `staff_id` param)
+- Has `padLink` for Pad-specific click-through
+- Has `cardAction` for interactive card actions (prs5.3.0)
+- Does NOT support @mention/reminder
+
+```python
+# Private chat oaCard
+result = await client.send_oacard(
+    chat_id="staff123",
+    title="Leave Approval",
+    head="OA审批",
+    sub_title="Annual Leave Request",
+    staff_id="staff456",
+    fields=[{"key": "Type", "value": "Annual Leave"}, {"key": "Days", "value": "3"}],
+    link="https://oa.example.com/approve/123",
+    pc_link="https://oa.example.com/approve/123?client=pc",
+    pad_link="https://oa.example.com/approve/123?client=pad",
+    card_action={"action": "approve", "params": {"id": "123"}},
+)
+
+# Group chat oaCard
+result = await client.send_oacard(
+    chat_id="group123", title="Leave Approval",
+    head="OA审批", is_group=True,
+)
+
+# Using OaCardParams dataclass
+from lansenger_sdk import OaCardParams
+params = OaCardParams(
+    chat_id="staff123", title="Leave Approval",
+    head="OA审批", fields=[{"key": "Type", "value": "Annual Leave"}],
+    link="https://oa.example.com/approve/123",
+)
+result = await client.send_oacard_with_params(params)
+```
+
+**oaCard fields**:
+
+| SDK param | API JSON field | Description |
+|-----------|---------------|-------------|
+| head | head | Card header text |
+| title | title | Card title (required) |
+| sub_title | subTitle | Card subtitle |
+| staff_id | staffID | Staff ID for sender avatar |
+| fields | fields | Key-value pairs (max 10) |
+| link | link | Card click-through link |
+| pc_link | pcLink | PC client click-through link |
+| pad_link | padLink | Pad client click-through link |
+| card_action | cardAction | Card action dict (prs5.3.0) |
+
+## Pad-Specific Link Fields
+
+Each card type has a different Pad link field name:
+
+| Card Type | SDK param | API JSON field | Version |
+|-----------|-----------|---------------|---------|
+| appCard | pad_card_link | padCardLink | prs4.6.0 |
+| linkCard | pad_link | padLink | prs4.6.0 |
+| oaCard | pad_link | padLink | prs4.6.0 |
+| appArticles | pad_url | padUrl | prs4.6.0 |
+
+```python
+# appCard with Pad link
+result = await client.send_app_card(
+    chat_id="staff123", body_title="Approval",
+    card_link="https://app.com/card", pad_card_link="https://app.com/card?pad=1",
+)
+
+# linkCard with Pad link
+result = await client.send_link_card(
+    chat_id="staff123", title="Article", link="https://article.com",
+    pc_link="https://article.com?pc=1", pad_link="https://article.com?pad=1",
+)
+
+# appArticles with Pad link per article
+result = await client.send_app_articles(
+    chat_id="staff123", articles=[
+        {"title": "News", "link": "https://news.com", "padUrl": "https://news.com?pad=1"},
+    ],
+)
 ```
 
 ## SDK Method Decision Tree
@@ -145,6 +246,7 @@ result = await client.send_bot_message(
 # Bot → human card private chat
 result = await client.send_link_card(chat_id="staff123", title="Article", link="https://...")
 result = await client.send_app_card(chat_id="staff123", body_title="Approval", is_dynamic=True)
+result = await client.send_oacard(chat_id="staff123", title="Leave Approval", head="OA审批", staff_id="staff456", fields=[{"key": "Type", "value": "Annual Leave"}])
 ```
 
 #### 公号 private chat (4.6.1) — public account → human
@@ -190,6 +292,9 @@ result = await client.send_app_card(chat_id="group123", body_title="Approval", i
 
 # Bot → group link card
 result = await client.send_link_card(chat_id="group123", title="Article", link="https://...", is_group=True)
+
+# Bot → group OA card
+result = await client.send_oacard(chat_id="group123", title="Leave Approval", head="OA审批", is_group=True)
 
 # Bot → group file
 result = await client.send_file(chat_id="group123", file_path="/path/to/file.pdf", is_group=True)
@@ -246,7 +351,7 @@ result = await client.send_group_message(
     reminder_all=True, reminder_user_ids=["staff456"],
 )
 
-# ⚠️ appCard/linkCard/appArticles do NOT support @mention
+# ⚠️ appCard/linkCard/appArticles/oaCard do NOT support @mention
 # reminder parameters are silently ignored for non-text/formatText types
 result = await client.send_app_card(
     chat_id="group123", body_title="Approval",
@@ -296,7 +401,7 @@ See `lansenger-chats` skill for detailed chat reading API reference.
 | Mistake | Correct approach |
 |---------|-----------------|
 | @mention in private chat | Only group chat (4.6.2) supports @mention — no group context in private chat |
-| @mention on appCard/linkCard/appArticles | Only text & formatText support @mention; other types silently ignore reminder |
+| @mention on appCard/linkCard/appArticles/oaCard | Only text & formatText support @mention; other types silently ignore reminder |
 | Bot private chat with departmentIdList treated as group | Each department member gets their own private chat, not a group message |
 | send_user_message without userToken | 4.6.3 requires userToken |
 | send_text with Markdown | Use send_markdown for Markdown content |
@@ -309,6 +414,6 @@ See `lansenger-chats` skill for detailed chat reading API reference.
 - @mention (reminder) only works on text and formatText in group chat — other msgTypes do NOT support it
 - If reminder fails, SDK auto-retries without reminder for text/formatText
 - Group chat userToken determines sender identity: present = human, absent = bot
-- send_text/send_markdown/send_file/send_link_card/send_app_articles/send_app_card/send_bot_message all support is_group=True
+- send_text/send_markdown/send_file/send_link_card/send_app_articles/send_app_card/send_oacard/send_bot_message all support is_group=True
 - Using send_user_message requires completing the OAuth2 flow (see lansenger-oauth skill)
 - To read chat history, use fetch_chat_list and fetch_chat_messages (see lansenger-chats skill)
