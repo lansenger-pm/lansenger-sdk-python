@@ -119,18 +119,6 @@ Group chat supports **all developer-accessible msgType** (text, formatText, oaca
 └──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
 ```
 
-## Card Type Capability Matrix
-
-```
-┌──────────────┬──────────────┬──────────────┬──────────────┐
-│  Card Type   │  Multi-lang  │  Dynamic     │  headStatus  │
-│              │  (5 langs)   │  Update      │  Info        │
-├──────────────┼──────────────┼──────────────┼──────────────┤
-│  appCard     │  ✗           │  ✓           │  ✓           │
-│  i18nAppCard │  ✓           │  ✗           │  ✗           │
-└──────────────┴──────────────┴──────────────┴──────────────┘
-```
-
 ## oaCard (OA审批卡片) — Full Reference
 
 oaCard is a special card type for OA approval workflows. Key differences from other cards:
@@ -138,7 +126,6 @@ oaCard is a special card type for OA approval workflows. Key differences from ot
 - Uses `staffID` (uppercase) in API JSON (mapped from `staff_id` param)
 - Has `padLink` for Pad-specific click-through
 - Has `cardAction` for interactive card actions (prs5.3.0)
-- Does NOT support @mention/reminder
 
 ```python
 # Private chat oaCard
@@ -276,8 +263,6 @@ result = await client.send_user_message(
 
 ### Group Chat
 
-Every send method now supports `is_group=True` to route through the group chat endpoint (4.6.2). All developer-accessible msgType work in group chat.
-
 #### Bot in group (default — no userToken)
 
 ```python
@@ -401,7 +386,6 @@ See `lansenger-chats` skill for detailed chat reading API reference.
 | Mistake | Correct approach |
 |---------|-----------------|
 | @mention in private chat | Only group chat (4.6.2) supports @mention — no group context in private chat |
-| @mention on appCard/linkCard/appArticles/oaCard | Only text & formatText support @mention; other types silently ignore reminder |
 | Bot private chat with departmentIdList treated as group | Each department member gets their own private chat, not a group message |
 | send_user_message without userToken | 4.6.3 requires userToken |
 | send_text with Markdown | Use send_markdown for Markdown content |
@@ -410,10 +394,8 @@ See `lansenger-chats` skill for detailed chat reading API reference.
 
 ## Tips
 
-- Group chat supports **all** developer-accessible msgType — appCard, linkCard, appArticles all work in groups
-- @mention (reminder) only works on text and formatText in group chat — other msgTypes do NOT support it
+- Group chat supports **all** developer-accessible msgType (see Group Chat table above)
+- @mention (reminder) only works on text and formatText in group chat (see @mention rules above)
 - If reminder fails, SDK auto-retries without reminder for text/formatText
-- Group chat userToken determines sender identity: present = human, absent = bot
-- send_text/send_markdown/send_file/send_link_card/send_app_articles/send_app_card/send_oacard/send_bot_message all support is_group=True
 - Using send_user_message requires completing the OAuth2 flow (see lansenger-oauth skill)
 - To read chat history, use fetch_chat_list and fetch_chat_messages (see lansenger-chats skill)
