@@ -59,6 +59,7 @@ from .models import (
     GroupMemberResult,
     IsInGroupResult,
     LinkCardParams,
+    OaCardParams,
     OrgInfoResult,
     QueryGroupsResult,
     ScheduleAttendeesResult,
@@ -524,6 +525,7 @@ class LansengerClient:
         description: str = "",
         icon_link: str = "",
         pc_link: str = "",
+        pad_link: str = "",
         from_name: str = "",
         from_icon_link: str = "",
         is_group: bool = False,
@@ -541,6 +543,7 @@ class LansengerClient:
             description: Card description text.
             icon_link: Card icon image link.
             pc_link: PC client redirect link.
+            pad_link: Pad client redirect link.
             from_name: Card source name.
             from_icon_link: Source icon image link.
             is_group: True if chat_id is a group ID.
@@ -561,6 +564,7 @@ class LansengerClient:
                 "description": description,
                 "iconLink": icon_link,
                 "pcLink": pc_link,
+                "padLink": pad_link,
                 "fromName": from_name,
                 "fromIconLink": from_icon_link,
             }
@@ -582,6 +586,7 @@ class LansengerClient:
             description=params.description,
             icon_link=params.icon_link,
             pc_link=params.pc_link,
+            pad_link=params.pad_link,
             from_name=params.from_name,
             from_icon_link=params.from_icon_link,
             is_group=params.is_group,
@@ -640,6 +645,7 @@ class LansengerClient:
         links: Optional[List[Dict[str, str]]] = None,
         card_link: str = "",
         pc_card_link: str = "",
+        pad_card_link: str = "",
         is_dynamic: bool = False,
         head_status_info: Optional[Dict[str, str]] = None,
         staff_id: str = "",
@@ -673,6 +679,7 @@ class LansengerClient:
             links: Link entries (max 3).
             card_link: Card click-through link.
             pc_card_link: PC client click-through link.
+            pad_card_link: Pad client click-through link.
             is_dynamic: Enable dynamic card status updates.
             head_status_info: Dynamic card status dict (iconLink/description/colour).
             staff_id: Staff ID for sender avatar.
@@ -713,6 +720,8 @@ class LansengerClient:
             app_card_data["staffId"] = staff_id
         if fields:
             app_card_data["fields"] = fields
+        if pad_card_link:
+            app_card_data["padCardLink"] = pad_card_link
         if links:
             app_card_data["links"] = links
 
@@ -761,10 +770,121 @@ class LansengerClient:
             links=params.links,
             card_link=params.card_link,
             pc_card_link=params.pc_card_link,
+            pad_card_link=params.pad_card_link,
             is_dynamic=params.is_dynamic,
             head_status_info=params.head_status_info,
             staff_id=params.staff_id,
             head_icon_url=params.head_icon_url,
+            is_group=params.is_group,
+            user_token=params.user_token,
+            sender_id=params.sender_id,
+        )
+
+    async def send_oacard(
+        self,
+        chat_id: str,
+        title: str,
+        *,
+        head: str = "",
+        sub_title: str = "",
+        staff_id: str = "",
+        fields: Optional[List[Dict[str, str]]] = None,
+        link: str = "",
+        pc_link: str = "",
+        pad_link: str = "",
+        card_action: Optional[Dict[str, Any]] = None,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
+    ) -> SendMessageResult:
+        """Send an oaCard (OA审批卡片) message.
+
+        oaCard does NOT support @mention/reminder.
+
+        Args:
+            chat_id: Recipient user ID or group chat ID.
+            title: Card title (required).
+            head: Card header text.
+            sub_title: Card subtitle.
+            staff_id: Staff ID for sender avatar.
+            fields: Key-value pairs (max 10).
+            link: Card click-through link.
+            pc_link: PC client click-through link.
+            pad_link: Pad client click-through link.
+            card_action: Card action dict (prs5.3.0).
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
+        """
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not title:
+            return SendMessageResult(success=False, error="title is required for oaCard")
+
+        oa_card_data: Dict[str, Any] = {
+            "head": head,
+            "title": title,
+        }
+        if sub_title:
+            oa_card_data["subTitle"] = sub_title
+        if staff_id:
+            oa_card_data["staffID"] = staff_id
+        if fields:
+            oa_card_data["fields"] = fields
+        if link:
+            oa_card_data["link"] = link
+        if pc_link:
+            oa_card_data["pcLink"] = pc_link
+        if pad_link:
+            oa_card_data["padLink"] = pad_link
+        if card_action:
+            oa_card_data["cardAction"] = card_action
+
+        msg_data = {"oacard": oa_card_data}
+
+        if is_group:
+            return await self._send_group(chat_id, "oacard", msg_data, user_token=user_token, sender_id=sender_id)
+
+        token = await self._get_token()
+        url = self._private_msg_url(token)
+
+        payload = {
+            "userIdList": [chat_id],
+            "msgType": "oacard",
+            "msgData": msg_data,
+        }
+
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+
+            if not response.text or not response.text.strip():
+                return SendMessageResult(
+                    success=False, error="Empty API response — likely a payload format issue", retryable=True
+                )
+
+            data = response.json()
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
+
+        return _parse_send_response(data, msg_type="oacard", operation="oacard")
+
+    async def send_oacard_with_params(
+        self,
+        params: OaCardParams,
+    ) -> SendMessageResult:
+        """Send an oaCard using an OaCardParams object."""
+        return await self.send_oacard(
+            chat_id=params.chat_id,
+            title=params.title,
+            head=params.head,
+            sub_title=params.sub_title,
+            staff_id=params.staff_id,
+            fields=params.fields,
+            link=params.link,
+            pc_link=params.pc_link,
+            pad_link=params.pad_link,
+            card_action=params.card_action,
             is_group=params.is_group,
             user_token=params.user_token,
             sender_id=params.sender_id,

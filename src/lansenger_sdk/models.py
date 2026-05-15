@@ -264,6 +264,7 @@ class AppCardParams:
     links: Optional[List[Dict[str, str]]] = None
     card_link: str = ""
     pc_card_link: str = ""
+    pad_card_link: str = ""
     is_dynamic: bool = False
     head_status_info: Optional[Dict[str, str]] = None
     staff_id: str = ""
@@ -281,8 +282,26 @@ class LinkCardParams:
     description: str = ""
     icon_link: str = ""
     pc_link: str = ""
+    pad_link: str = ""
     from_name: str = ""
     from_icon_link: str = ""
+    is_group: bool = False
+    user_token: str = ""
+    sender_id: str = ""
+
+
+@dataclass
+class OaCardParams:
+    chat_id: str = ""
+    head: str = ""
+    title: str = ""
+    sub_title: str = ""
+    staff_id: str = ""
+    fields: Optional[List[Dict[str, str]]] = None
+    link: str = ""
+    pc_link: str = ""
+    pad_link: str = ""
+    card_action: Optional[Dict[str, Any]] = None
     is_group: bool = False
     user_token: str = ""
     sender_id: str = ""

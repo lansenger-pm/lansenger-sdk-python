@@ -111,6 +111,18 @@ async def test_link_card_validation():
 
 
 @pytest.mark.asyncio
+async def test_oacard_validation():
+    client = LansengerClient(app_id="id", app_secret="secret")
+    result = await client.send_oacard(chat_id="", title="T")
+    assert result.success is False
+    assert "chat_id is required" in result.error
+
+    result = await client.send_oacard(chat_id="user123", title="")
+    assert result.success is False
+    assert "title is required for oaCard" in result.error
+
+
+@pytest.mark.asyncio
 async def test_app_card_validation():
     client = LansengerClient(app_id="id", app_secret="secret")
     result = await client.send_app_card(chat_id="", body_title="T")

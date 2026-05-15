@@ -8,7 +8,7 @@
       "id": "lansenger-messaging",
       "name": "Lansenger Messaging Strategy",
       "category": "messaging",
-      "description": "Lansenger messaging strategy — understand 3 messaging channels (bot/private/account), text/formatText/appCard/appArticles capability boundaries, and SDK method selection",
+      "description": "Lansenger messaging strategy — understand 4 messaging channels (bot/private/account/group), text/formatText/appCard/linkCard/appArticles capability boundaries, @mention rules, and SDK method selection",
       "path": "lansenger-messaging/SKILL.md",
       "platform": "lansenger",
       "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
@@ -70,6 +70,16 @@
       "category": "callbacks",
       "description": "Lansenger callback event parsing — 25 event types across 14 categories, structured dataclass parsing, payload parsing, signature verification",
       "path": "lansenger-callbacks/SKILL.md",
+      "platform": "lansenger",
+      "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
+      "optional_config": ["LANSENGER_API_GATEWAY_URL"]
+    },
+    {
+      "id": "lansenger-chats",
+      "name": "Lansenger Chat Reading APIs",
+      "category": "messaging",
+      "description": "Lansenger chat reading APIs — fetch personal chat list (private + group conversations) and pull messages from a specific conversation",
+      "path": "lansenger-chats/SKILL.md",
       "platform": "lansenger",
       "required_config": ["LANSENGER_APP_ID", "LANSENGER_APP_SECRET"],
       "optional_config": ["LANSENGER_API_GATEWAY_URL"]

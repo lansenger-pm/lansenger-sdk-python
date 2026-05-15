@@ -40,6 +40,7 @@ from .models import (
     GroupMemberResult,
     IsInGroupResult,
     LinkCardParams,
+    OaCardParams,
     OrgInfoResult,
     QueryGroupsResult,
     ScheduleAttendeesResult,
@@ -259,6 +260,7 @@ class LansengerSyncClient:
         description: str = "",
         icon_link: str = "",
         pc_link: str = "",
+        pad_link: str = "",
         from_name: str = "",
         from_icon_link: str = "",
         is_group: bool = False,
@@ -274,6 +276,7 @@ class LansengerSyncClient:
             description=description,
             icon_link=icon_link,
             pc_link=pc_link,
+            pad_link=pad_link,
             from_name=from_name,
             from_icon_link=from_icon_link,
             is_group=is_group,
@@ -321,6 +324,7 @@ class LansengerSyncClient:
         links: Optional[List[Dict[str, str]]] = None,
         card_link: str = "",
         pc_card_link: str = "",
+        pad_card_link: str = "",
         is_dynamic: bool = False,
         head_status_info: Optional[Dict[str, str]] = None,
         staff_id: str = "",
@@ -342,6 +346,7 @@ class LansengerSyncClient:
             links=links,
             card_link=card_link,
             pc_card_link=pc_card_link,
+            pad_card_link=pad_card_link,
             is_dynamic=is_dynamic,
             head_status_info=head_status_info,
             staff_id=staff_id,
@@ -355,6 +360,49 @@ class LansengerSyncClient:
         """Send an appCard using AppCardParams (blocking)."""
         return _run_async(self._ephemeral_call_with_positional(
             "send_app_card_with_params",
+            args=[params],
+            kwargs={},
+        ))
+
+    def send_oacard(
+        self,
+        chat_id: str,
+        title: str,
+        *,
+        head: str = "",
+        sub_title: str = "",
+        staff_id: str = "",
+        fields: Optional[List[Dict[str, str]]] = None,
+        link: str = "",
+        pc_link: str = "",
+        pad_link: str = "",
+        card_action: Optional[Dict[str, Any]] = None,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
+    ) -> SendMessageResult:
+        """Send an oaCard (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "send_oacard",
+            chat_id=chat_id,
+            title=title,
+            head=head,
+            sub_title=sub_title,
+            staff_id=staff_id,
+            fields=fields,
+            link=link,
+            pc_link=pc_link,
+            pad_link=pad_link,
+            card_action=card_action,
+            is_group=is_group,
+            user_token=user_token,
+            sender_id=sender_id,
+        ))
+
+    def send_oacard_with_params(self, params: OaCardParams) -> SendMessageResult:
+        """Send an oaCard using OaCardParams (blocking)."""
+        return _run_async(self._ephemeral_call_with_positional(
+            "send_oacard_with_params",
             args=[params],
             kwargs={},
         ))

@@ -1,6 +1,6 @@
 ---
 name: lansenger-messaging
-description: Lansenger messaging strategy — understand 3 messaging channels (bot/private/account), text/formatText/appCard/appArticles capability boundaries, and SDK method selection
+description: Lansenger messaging strategy — understand 4 messaging channels (bot/private/account/group), text/formatText/appCard/linkCard/appArticles capability boundaries, @mention rules, and SDK method selection
 license: MIT
 metadata:
   sdk: lansenger-sdk
@@ -49,6 +49,8 @@ Three different private chat channels, distinguished by **who is speaking**:
 
 ### Group Chat — In-Group Conversation
 
+Group chat supports **all developer-accessible msgType** (text, formatText, oacard, appCard, linkCard, appArticles, verifyCard).
+
 ```
 ┌─────────────────────┬──────────────────────────────────────────────┐
 │                     │  4.6.2 群聊消息                               │
@@ -58,38 +60,48 @@ Three different private chat channels, distinguished by **who is speaking**:
 │  appToken required  │  ✓                                           │
 │  userToken required │  Optional (determines sender identity)       │
 │  Recipients         │  groupId (group openId)                      │
-│  msgType            │  text, oacard only                           │
-│  @mention (reminder)│  ✓ — only group chat supports @mention       │
+│  msgType            │  ALL developer-accessible types              │
+│  @mention (reminder)│  ✓ — ONLY text & formatText                  │
 │  Attachments        │  ✓ (text type)                               │
 │  Special fields     │  senderId, uuid, outlines, entryId           │
 │  SDK method         │  send_text(is_group=True)                    │
-│                     │  send_bot_message(is_group=True)             │
-│                     │  send_group_message                           │
+│                     │  send_markdown(is_group=True)                 │
+│                     │  send_file(is_group=True)                     │
+│                     │  send_link_card(is_group=True)                │
+│                     │  send_app_articles(is_group=True)             │
+│                     │  send_app_card(is_group=True)                 │
+│                     │  send_bot_message(is_group=True)              │
+│                     │  send_group_message(reminder_all=...)         │
 │  Prerequisite       │  Bot/user must be in the group                │
 └─────────────────────┴──────────────────────────────────────────────┘
 ```
 
-**Key difference**: everyone in the group sees the message in the same group chat window. Only group chat supports @mention.
+**Key difference**: everyone in the group sees the message in the same group chat window.
 
 **userToken determines group chat sender identity**:
 - With userToken → message appears from a **human** (who must also be in the group)
 - No userToken + senderId → message appears from specified person
 - No userToken, no senderId → message appears from the **bot** (requires bot capability)
 
+**@mention (reminder) rules**:
+- **Only text and formatText** support @mention (reminder_all, reminder_user_ids)
+- All other msgTypes (appCard, linkCard, appArticles, etc.) **do NOT** support @mention — reminder parameters are silently ignored for these types
+- If reminder fails for text/formatText, SDK automatically retries without reminder
+
 ## Message Type Capability Matrix
 
 ```
-┌──────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
-│  msgType     │  Markdown    │  @mention    │  Attachments │  Channel     │
-├──────────────┼──────────────┼──────────────┼──────────────┼──────────────┤
-│  text        │  ✗           │  ✓(group)    │  ✓           │  All         │
-│  formatText  │  ✓           │  ✗           │  ✗           │  4.6.3 only  │
-│  oacard      │  ✗           │  ✗           │  ✗           │  All         │
-│  appArticles │  ✗           │  ✗           │  ✗           │  4.6.12 only │
-│  appCard     │  ✗ (div)     │  ✗           │  ✗           │  4.6.1/3/12  │
-│  linkCard    │  ✗           │  ✗           │  ✗           │  4.6.1/12    │
-│  verifyCard  │  ✗           │  ✗           │  ✗           │  4.6.1/12    │
-└──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
+┌──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+│  msgType     │  Markdown    │  @mention    │  Attachments │  Group chat  │  Channel     │
+├──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┤
+│  text        │  ✗           │  ✓(group)    │  ✓           │  ✓           │  All         │
+│  formatText  │  ✓           │  ✓(group)    │  ✗           │  ✓           │  4.6.3/4.6.2 │
+│  oacard      │  ✗           │  ✗           │  ✗           │  ✓           │  All         │
+│  appArticles │  ✗           │  ✗           │  ✗           │  ✓           │  All         │
+│  appCard     │  ✗ (div)     │  ✗           │  ✗           │  ✓           │  All         │
+│  linkCard    │  ✗           │  ✗           │  ✗           │  ✓           │  All         │
+│  verifyCard  │  ✗           │  ✗           │  ✗           │  ✓           │  All         │
+└──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┘
 ```
 
 ## Card Type Capability Matrix
@@ -111,6 +123,10 @@ Three different private chat channels, distinguished by **who is speaking**:
 #### Bot private chat (4.6.12) — most common
 
 ```python
+from lansenger_sdk import LansengerClient
+
+client = LansengerClient.from_env()
+
 # Bot → human private chat
 result = await client.send_text(chat_id="staff123", content="Hello")
 
@@ -158,62 +174,141 @@ result = await client.send_user_message(
 
 ### Group Chat
 
-#### Bot in group (default)
+Every send method now supports `is_group=True` to route through the group chat endpoint (4.6.2). All developer-accessible msgType work in group chat.
+
+#### Bot in group (default — no userToken)
 
 ```python
-# Bot → group (no userToken)
-result = await client.send_text(
-    chat_id="group123", content="Notice",
-    is_group=True,
-)
+# Bot → group text
+result = await client.send_text(chat_id="group123", content="Notice", is_group=True)
+
+# Bot → group Markdown
+result = await client.send_markdown(chat_id="group123", content="**Bold**", is_group=True)
+
+# Bot → group card
+result = await client.send_app_card(chat_id="group123", body_title="Approval", is_group=True)
+
+# Bot → group link card
+result = await client.send_link_card(chat_id="group123", title="Article", link="https://...", is_group=True)
+
+# Bot → group file
+result = await client.send_file(chat_id="group123", file_path="/path/to/file.pdf", is_group=True)
 ```
 
 #### Human in group (with userToken)
 
 ```python
-# Human → group (with userToken, looks like person sent in group)
+# Human → group (looks like person sent in group)
+result = await client.send_text(
+    chat_id="group123", content="I'll handle it",
+    is_group=True, user_token="userToken_from_oauth2",
+)
+
+# Human → group card
+result = await client.send_app_card(
+    chat_id="group123", body_title="My Approval",
+    is_group=True, user_token="userToken_from_oauth2", sender_id="staff456",
+)
+
+# Human → group via send_group_message
 result = await client.send_group_message(
-    group_id="group123",
-    msg_type="text",
+    group_id="group123", msg_type="text",
     msg_data={"text": {"content": "I'll handle it"}},
-    user_token="userToken_from_oauth2",  # with = human sender
+    user_token="userToken_from_oauth2",
 )
 ```
 
-#### @mention in group chat (only group chat can @mention)
+#### @mention in group chat — ONLY text & formatText
 
 ```python
-# @all members
+# @all members (text only)
 result = await client.send_text(
     chat_id="group123", content="Important notice!",
     is_group=True, reminder_all=True,
 )
 
-# @specific people
+# @specific people (text only)
 result = await client.send_text(
     chat_id="group123", content="@张三 please check",
     is_group=True, reminder_user_ids=["staff456"],
 )
+
+# @all with Markdown (formatText only)
+result = await client.send_markdown(
+    chat_id="group123", content="**紧急通知**",
+    is_group=True, reminder_all=True,
+)
+
+# @mention via send_group_message
+result = await client.send_group_message(
+    group_id="group123", msg_type="text",
+    msg_data={"text": {"content": "Important"}},
+    reminder_all=True, reminder_user_ids=["staff456"],
+)
+
+# ⚠️ appCard/linkCard/appArticles do NOT support @mention
+# reminder parameters are silently ignored for non-text/formatText types
+result = await client.send_app_card(
+    chat_id="group123", body_title="Approval",
+    is_group=True, reminder_all=True,  # reminder_all is SILENTLY IGNORED here
+)
 ```
+
+#### Bot message to multiple groups
+
+```python
+# send_bot_message with is_group=True sends to each group ID
+result = await client.send_bot_message(
+    msg_type="text", msg_data={"text": {"content": "Notice"}},
+    chat_ids=["group1", "group2"],
+    is_group=True,
+)
+```
+
+### Reading Chat Messages (4.24 MCP)
+
+SDK can also **read** conversation data, not just send:
+
+```python
+# Query user's chat list (private + group)
+result = await client.fetch_chat_list(chat_type=0, user_token="ut1")
+
+# Get private chat messages with a specific person
+result = await client.fetch_chat_messages(
+    staff_id="staff123", user_token="ut1", page_size=50,
+)
+
+# Get group chat messages
+result = await client.fetch_chat_messages(
+    group_id="group123", user_token="ut1", page_size=50,
+)
+
+# Deep pagination — use last_version from previous result
+result = await client.fetch_chat_messages(
+    group_id="group123", base_version="v100", page_size=50,
+)
+```
+
+See `lansenger-chats` skill for detailed chat reading API reference.
 
 ## Common Mistakes
 
 | Mistake | Correct approach |
 |---------|-----------------|
-| Using send_bot_message for group chat | Group chat uses send_text(is_group=True) or send_group_message |
 | @mention in private chat | Only group chat (4.6.2) supports @mention — no group context in private chat |
+| @mention on appCard/linkCard/appArticles | Only text & formatText support @mention; other types silently ignore reminder |
 | Bot private chat with departmentIdList treated as group | Each department member gets their own private chat, not a group message |
 | send_user_message without userToken | 4.6.3 requires userToken |
-| Group chat with linkCard/appCard | Group chat (4.6.2) only supports text and oacard |
 | send_text with Markdown | Use send_markdown for Markdown content |
 | send_markdown with attachment | Send separately: send_markdown first, then send_file |
 | i18nAppCard for approval workflow | Use appCard + isDynamic + headStatusInfo |
 
 ## Tips
 
-- Group chat only supports text and oacard — richer cards only work in private chat
-- Bot private chat (4.6.12) does not support formatText/attachments — use 4.6.3 人→人 private chat for those
-- @mention only works in group chat — reminder field is meaningless in private chat
+- Group chat supports **all** developer-accessible msgType — appCard, linkCard, appArticles all work in groups
+- @mention (reminder) only works on text and formatText in group chat — other msgTypes do NOT support it
+- If reminder fails, SDK auto-retries without reminder for text/formatText
 - Group chat userToken determines sender identity: present = human, absent = bot
-- send_text with is_group=True now supports user_token parameter — can send as human in group
+- send_text/send_markdown/send_file/send_link_card/send_app_articles/send_app_card/send_bot_message all support is_group=True
 - Using send_user_message requires completing the OAuth2 flow (see lansenger-oauth skill)
+- To read chat history, use fetch_chat_list and fetch_chat_messages (see lansenger-chats skill)

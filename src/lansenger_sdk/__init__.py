@@ -64,6 +64,7 @@ from .models import (
     GroupMemberResult,
     IsInGroupResult,
     LinkCardParams,
+    OaCardParams,
     OrgInfoResult,
     QueryGroupsResult,
     SendMessageResult,
@@ -213,6 +214,7 @@ __all__ = [
     "DownloadMediaResult",
     "AppCardParams",
     "LinkCardParams",
+    "OaCardParams",
     "DynamicCardUpdateParams",
     "UserTokenResult",
     "UserInfoResult",
@@ -361,4 +363,4 @@ __all__ = [
     "fetch_chat_messages",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
