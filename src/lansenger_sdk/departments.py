@@ -19,7 +19,7 @@ from urllib.parse import quote
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import (
     DepartmentChildrenResult,
     DepartmentDetailResult,
@@ -81,10 +81,7 @@ async def fetch_department_detail(
     if not department_id:
         return DepartmentDetailResult(success=False, error="department_id is required")
 
-    path = API_ENDPOINTS["departments"]["fetch"].replace("{department_id}", quote(department_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "departments", "fetch", app_token, user_token=user_token, department_id=department_id)
     if tag_id:
         url += f"&tag_id={quote(tag_id)}"
 
@@ -141,10 +138,7 @@ async def fetch_department_children(
     if not department_id:
         return DepartmentChildrenResult(success=False, error="department_id is required")
 
-    path = API_ENDPOINTS["departments"]["children_fetch"].replace("{department_id}", quote(department_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "departments", "children_fetch", app_token, user_token=user_token, department_id=department_id)
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -186,10 +180,8 @@ async def fetch_department_staffs(
     if not department_id:
         return DepartmentStaffsResult(success=False, error="department_id is required")
 
-    path = API_ENDPOINTS["departments"]["staffs_fetch"].replace("{department_id}", quote(department_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}&page={page}&page_size={page_size}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "departments", "staffs_fetch", app_token, user_token=user_token, department_id=department_id)
+    url += f"&page={page}&page_size={page_size}"
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:

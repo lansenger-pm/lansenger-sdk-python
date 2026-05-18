@@ -44,10 +44,9 @@ from .models import (
     TodoTaskExecutorListResult,
 )
 from .exceptions import LansengerNetworkError
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.todos")
-
-_TODO_BASE = "/xtra/task/unified/v1"
 
 TODO_TODO_STATUS_PENDING_READ = "11"
 TODO_TODO_STATUS_READ = "12"
@@ -93,13 +92,6 @@ def _parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
     return True, None
 
 
-def _build_url(config: LansengerConfig, path: str, app_token: str, user_token: str = "") -> str:
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
-    return url
-
-
 async def create_todo_task(
     config: LansengerConfig,
     app_token: str,
@@ -127,7 +119,7 @@ async def create_todo_task(
     if not org_id:
         return TodoTaskCreateResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/create", app_token, user_token)
+    url = build_api_url(config, "todo", "create", app_token, user_token=user_token)
     body: Dict[str, Any] = {
         "title": title,
         "type": type,
@@ -178,7 +170,7 @@ async def update_todo_task(
     if not org_id:
         return TodoTaskCreateResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/info/update", app_token, user_token)
+    url = build_api_url(config, "todo", "info_update", app_token, user_token=user_token)
     body: Dict[str, Any] = {
         "todotaskId": todotask_id,
         "title": title,
@@ -218,7 +210,7 @@ async def update_todo_task_status(
     if not org_id:
         return TodoTaskCreateResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/status/update", app_token, user_token)
+    url = build_api_url(config, "todo", "status_update", app_token, user_token=user_token)
     body: Dict[str, Any] = {
         "todotaskId": todotask_id,
         "status": status,
@@ -252,7 +244,7 @@ async def delete_todo_task(
     if not org_id:
         return TodoTaskCreateResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/sender/todotask/delete", app_token, user_token)
+    url = build_api_url(config, "todo", "sender_delete", app_token, user_token=user_token)
     body: Dict[str, Any] = {
         "todotaskId": todotask_id,
         "orgId": org_id,
@@ -284,7 +276,7 @@ async def fetch_todo_task_list(
     if not org_id:
         return TodoTaskListResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/list/fetch", app_token, user_token)
+    url = build_api_url(config, "todo", "list_fetch", app_token, user_token=user_token)
     body: Dict[str, Any] = {"orgId": org_id}
     if app_ids:
         body["appIds"] = app_ids
@@ -324,7 +316,7 @@ async def fetch_todo_task_by_source_id(
     if not org_id:
         return TodoTaskInfoResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/info/fetchbysourceid", app_token, user_token)
+    url = build_api_url(config, "todo", "info_fetch_by_source_id", app_token, user_token=user_token)
     body: Dict[str, Any] = {"sourceId": source_id, "orgId": org_id}
     if staff_id:
         body["staffId"] = staff_id
@@ -370,7 +362,7 @@ async def fetch_todo_task_by_id(
     if not org_id:
         return TodoTaskInfoResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/info/fetch", app_token, user_token)
+    url = build_api_url(config, "todo", "info_fetch", app_token, user_token=user_token)
     body: Dict[str, Any] = {"todotaskId": todotask_id, "orgId": org_id}
     if staff_id:
         body["staffId"] = staff_id
@@ -417,7 +409,7 @@ async def fetch_todo_task_status_counts(
     if not org_id:
         return TodoTaskStatusCountResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/status/countList/fetch", app_token, user_token)
+    url = build_api_url(config, "todo", "status_count_list_fetch", app_token, user_token=user_token)
     body: Dict[str, Any] = {"staffId": staff_id, "orgId": org_id}
     if app_id:
         body["appId"] = app_id
@@ -454,7 +446,7 @@ async def update_executor_status(
     if not org_id:
         return TodoTaskCreateResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/executor/status/update", app_token, user_token)
+    url = build_api_url(config, "todo", "executor_status_update", app_token, user_token=user_token)
     body: Dict[str, Any] = {
         "executorStatusList": executor_status_list,
         "orgId": org_id,
@@ -487,7 +479,7 @@ async def add_executors(
     if not org_id:
         return TodoTaskCreateResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/executor/create", app_token, user_token)
+    url = build_api_url(config, "todo", "executor_create", app_token, user_token=user_token)
     body: Dict[str, Any] = {
         "executorIds": executor_ids,
         "orgId": org_id,
@@ -520,7 +512,7 @@ async def delete_executors(
     if not org_id:
         return TodoTaskCreateResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/executor/delete", app_token, user_token)
+    url = build_api_url(config, "todo", "executor_delete", app_token, user_token=user_token)
     body: Dict[str, Any] = {
         "executorIds": executor_ids,
         "orgId": org_id,
@@ -554,7 +546,7 @@ async def fetch_executor_list(
     if not org_id:
         return TodoTaskExecutorListResult(success=False, error="org_id is required")
 
-    url = _build_url(config, f"{_TODO_BASE}/todotask/executor/list/fetch", app_token, user_token)
+    url = build_api_url(config, "todo", "executor_list_fetch", app_token, user_token=user_token)
     body: Dict[str, Any] = {"todotaskId": todotask_id, "orgId": org_id}
     if staff_id:
         body["staffId"] = staff_id

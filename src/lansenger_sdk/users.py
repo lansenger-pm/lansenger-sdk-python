@@ -16,7 +16,7 @@ from typing import Optional
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import UserInfoResult
 
 logger = logging.getLogger("lansenger_sdk.users")
@@ -47,12 +47,7 @@ async def fetch_user_info(
     if not app_token:
         return UserInfoResult(success=False, error="app_token is required")
 
-    url = (
-        f"{config.api_gateway_url}"
-        f"{API_ENDPOINTS['users']['fetch']}"
-        f"?app_token={app_token}"
-        f"&user_token={user_token}"
-    )
+    url = build_api_url(config, "users", "fetch", app_token, user_token=user_token)
 
     owns_client = http_client is None
     if owns_client:

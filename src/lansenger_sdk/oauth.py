@@ -30,6 +30,7 @@ import httpx
 from .config import LansengerConfig
 from .constants import API_ENDPOINTS, OAUTH2_SCOPE_BASIC_USER_INFO, OAUTH2_SCOPES
 from .exceptions import LansengerAuthError, LansengerConfigError, LansengerNetworkError
+from .url_helpers import build_api_url
 from .models import UserTokenResult
 
 logger = logging.getLogger("lansenger_sdk.oauth")
@@ -124,13 +125,8 @@ async def exchange_code_for_user_token(
     if not app_token:
         return UserTokenResult(success=False, error="app_token is required")
 
-    url = (
-        f"{config.api_gateway_url}"
-        f"{API_ENDPOINTS['oauth2']['user_token_create']}"
-        f"?app_token={app_token}"
-        f"&grant_type=authorization_code"
-        f"&code={code}"
-    )
+    url = build_api_url(config, "oauth2", "user_token_create", app_token)
+    url += f"&grant_type=authorization_code&code={code}"
     if redirect_uri:
         url += f"&redirect_uri={quote(redirect_uri)}"
 
@@ -206,13 +202,8 @@ async def refresh_user_token(
     if not app_token:
         return UserTokenResult(success=False, error="app_token is required")
 
-    url = (
-        f"{config.api_gateway_url}"
-        f"{API_ENDPOINTS['oauth2']['refresh_token_create']}"
-        f"?app_token={app_token}"
-        f"&grant_type=refresh_token"
-        f"&refresh_token={refresh_token}"
-    )
+    url = build_api_url(config, "oauth2", "refresh_token_create", app_token)
+    url += f"&grant_type=refresh_token&refresh_token={refresh_token}"
     if scope:
         url += f"&scope={quote(scope)}"
 

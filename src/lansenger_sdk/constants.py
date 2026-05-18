@@ -54,7 +54,7 @@ API_ENDPOINTS = {
         "msg_fetch": "/v1/sse/msg/fetch",
     },
     "media": {
-        "create": "/v1/app/medias/create",
+        "create": "/v1/medias/create",
         "fetch": "/v1/medias/{media_id}/fetch",
     },
     "message": {
@@ -76,6 +76,32 @@ API_ENDPOINTS = {
     "chats": {
         "fetch": "/v1/chats/fetch",
         "messages_fetch": "/v1/messages/fetch",
+    },
+    "calendars": {
+        "primary": "/v1/calendars/primary",
+        "schedule_create": "/v1/calendars/{calendar_id}/schedules/create",
+        "schedule_fetch": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/fetch",
+        "schedule_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/update",
+        "schedule_delete": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/delete",
+        "schedule_list": "/v1/calendars/{calendar_id}/schedules/fetch",
+        "attendees_fetch": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/fetch",
+        "attendees_create": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/create",
+        "attendees_delete": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/delete",
+    },
+    "todo": {
+        "create": "/xtra/task/unified/v1/todotask/create",
+        "info_update": "/xtra/task/unified/v1/todotask/info/update",
+        "status_update": "/xtra/task/unified/v1/todotask/status/update",
+        "sender_delete": "/xtra/task/unified/v1/sender/todotask/delete",
+        "list_fetch": "/xtra/task/unified/v1/todotask/list/fetch",
+        "info_fetch_by_source_id": "/xtra/task/unified/v1/todotask/info/fetchbysourceid",
+        "info_fetch": "/xtra/task/unified/v1/todotask/info/fetch",
+        "status_count_list_fetch": "/xtra/task/unified/v1/todotask/status/countList/fetch",
+        "executor_status_update": "/xtra/task/unified/v1/todotask/executor/status/update",
+        "executor_create": "/xtra/task/unified/v1/todotask/executor/create",
+        "executor_delete": "/xtra/task/unified/v1/todotask/executor/delete",
+        "executor_list_fetch": "/xtra/task/unified/v1/todotask/executor/list/fetch",
+        "staff_application_fetch": "/xtra/task/unified/v1/staff/application/fetch",
     },
 }
 

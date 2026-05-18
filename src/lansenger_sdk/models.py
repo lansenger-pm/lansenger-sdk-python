@@ -909,11 +909,21 @@ class ChatStaffInfo:
     staff_name: str = ""
     sector_names: Optional[List[str]] = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"staff_id": self.staff_id, "staff_name": self.staff_name}
+        if self.sector_names is not None:
+            d["sector_names"] = self.sector_names
+        return d
+
 
 @dataclass
 class ChatGroupInfo:
     group_id: str = ""
     group_name: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"group_id": self.group_id, "group_name": self.group_name}
+        return d
 
 
 @dataclass
@@ -924,6 +934,16 @@ class ChatListResult:
     error: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        if self.staff_infos is not None:
+            d["staff_infos"] = [s.to_dict() for s in self.staff_infos]
+        if self.group_infos is not None:
+            d["group_infos"] = [g.to_dict() for g in self.group_infos]
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
 
 @dataclass
 class ChatMessageInfo:
@@ -931,6 +951,12 @@ class ChatMessageInfo:
     sender: str = ""
     message_type: str = ""
     content: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"send_time": self.send_time, "sender": self.sender, "message_type": self.message_type}
+        if self.content is not None:
+            d["content"] = self.content
+        return d
 
 
 @dataclass
@@ -944,3 +970,11 @@ class ChatMessagesResult:
     messages: Optional[List[ChatMessageInfo]] = None
     error: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total, "last_version": self.last_version, "name": self.name, "chat_type": self.chat_type}
+        if self.messages is not None:
+            d["messages"] = [m.to_dict() for m in self.messages]
+        if self.error is not None:
+            d["error"] = self.error
+        return d

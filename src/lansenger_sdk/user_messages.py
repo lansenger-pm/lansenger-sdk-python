@@ -25,7 +25,7 @@ from typing import Any, Dict, Optional
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import UserMessageResult
 
 logger = logging.getLogger("lansenger_sdk.user_messages")
@@ -67,8 +67,7 @@ async def send_user_message(
     if not msg_data:
         return UserMessageResult(success=False, error="msg_data is required")
 
-    path = API_ENDPOINTS["user_message"]["create"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}&user_token={user_token}"
+    url = build_api_url(config, "user_message", "create", app_token, user_token=user_token)
 
     final_msg_data: Dict[str, Any] = dict(msg_data)
     if common:

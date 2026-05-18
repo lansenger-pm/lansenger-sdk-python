@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import (
     ChatGroupInfo,
     ChatListResult,
@@ -51,10 +51,7 @@ async def fetch_chat_list(
         user_token: Optional userToken for human identity.
         http_client: Optional httpx client.
     """
-    path = API_ENDPOINTS["chats"]["fetch"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "chats", "fetch", app_token, user_token=user_token)
 
     payload: Dict[str, Any] = {}
     if chat_type:
@@ -152,10 +149,7 @@ async def fetch_chat_messages(
             success=False, error="staff_id or group_id is required"
         )
 
-    path = API_ENDPOINTS["chats"]["messages_fetch"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "chats", "messages_fetch", app_token, user_token=user_token)
     url += f"&page_size={page_size}"
     if base_version:
         url += f"&base_version={base_version}"

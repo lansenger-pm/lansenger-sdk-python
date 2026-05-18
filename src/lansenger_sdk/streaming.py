@@ -12,12 +12,11 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Dict, Optional
-from urllib.parse import quote
 
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import StreamMessageResult
 
 logger = logging.getLogger("lansenger_sdk.streaming")
@@ -80,8 +79,7 @@ async def create_stream_message(
     if not stream_id:
         return StreamMessageResult(success=False, error="stream_id is required")
 
-    path = API_ENDPOINTS["sse"]["msg_create"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
+    url = build_api_url(config, "sse", "msg_create", app_token)
 
     body: Dict[str, Any] = {
         "receiverId": receiver_id,
@@ -123,8 +121,7 @@ async def fetch_stream_message(
     if not msg_id:
         return StreamMessageResult(success=False, error="msg_id is required")
 
-    path = API_ENDPOINTS["sse"]["msg_fetch"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
+    url = build_api_url(config, "sse", "msg_fetch", app_token)
 
     body: Dict[str, Any] = {
         "msgId": msg_id,

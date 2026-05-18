@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote
 
 import httpx
 
@@ -34,17 +33,9 @@ from .models import (
     ScheduleListResult,
     ScheduleAttendeesResult,
 )
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.calendars")
-
-
-def _build_url(config: LansengerConfig, path: str, app_token: str, user_token: str = "", user_id: str = "") -> str:
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
-    if user_id:
-        url += f"&user_id={quote(user_id)}"
-    return url
 
 
 async def _do_get(
@@ -128,7 +119,7 @@ async def fetch_primary_calendar(
         user_id: Optional user ID (alternative to user_token).
         http_client: Optional httpx client.
     """
-    url = _build_url(config, "/v1/calendars/primary", app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "primary", app_token, user_token=user_token, user_id=user_id)
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
         return CalendarPrimaryResult(success=False, error=http_err)
@@ -196,8 +187,7 @@ async def create_schedule(
     if not attendees:
         return ScheduleCreateResult(success=False, error="attendees is required")
 
-    path = f"/v1/calendars/{quote(calendar_id, safe='')}/schedules/create"
-    url = _build_url(config, path, app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "schedule_create", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id)
 
     body: Dict[str, Any] = {
         "summary": summary,
@@ -251,8 +241,7 @@ async def fetch_schedule(
     if not schedule_id:
         return ScheduleInfoResult(success=False, error="schedule_id is required")
 
-    path = f"/v1/calendars/{quote(calendar_id, safe='')}/schedules/{quote(schedule_id, safe='')}/fetch"
-    url = _build_url(config, path, app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "schedule_fetch", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
         return ScheduleInfoResult(success=False, error=http_err)
@@ -295,8 +284,7 @@ async def delete_schedule(
     if not schedule_id:
         return ScheduleCreateResult(success=False, error="schedule_id is required")
 
-    path = f"/v1/calendars/{quote(calendar_id, safe='')}/schedules/{quote(schedule_id, safe='')}/delete"
-    url = _build_url(config, path, app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "schedule_delete", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
     body: Dict[str, Any] = {
         "reminder_type": reminder_type,
@@ -340,8 +328,7 @@ async def fetch_schedule_list(
     if not start_time or not end_time:
         return ScheduleListResult(success=False, error="start_time and end_time are required")
 
-    path = f"/v1/calendars/{quote(calendar_id, safe='')}/schedules/fetch"
-    url = _build_url(config, path, app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "schedule_list", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id)
 
     body: Dict[str, Any] = {"startTime": start_time, "endTime": end_time}
 
@@ -378,8 +365,7 @@ async def fetch_schedule_attendees(
     if not schedule_id:
         return ScheduleAttendeesResult(success=False, error="schedule_id is required")
 
-    path = f"/v1/calendars/{quote(calendar_id, safe='')}/schedules/{quote(schedule_id, safe='')}/members/fetch"
-    url = _build_url(config, path, app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "attendees_fetch", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
     url += f"&page={page}&page_size={page_size}"
 
     data, http_err = await _do_get(config, url, http_client)
@@ -418,8 +404,7 @@ async def add_schedule_attendees(
     if not attendees:
         return ScheduleCreateResult(success=False, error="attendees is required")
 
-    path = f"/v1/calendars/{quote(calendar_id, safe='')}/schedules/{quote(schedule_id, safe='')}/members/create"
-    url = _build_url(config, path, app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "attendees_create", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
     body: Dict[str, Any] = {"attendees": attendees}
     if reminder_type:
@@ -460,8 +445,7 @@ async def delete_schedule_attendees(
     if not attendees:
         return ScheduleCreateResult(success=False, error="attendees is required")
 
-    path = f"/v1/calendars/{quote(calendar_id, safe='')}/schedules/{quote(schedule_id, safe='')}/members/delete"
-    url = _build_url(config, path, app_token, user_token, user_id)
+    url = build_api_url(config, "calendars", "attendees_delete", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
     body: Dict[str, Any] = {"attendees": attendees}
     if reminder_type:

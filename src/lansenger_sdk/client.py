@@ -31,9 +31,10 @@ import httpx
 
 from .auth import TokenManager
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS, MEDIA_TYPE_FILE, guess_media_type
+from .constants import MEDIA_TYPE_FILE, guess_media_type
 from .exceptions import LansengerAPIError, LansengerFileError, LansengerNetworkError
 from .oauth import exchange_code_for_user_token, refresh_user_token
+from .url_helpers import build_api_url
 from .media import download_media, upload_media
 from .persistence import CredentialStore
 from .models import (
@@ -212,18 +213,10 @@ class LansengerClient:
         return await self._token_manager.get_token()
 
     def _private_msg_url(self, token: str) -> str:
-        return (
-            f"{self._config.api_gateway_url}"
-            f"{API_ENDPOINTS['smart_bot']['private_message']}"
-            f"?app_token={token}"
-        )
+        return build_api_url(self._config, "smart_bot", "private_message", token)
 
     def _group_msg_url(self, token: str) -> str:
-        return (
-            f"{self._config.api_gateway_url}"
-            f"{API_ENDPOINTS['smart_bot']['group_message']}"
-            f"?app_token={token}"
-        )
+        return build_api_url(self._config, "smart_bot", "group_message", token)
 
     async def _send_private(self, chat_id: str, msg_type: str, msg_data: dict) -> SendMessageResult:
         token = await self._get_token()
@@ -917,11 +910,7 @@ class LansengerClient:
             return SendMessageResult(success=False, error="msg_id is required")
 
         token = await self._get_token()
-        url = (
-            f"{self._config.api_gateway_url}"
-            f"{API_ENDPOINTS['message']['dynamic_update']}"
-            f"?app_token={token}"
-        )
+        url = build_api_url(self._config, "message", "dynamic_update", token)
 
         app_card_update: Dict[str, Any] = {"isLastUpdate": is_last_update}
         if head_status_info:
@@ -982,7 +971,7 @@ class LansengerClient:
             )
 
         token = await self._get_token()
-        url = f"{self._config.api_gateway_url}{API_ENDPOINTS['message']['revoke']}?app_token={token}"
+        url = build_api_url(self._config, "message", "revoke", token)
 
         payload: Dict[str, Any] = {
             "chatType": chat_type,
@@ -1018,11 +1007,8 @@ class LansengerClient:
         self._ensure_clients()
 
         token = await self._get_token()
-        url = (
-            f"{self._config.api_gateway_url}"
-            f"{API_ENDPOINTS['groups']['fetch']}"
-            f"?app_token={token}&page_offset={page_offset}&page_size={page_size}"
-        )
+        url = build_api_url(self._config, "groups", "fetch", token)
+        url += f"&page_offset={page_offset}&page_size={page_size}"
 
         try:
             response = await self._http_client.get(url)
@@ -1656,9 +1642,7 @@ class LansengerClient:
         if not msg_data:
             return BotMessageResult(success=False, error="msg_data is required")
         token = await self._get_token()
-        url = f"{self._config.api_gateway_url}{API_ENDPOINTS['bot']['message_create']}?app_token={token}"
-        if user_token:
-            url += f"&user_token={user_token}"
+        url = build_api_url(self._config, "bot", "message_create", token, user_token=user_token)
         payload: Dict[str, Any] = {
             "userIdList": chat_ids or [],
             "departmentIdList": department_ids or [],

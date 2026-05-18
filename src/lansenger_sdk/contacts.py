@@ -23,7 +23,7 @@ from urllib.parse import quote
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import (
     DepartmentAncestorsResult,
     ExtraFieldIdsResult,
@@ -87,10 +87,7 @@ async def fetch_staff_basic_info(
     if not staff_id:
         return StaffBasicInfoResult(success=False, error="staff_id is required")
 
-    path = API_ENDPOINTS["staffs"]["fetch"].replace("{staff_id}", quote(staff_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "staffs", "fetch", app_token, user_token=user_token, staff_id=staff_id)
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -136,10 +133,7 @@ async def fetch_staff_detail(
     if not staff_id:
         return StaffDetailResult(success=False, error="staff_id is required")
 
-    path = API_ENDPOINTS["staffs"]["detail_fetch"].replace("{staff_id}", quote(staff_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "staffs", "detail_fetch", app_token, user_token=user_token, staff_id=staff_id)
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -206,10 +200,7 @@ async def fetch_department_ancestors(
     if not staff_id:
         return DepartmentAncestorsResult(success=False, error="staff_id is required")
 
-    path = API_ENDPOINTS["staffs"]["department_ancestors"].replace("{staff_id}", quote(staff_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "staffs", "department_ancestors", app_token, user_token=user_token, staff_id=staff_id)
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -260,15 +251,8 @@ async def fetch_staff_id_mapping(
     if not id_value:
         return StaffIdMappingResult(success=False, error="id_value is required")
 
-    url = (
-        f"{config.api_gateway_url}{API_ENDPOINTS['staffs']['id_mapping']}"
-        f"?app_token={app_token}"
-        f"&org_id={quote(org_id)}"
-        f"&id_type={quote(id_type)}"
-        f"&id_value={quote(id_value)}"
-    )
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "staffs", "id_mapping", app_token, user_token=user_token)
+    url += f"&org_id={quote(org_id)}&id_type={quote(id_type)}&id_value={quote(id_value)}"
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -310,10 +294,8 @@ async def fetch_org_extra_field_ids(
     if not org_id:
         return ExtraFieldIdsResult(success=False, error="org_id is required")
 
-    path = API_ENDPOINTS["org"]["extra_field_ids"].replace("{org_id}", quote(org_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}&page={page}&page_size={page_size}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "org", "extra_field_ids", app_token, user_token=user_token, org_id=org_id)
+    url += f"&page={page}&page_size={page_size}"
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -363,11 +345,7 @@ async def search_staff(
     if not keyword:
         return StaffSearchResult(success=False, error="keyword is required")
 
-    url = f"{config.api_gateway_url}{API_ENDPOINTS['staffs']['search']}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
-    if user_id:
-        url += f"&user_id={quote(user_id)}"
+    url = build_api_url(config, "staffs", "search", app_token, user_token=user_token, user_id=user_id)
     if page is not None and page_size is not None:
         url += f"&page={page}&page_size={page_size}"
 
@@ -428,10 +406,7 @@ async def fetch_org_info(
     if not org_id:
         return OrgInfoResult(success=False, error="org_id is required")
 
-    path = API_ENDPOINTS["org"]["fetch"].replace("{org_id}", quote(org_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "org", "fetch", app_token, user_token=user_token, org_id=org_id)
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:

@@ -11,9 +11,10 @@ import httpx
 
 from .auth import TokenManager
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS, MEDIA_TYPE_FILE, MEDIA_TYPE_IMAGE, MEDIA_TYPE_VIDEO, guess_media_type
+from .constants import MEDIA_TYPE_FILE, MEDIA_TYPE_IMAGE, MEDIA_TYPE_VIDEO, guess_media_type
 from .exceptions import LansengerFileError, LansengerNetworkError
 from .models import DownloadMediaResult, UploadMediaResult
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.media")
 
@@ -45,7 +46,7 @@ async def upload_media(
     except Exception as e:
         return UploadMediaResult(success=False, error=f"Auth failed: {e}")
 
-    url = f"{config.api_gateway_url}/v1/medias/create?type={media_type}&app_token={token}"
+    url = build_api_url(config, "media", "create", token) + f"&type={media_type}"
 
     try:
         with open(file_path, "rb") as f:
@@ -97,11 +98,10 @@ async def download_media(
     except Exception as e:
         return DownloadMediaResult(success=False, error=f"Auth failed: {e}")
 
-    url = f"{config.api_gateway_url}/v1/medias/{media_id}/fetch"
-    params = {"app_token": token}
+    url = build_api_url(config, "media", "fetch", token, media_id=media_id)
 
     try:
-        response = await http_client.get(url, params=params)
+        response = await http_client.get(url)
         response.raise_for_status()
         return DownloadMediaResult(success=True, data=response.content)
     except httpx.HTTPError as e:

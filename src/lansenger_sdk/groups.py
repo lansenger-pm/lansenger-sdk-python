@@ -21,7 +21,7 @@ from urllib.parse import quote
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import (
     CreateGroupResult,
     GroupInfoResult,
@@ -130,10 +130,7 @@ async def create_group(
     if not org_id:
         return CreateGroupResult(success=False, error="org_id is required")
 
-    path = API_ENDPOINTS["groups_v2"]["create"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "groups_v2", "create", app_token, user_token=user_token)
 
     body: Dict[str, Any] = {
         "name": name,
@@ -197,10 +194,7 @@ async def fetch_group_info(
     if not group_id:
         return GroupInfoResult(success=False, error="group_id is required")
 
-    path = API_ENDPOINTS["groups_v2"]["info_fetch"].replace("{group_id}", quote(group_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "groups_v2", "info_fetch", app_token, user_token=user_token, group_id=group_id)
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -257,10 +251,8 @@ async def fetch_group_members(
     if not group_id:
         return GroupMemberResult(success=False, error="group_id is required")
 
-    path = API_ENDPOINTS["groups_v2"]["members_fetch"].replace("{group_id}", quote(group_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}&page_offset={page_offset}&page_size={page_size}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "groups_v2", "members_fetch", app_token, user_token=user_token, group_id=group_id)
+    url += f"&page_offset={page_offset}&page_size={page_size}"
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -298,10 +290,8 @@ async def fetch_group_list(
         page_size: Page size (default 100).
         http_client: Optional httpx client.
     """
-    path = API_ENDPOINTS["groups_v2"]["groups_fetch"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}&page_offset={page_offset}&page_size={page_size}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "groups_v2", "groups_fetch", app_token, user_token=user_token)
+    url += f"&page_offset={page_offset}&page_size={page_size}"
 
     data, http_err = await _do_get(config, url, http_client)
     if http_err:
@@ -342,10 +332,7 @@ async def check_is_in_group(
     if not group_id:
         return IsInGroupResult(success=False, error="group_id is required")
 
-    path = API_ENDPOINTS["groups_v2"]["is_in_group"].replace("{group_id}", quote(group_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "groups_v2", "is_in_group", app_token, user_token=user_token, group_id=group_id)
     if staff_id:
         url += f"&staff_id={quote(staff_id)}"
 
@@ -416,10 +403,7 @@ async def update_group_info(
     if not group_id:
         return UpdateGroupResult(success=False, error="group_id is required")
 
-    path = API_ENDPOINTS["groups_v2"]["info_update"].replace("{group_id}", quote(group_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "groups_v2", "info_update", app_token, user_token=user_token, group_id=group_id)
 
     body: Dict[str, Any] = {}
     if name:
@@ -496,10 +480,7 @@ async def update_group_members(
     if not add_user_list and not del_user_list and not add_department_id_list:
         return UpdateGroupMembersResult(success=False, error="at least one of add_user_list, del_user_list, or add_department_id_list is required")
 
-    path = API_ENDPOINTS["groups_v2"]["members_update"].replace("{group_id}", quote(group_id, safe=""))
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "groups_v2", "members_update", app_token, user_token=user_token, group_id=group_id)
 
     body: Dict[str, Any] = {}
     if add_user_list:

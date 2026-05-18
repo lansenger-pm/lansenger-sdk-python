@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS
+from .url_helpers import build_api_url
 from .models import AccountMessageResult
 
 logger = logging.getLogger("lansenger_sdk.account_messages")
@@ -67,10 +67,7 @@ async def send_account_message(
     if not msg_data:
         return AccountMessageResult(success=False, error="msg_data is required")
 
-    path = API_ENDPOINTS["account_message"]["create"]
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
-    if user_token:
-        url += f"&user_token={user_token}"
+    url = build_api_url(config, "account_message", "create", app_token, user_token=user_token)
 
     payload: Dict[str, Any] = {
         "userIdList": chat_ids or [],
