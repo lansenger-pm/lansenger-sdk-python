@@ -1,6 +1,6 @@
 ---
 name: lansenger-callbacks
-description: Lansenger callback event parsing — 25 event types across 14 categories, structured dataclass parsing, payload parsing, signature verification
+description: Lansenger callback event parsing — 24 event types across 13 categories, structured dataclass parsing, payload parsing, signature verification
 license: MIT
 metadata:
   sdk: lansenger-sdk
@@ -15,12 +15,12 @@ Lansenger SDK provides callback event parsing for processing webhook payloads se
 
 ## Event Type Categories
 
-Lansenger sends 25 event types grouped into 14 categories:
+Lansenger sends 24 event types grouped into 13 categories:
 
 | Category | Event Types |
 |----------|-------------|
 | **bot** | `bot_private_message`, `bot_group_message` |
-| **public_account** | `account_message`, `account_subscribe`, `account_unsubscribe` |
+| **public_account** | `account_subscribe`, `account_unsubscribe` |
 | **staff** | `staff_info`, `staff_modify`, `staff_create`, `staff_delete` |
 | **department** | `dept_modify`, `dept_create`, `dept_delete` |
 | **group** | `group_create_approve` |
@@ -33,6 +33,8 @@ Lansenger sends 25 event types grouped into 14 categories:
 | **data_scope** | `data_scope` |
 | **workbench** | `wb_visible_config` |
 | **calendar** | `schedule_modify`, `schedule_delete` |
+
+Note: `account_message` callback events are not yet mapped in the SDK — they would be categorized as `"unknown"` and their data remains a raw dict.
 
 ## SDK Method Reference
 
@@ -80,7 +82,7 @@ class CallbackEvent:
     event_id: int        # eventId from payload
     event_type: str      # eventType string (e.g. "bot_private_message")
     category: str        # mapped category (e.g. "bot", "staff", "department")
-    data: dataclass      # structured event-specific dataclass (not raw dict)
+    data: Union[dict, dataclass]  # structured dataclass for known events, or raw dict for unknown event types
     app_id: str          # appId
     org_id: str          # orgId
 ```

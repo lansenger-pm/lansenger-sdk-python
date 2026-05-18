@@ -112,11 +112,13 @@ result = await client.update_todo_task_status(
 result = await client.delete_todo_task(
     todotask_id="taskOpenId",
     org_id="orgId123",
+    staff_id="senderOpenId",        # optional
 )
 ```
 
 - Returns: `TodoTaskCreateResult` — todotask_id
 - **Required**: todotask_id, org_id
+- Optional: `staff_id`
 - Only the sender (creator) can delete a todo task
 
 ### 5. Fetch todo task list
@@ -139,11 +141,13 @@ result = await client.fetch_todo_task_list(
 result = await client.fetch_todo_task_by_source_id(
     source_id="approval-123",
     org_id="orgId123",
+    staff_id="staffOpenId",          # optional
 )
 # result.todotask_id, result.title, result.status, result.executor_ids
 ```
 
 - Returns: `TodoTaskInfoResult` — todotask_id, source_id, title, desc, status, type, link, pc_link, sender_id, executor_ids, create_time, app_id
+- Optional: `staff_id`
 
 ### 7. Fetch todo by todotaskId
 
@@ -151,11 +155,13 @@ result = await client.fetch_todo_task_by_source_id(
 result = await client.fetch_todo_task_by_id(
     todotask_id="taskOpenId",
     org_id="orgId123",
+    staff_id="staffOpenId",          # optional
 )
 # result.todotask_id, result.title, result.status
 ```
 
 - Returns: `TodoTaskInfoResult` (same fields as above)
+- Optional: `staff_id`
 
 ### 8. Fetch status counts
 
@@ -164,11 +170,13 @@ result = await client.fetch_todo_task_status_counts(
     staff_id="staffOpenId",
     org_id="orgId123",
     app_id="appId1",                      # optional: filter by app
+    status_list=["21", "22"],             # optional: filter by status codes
 )
 # result.status_counts — list of {status, count} dicts
 ```
 
 - Returns: `TodoTaskStatusCountResult` — status_counts
+- Optional: `app_id`, `status_list`
 
 ### 9-12. Executor management
 
@@ -197,6 +205,7 @@ result = await client.delete_executors(
 result = await client.fetch_executor_list(
     todotask_id="taskOpenId",
     org_id="orgId123",
+    staff_id="staffOpenId",              # optional
     status_list=["21"],                   # optional: filter by executor status
 )
 # result.total, result.executor_list

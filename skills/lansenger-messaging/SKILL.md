@@ -204,6 +204,90 @@ result = await client.send_app_articles(
 )
 ```
 
+## Other SDK Methods
+
+### send_image_url — Send image from URL
+
+Downloads an image from a URL and sends it as a media message:
+
+```python
+result = await client.send_image_url(
+    chat_id="staff123", image_url="https://example.com/photo.jpg",
+    caption="Team photo",
+)
+
+# Group chat
+result = await client.send_image_url(
+    chat_id="group123", image_url="https://example.com/photo.jpg",
+    is_group=True,
+)
+```
+
+- **Required**: chat_id, image_url
+- Optional: caption, is_group, user_token, sender_id
+
+### update_dynamic_card — Update a live appCard
+
+Updates a previously sent dynamic appCard in-place (only works on appCards sent with `is_dynamic=True`):
+
+```python
+result = await client.update_dynamic_card(
+    msg_id="previous_msg_id",
+    head_status_info={"text": "Approved ✓", "color": "green"},
+    links=[{"name": "View Details", "link": "https://app.com/details"}],
+    is_last_update=True,
+)
+
+# Using DynamicCardUpdateParams
+from lansenger_sdk import DynamicCardUpdateParams
+params = DynamicCardUpdateParams(msg_id="msg123", is_last_update=True)
+result = await client.update_dynamic_card_with_params(params)
+```
+
+- **Required**: msg_id
+- Optional: head_status_info, links, is_last_update
+
+### revoke_message — Retract a sent message
+
+```python
+result = await client.revoke_message(
+    message_ids=["msg123", "msg456"],
+    chat_type="private",  # "private" or "group"
+    sender_id="staff1",   # optional
+)
+```
+
+- **Required**: message_ids (list), chat_type
+
+### Media upload/download
+
+```python
+# Upload a file and get mediaId
+result = await client.upload_media(file_path="/path/to/file.pdf", media_type=3)
+# result.message_id contains the mediaId
+
+# Download media by mediaId to bytes
+result = await client.download_media(media_id="media123")
+
+# Download media and save to local file
+result = await client.download_media_to_file(
+    media_id="media123", save_path="/path/to/save.pdf",
+)
+```
+
+### Health check & token management
+
+```python
+# Verify credentials work
+ok = await client.health_check()  # returns True/False
+
+# Get current appToken (auto-managed)
+token = await client.get_token()
+
+# Force refresh appToken
+await client.invalidate_token()
+```
+
 ## SDK Method Decision Tree
 
 ### Private Chat
@@ -228,6 +312,7 @@ result = await client.send_text(chat_id="staff123", content="Report", file_path=
 result = await client.send_bot_message(
     msg_type="text", msg_data={"text": {"content": "Notice"}},
     chat_ids=["staff1", "staff2"], department_ids=["dept1"],
+    entry_id="entry_openId",              # optional
 )
 
 # Bot → human card private chat
@@ -241,9 +326,11 @@ result = await client.send_oacard(chat_id="staff123", title="Leave Approval", he
 ```python
 result = await client.send_account_message(
     msg_type="text", msg_data={"text": {"content": "System notice"}},
-    chat_ids=["staff1", "staff2"],  # can send to multiple users/depts
+    chat_ids=["staff1", "staff2"],
     department_ids=["dept1"],
     account_id="524288-xxxx",       # 公号 ID, or use entryId
+    attach={"name": "report.pdf", "size": 1024, "mediaId": "m123"},  # optional attachment
+    entry_id="entry_openId",        # optional 公号 entryId
 )
 # Each recipient sees this in their own private chat, sender = 公号
 ```
@@ -253,10 +340,12 @@ result = await client.send_account_message(
 ```python
 # userToken is REQUIRED (obtained via OAuth2)
 result = await client.send_user_message(
-    receiver_id="staff456",     # single recipient, 1:1
+    receiver_id="staff456",
     msg_type="text",
     msg_data={"text": {"content": "Hello"}},
-    user_token="userToken_from_oauth2",  # required
+    user_token="userToken_from_oauth2",
+    uuid="unique-msg-id",                # optional dedup key
+    common={"attachmentList": [...]},     # optional msgData.common
 )
 # Sender = human, looks like the person sent it themselves
 ```

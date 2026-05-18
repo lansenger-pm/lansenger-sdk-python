@@ -43,7 +43,7 @@ client = LansengerClient(
 
 auth_url = client.build_authorize_url(
     redirect_uri="https://myapp.com/callback",
-    # scope defaults to "basic_userinfor"
+    scope="basic_userinfor",           # or scope=["basic_userinfor", "other_scope"]
     # state auto-generated UUID for CSRF protection
 )
 # Redirect user to auth_url in browser, or send as link_card
@@ -67,7 +67,7 @@ if not LansengerClient.validate_callback_state(callback["state"], expected_state
     raise Exception("CSRF state mismatch")
 
 # Exchange code for userToken + refreshToken
-token_result = await client.exchange_code(callback["code"])
+token_result = await client.exchange_code(callback["code"], redirect_uri="https://myapp.com/callback")
 # token_result.user_token, token_result.refresh_token, token_result.staff_id
 ```
 
@@ -77,7 +77,7 @@ token_result = await client.exchange_code(callback["code"])
 ### Step 3: Refresh expired userToken
 
 ```python
-token_result = await client.refresh_user_token(refresh_token="previousRefreshToken")
+token_result = await client.refresh_user_token(refresh_token="previousRefreshToken", scope="basic_userinfor")
 # token_result.user_token, token_result.refresh_token (NEW — old one invalidated)
 ```
 

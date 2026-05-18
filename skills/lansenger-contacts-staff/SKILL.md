@@ -30,11 +30,12 @@ Lansenger SDK provides staff/contacts/org APIs for looking up organization membe
 ### 1. Fetch staff basic info
 
 ```python
-result = await client.fetch_staff_basic_info(staff_id="staffOpenId123")
+result = await client.fetch_staff_basic_info(staff_id="staffOpenId123", user_token="userToken456")
 # result.org_id, result.name, result.gender, result.avatar_url, result.departments
 ```
 
 - Returns: `StaffBasicInfoResult` — orgId, orgName, name, gender, signature, avatarUrl, avatarId, status, departments
+- Optional: `user_token` for user-scoped access
 - `orgName` field: API sometimes returns `orgname` (lowercase n) — SDK handles this fallback
 
 ### 2. Fetch staff detail (full profile)
@@ -44,18 +45,19 @@ result = await client.fetch_staff_detail(staff_id="staffOpenId123", user_token="
 # result.email, result.mobile_phone, result.employee_number, result.education, result.career
 ```
 
-- Returns: `StaffDetailResult` — name, signature, avatar, org, email, phone, employee_number, external_id, nationality, birthdate, id_number, duties, parties, address, education, career, login_ways, tags, extra_field_set, leaders, join_date, departments
+- Returns: `StaffDetailResult` — name, signature, avatar, org (orgId, orgName), email, phone, mobile_phone, external_phone, extra_phones, employee_number, external_id, nationality, native_place, birthdate, id_number, gender, introduction, status, avatar_id, avatar_url, login_name, duties, parties, address, education, career, login_ways, tags, extra_field_set, leaders, join_date, departments
 - **Requires org or personal auth** — providing `user_token` is recommended
 - Note: API field `endData` (not `endDate`) — preserved as-is per Lansenger docs typo
 
 ### 3. Fetch department ancestors for a staff member
 
 ```python
-result = await client.fetch_department_ancestors(staff_id="staffOpenId123")
+result = await client.fetch_department_ancestors(staff_id="staffOpenId123", user_token="userToken456")
 # result.ancestor_groups — list of ancestor department chains
 ```
 
 - Returns: `DepartmentAncestorsResult` — ancestor_groups (list of list of dicts)
+- Optional: `user_token`
 - Each chain: `[{"id": "...", "name": "..."}, ...]`
 
 ### 4. Map identifier to staffId
@@ -65,21 +67,24 @@ result = await client.fetch_staff_id_mapping(
     org_id="orgId123",
     id_type="mobile",       # employ_id | mobile | mail | login | external_id
     id_value="13800138000",
+    user_token="userToken456",
 )
 # result.staff_id — the mapped staff openId
 ```
 
 - Returns: `StaffIdMappingResult` — staff_id
+- Optional: `user_token`
 - **id_type options**: `employ_id`, `mobile`, `mail`, `login`, `external_id`
 
 ### 5. Fetch org extra field IDs
 
 ```python
-result = await client.fetch_org_extra_field_ids(org_id="orgId123", page=1, page_size=1000)
+result = await client.fetch_org_extra_field_ids(org_id="orgId123", page=1, page_size=1000, user_token="userToken456")
 # result.extra_field_ids, result.total, result.has_more
 ```
 
 - Returns: `ExtraFieldIdsResult` — has_more, total, extra_field_ids
+- Optional: `user_token`
 - page_size max: 100000
 
 ### 6. Search staff by keyword
