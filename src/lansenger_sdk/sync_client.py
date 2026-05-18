@@ -127,6 +127,33 @@ class LansengerSyncClient:
             http_timeout=config.http_timeout,
         )
 
+    @classmethod
+    def from_store(cls, profile: str = "default", path: Optional[str] = None) -> LansengerSyncClient:
+        """Create client from a CredentialStore profile.
+
+        Args:
+            profile: Named profile in the credential store (default: "default").
+            path: Optional custom path to the state file.
+
+        Raises LansengerConfigError if the profile has no credentials.
+        """
+        from .persistence import CredentialStore
+        from .exceptions import LansengerConfigError
+        store = CredentialStore(path=path, profile=profile)
+        creds = store.load_credentials()
+        if not creds.get("app_id") or not creds.get("app_secret"):
+            raise LansengerConfigError(
+                f"No credentials found for profile '{profile}'. "
+                "Run lansenger config set or set LANSENGER_APP_ID / LANSENGER_APP_SECRET env vars."
+            )
+        config = LansengerConfig(
+            app_id=creds["app_id"],
+            app_secret=creds["app_secret"],
+            api_gateway_url=creds.get("api_gateway_url") or "https://open.e.lanxin.cn/open/apigw",
+            passport_url=creds.get("passport_url", ""),
+        )
+        return cls.from_config(config)
+
     async def _ephemeral_call(self, method_name: str, **kwargs) -> Any:
         """Create an ephemeral async client, call method, then close."""
         client = LansengerClient(

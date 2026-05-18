@@ -363,4 +363,4 @@ __all__ = [
     "fetch_chat_messages",
 ]
 
-__version__ = "1.0.3"
+__version__ = "1.1.0"
