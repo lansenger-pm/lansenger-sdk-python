@@ -4,7 +4,7 @@ Framework-independent Python SDK for the Lansenger (蓝信) platform — support
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 296](https://img.shields.io/badge/Tests-296-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 341](https://img.shields.io/badge/Tests-341-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zero framework dependencies — only `httpx`. Works with any async or sync Python codebase.
 
@@ -33,7 +33,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Groups** — create, info, members, list, membership check, update settings & members
 - **Calendar & schedule** — primary calendar, schedule CRUD, attendee management
 - **Unified todo** — create, update, delete, query, executor management, status counts
-- **Callback events** — 25 event types, structured data parsing, signature verification
+- **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
 
 ## Quick Install
 
@@ -310,18 +310,65 @@ await client.update_executor_status(
 
 ## 8. Callback Events
 
+The SDK supports both plain JSON and AES-encrypted callback payloads (per Lansenger API spec 4.10.1.4).
+
+### Configuration
+
+Set `encoding_key` and `callback_token` (from Lansenger Developer Center callback settings):
+
 ```python
-from lansenger_sdk import parse_callback_payload, verify_callback_signature
-
-# Parse webhook payload
-events = parse_callback_payload(encrypted_data, encoding_key="your_key")
-
-# Verify signature
-is_valid = verify_callback_signature(timestamp, nonce, signature, encoding_key)
-
-# Available event types
-types = client.get_callback_event_types()  # 26 event types across 14 categories
+client = LansengerClient(
+    app_id="your-appid", app_secret="your-secret",
+    encoding_key="BASE64_AES_KEY",
+    callback_token="CALLBACK_TOKEN",
+)
 ```
+
+Or via environment variables: `LANSENGER_ENCODING_KEY`, `LANSENGER_CALLBACK_TOKEN`.
+
+### Parse callback payload (auto-detects encrypted vs plain JSON)
+
+```python
+from lansenger_sdk import parse_callback_payload, decrypt_callback_payload
+
+# Plain JSON webhook
+events = parse_callback_payload('{"events": [...]}')
+
+# AES-encrypted payload (auto-decrypts with encoding_key)
+events = parse_callback_payload(
+    encrypted_data,
+    encoding_key="BASE64_AES_KEY",
+    known_app_id="your-appid",  # helps split orgId/appId in decrypted buffer
+)
+```
+
+### Verify signature
+
+```python
+from lansenger_sdk import verify_callback_signature
+
+# sha1(sort(token, timestamp, nonce, dataEncrypt))
+is_valid = verify_callback_signature(
+    timestamp, nonce, signature, encoding_key,
+    data_encrypt=encrypted_data,
+    callback_token="CALLBACK_TOKEN",  # falls back to encoding_key if empty
+)
+```
+
+### Direct decryption
+
+```python
+result = decrypt_callback_payload(encrypted_data, encoding_key="KEY", known_app_id="APPID")
+# result = {"orgId": "...", "appId": "...", "events": [...], "length": N}
+```
+
+### Event types
+
+```python
+types = client.get_callback_event_types()  # 25 event types across 13 categories
+```
+
+AES decryption requires `pycryptodome` or `cryptography` package (auto-detected).
 
 ## Message Type Capability Matrix
 
@@ -350,6 +397,8 @@ types = client.get_callback_event_types()  # 26 event types across 14 categories
 | `LANSENGER_APP_SECRET` | ✓ | App/Bot Secret | — |
 | `LANSENGER_API_GATEWAY_URL` | ✗ | API Gateway URL | `https://open.e.lanxin.cn/open/apigw` |
 | `LANSENGER_PASSPORT_URL` | ✗ | Passport URL (for OAuth2) | — |
+| `LANSENGER_ENCODING_KEY` | ✗ | Callback AES encryption key (Base64) | — |
+| `LANSENGER_CALLBACK_TOKEN` | ✗ | Callback signature token | — |
 
 ### Credential & Token Persistence
 
@@ -359,7 +408,11 @@ By default, credentials and tokens stay in memory only (lost on process exit). E
 from lansenger_sdk import LansengerClient, CredentialStore
 
 # Auto-persist to ~/.lansenger/sdk_state.json (0600 permissions)
-client = LansengerClient(app_id="...", app_secret="...", store_path="~/.lansenger/sdk_state.json")
+client = LansengerClient(
+    app_id="...", app_secret="...",
+    encoding_key="BASE64_AES_KEY", callback_token="CALLBACK_TOKEN",
+    store_path="~/.lansenger/sdk_state.json",
+)
 
 # Or from env with persistence
 client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
@@ -391,7 +444,7 @@ org = client.fetch_org_info(org_id="orgId")
 ## Project Structure
 
 ```
-lansenger-skills-official/
+lansenger-sdk-python/
 ├── src/lansenger_sdk/
 │   ├── __init__.py          # All exports
 │   ├── client.py            # LansengerClient (async)
@@ -410,13 +463,12 @@ lansenger-skills-official/
 │   ├── media.py             # Upload/download
 │   ├── streaming.py         # SSE streaming
 │   ├── persistence.py       # CredentialStore — file-based token & credential persistence
-│   ├── callbacks.py         # Callback events
+│   ├── callbacks.py         # Callback events — 25 event types, structured parsing, AES decryption (4.10.1.4), SHA1 signature verification
 │   ├── groups.py            # Group APIs
 │   ├── todos.py             # Unified Todo
 │   ├── calendars.py         # Calendar & Schedule
 │   └── users.py             # User info
-├── tests/                   # 296 tests, all passing
-├── skills/                  # 9 skills (Agent Skills standard: <name>/SKILL.md) + manifest
+├── tests/                   # 341 tests, all passing
 ├── pyproject.toml
 └── README*.md               # 5-language READMEs
 ```

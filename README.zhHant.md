@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 296](https://img.shields.io/badge/Tests-296-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 341](https://img.shields.io/badge/Tests-341-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 零框架依賴——僅依賴 `httpx`。可適配任何異步或同步 Python 專案。
 
@@ -35,7 +35,7 @@
 - **群組** — 建立、查詢資訊/成員/列表、檢查成員、更新設定與成員
 - **日曆日程** — 主日曆、日程 CRUD、參會人管理
 - **統一待辦** — 建立、更新、刪除、查詢、執行人管理、狀態統計
-- **回調事件** — 25 種事件類型、結構化資料解析、簽名驗證
+- **回調事件** — 25 種事件類型、結構化解析、AES 解密（按 4.10.1.4規範）、SHA1 簽名驗證
 
 ## 快速安裝
 
@@ -312,18 +312,65 @@ await client.update_executor_status(
 
 ## 8. 回調事件
 
+SDK 同時支援明文 JSON 和 AES 加密回調載荷（按藍信接口規範 4.10.1.4）。
+
+### 配置
+
+設定 `encoding_key` 和 `callback_token`（來自藍信開發者中心回調設定）：
+
 ```python
-from lansenger_sdk import parse_callback_payload, verify_callback_signature
-
-# 解析 webhook 訊息
-events = parse_callback_payload(encrypted_data, encoding_key="your_key")
-
-# 驗證簽名
-is_valid = verify_callback_signature(timestamp, nonce, signature, encoding_key)
-
-# 可用事件類型
-types = client.get_callback_event_types()  # 14 大類共 26 種事件類型
+client = LansengerClient(
+    app_id="your-appid", app_secret="your-secret",
+    encoding_key="BASE64_AES密鑰",
+    callback_token="回調簽名令牌",
+)
 ```
+
+也可透過環境變數：`LANSENGER_ENCODING_KEY`、`LANSENGER_CALLBACK_TOKEN`。
+
+### 解析回調載荷（自動辨識加密/明文）
+
+```python
+from lansenger_sdk import parse_callback_payload, decrypt_callback_payload
+
+# 明文 JSON
+events = parse_callback_payload('{"events": [...]}')
+
+# AES 加密載荷（自動用 encoding_key 解密）
+events = parse_callback_payload(
+    encrypted_data,
+    encoding_key="BASE64_AES密鑰",
+    known_app_id="your-appid",  # 輔助解密後 orgId/appId 的邊界拆分
+)
+```
+
+### 驗證簽名
+
+```python
+from lansenger_sdk import verify_callback_signature
+
+# sha1(sort(token, timestamp, nonce, dataEncrypt))
+is_valid = verify_callback_signature(
+    timestamp, nonce, signature, encoding_key,
+    data_encrypt=encrypted_data,
+    callback_token="回調簽名令牌",  # 為空時回退到 encoding_key
+)
+```
+
+### 直接解密
+
+```python
+result = decrypt_callback_payload(encrypted_data, encoding_key="密鑰", known_app_id="應用ID")
+# result = {"orgId": "...", "appId": "...", "events": [...], "length": N}
+```
+
+### 事件類型
+
+```python
+types = client.get_callback_event_types()  # 13 個類別共 25 種事件類型
+```
+
+AES 解密需安裝 `pycryptodome` 或 `cryptography` 包（自動檢測）。
 
 ## 訊息類型能力矩陣
 
@@ -352,6 +399,8 @@ types = client.get_callback_event_types()  # 14 大類共 26 種事件類型
 | `LANSENGER_APP_SECRET` | ✓ | 應用/機器人 Secret | — |
 | `LANSENGER_API_GATEWAY_URL` | ✗ | API 网关 URL | `https://open.e.lanxin.cn/open/apigw` |
 | `LANSENGER_PASSPORT_URL` | ✗ | 通行證 URL（OAuth2 需要） | — |
+| `LANSENGER_ENCODING_KEY` | ✗ | 回調 AES 加密密鑰（Base64） | — |
+| `LANSENGER_CALLBACK_TOKEN` | ✗ | 回調簽名令牌 | — |
 
 ### 憑證與令牌持久化
 
@@ -361,7 +410,11 @@ types = client.get_callback_event_types()  # 14 大類共 26 種事件類型
 from lansenger_sdk import LansengerClient, CredentialStore
 
 # 持久化至 ~/.lansenger/sdk_state.json（0600 權限）
-client = LansengerClient(app_id="...", app_secret="...", store_path="~/.lansenger/sdk_state.json")
+client = LansengerClient(
+    app_id="...", app_secret="...",
+    encoding_key="BASE64_AES密鑰", callback_token="回調簽名令牌",
+    store_path="~/.lansenger/sdk_state.json",
+)
 
 # 或從環境變數建立並持久化
 client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
@@ -391,7 +444,7 @@ org = client.fetch_org_info(org_id="orgId")
 ## 專案結構
 
 ```
-lansenger-skills-official/
+lansenger-sdk-python/
 ├── src/lansenger_sdk/
 │   ├── __init__.py          # 全部导出
 │   ├── client.py            # LansengerClient（異步）
@@ -410,13 +463,12 @@ lansenger-skills-official/
 │   ├── media.py             # 上傳/下載
 │   ├── streaming.py         # SSE 流式訊息
 │   ├── persistence.py       # CredentialStore — 憑證與令牌檔案持久化
-│   ├── callbacks.py         # 回調事件
+│   ├── callbacks.py         # 回調事件 — 25 種事件類型、結構化解析、AES 解密（4.10.1.4）、SHA1 簽名驗證
 │   ├── groups.py            # 群組 API
 │   ├── todos.py             # 統一待辦
 │   ├── calendars.py         # 日曆日程
 │   └── users.py             # 使用者資訊
-├── tests/                   # 296 個測試，全部通過，全部通過
-├── skills/                  # 9 個 skill（Agent Skills 標準：<name>/SKILL.md）+ manifest
+├── tests/                   # 341 個測試，全部通過
 ├── pyproject.toml
 └── README*.md               # 5 語言 README
 ```

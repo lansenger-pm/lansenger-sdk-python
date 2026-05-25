@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 296](https://img.shields.io/badge/Tests-296-green)](https://github.com/lansenger-pm/lansenger-skills-official)
+[![Tests: 341](https://img.shields.io/badge/Tests-341-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 零框架依赖 — 仅依赖 `httpx`。兼容任何异步或同步 Python 项目。
 
@@ -35,7 +35,7 @@
 - **群组** — 创建、信息、成员、列表、成员检查、更新设置与成员
 - **日历与日程** — 主日历、日程 CRUD、参会人管理
 - **统一待办** — 创建、更新、删除、查询、执行人管理、状态计数
-- **回调事件** — 25 种事件类型、结构化数据解析、签名验证
+- **回调事件** — 25 种事件类型、结构化解析、AES 解密（按 4.10.1.4 规范）、SHA1 签名验证
 
 ## 快速安装
 
@@ -312,18 +312,65 @@ await client.update_executor_status(
 
 ## 8. 回调事件
 
+SDK 同时支持明文 JSON 和 AES 加密回调载荷（按蓝信接口规范 4.10.1.4）。
+
+### 配置
+
+设置 `encoding_key` 和 `callback_token`（来自蓝信开发者中心回调配置）：
+
 ```python
-from lansenger_sdk import parse_callback_payload, verify_callback_signature
-
-# 解析 webhook 载荷
-events = parse_callback_payload(encrypted_data, encoding_key="your_key")
-
-# 验证签名
-is_valid = verify_callback_signature(timestamp, nonce, signature, encoding_key)
-
-# 可用事件类型
-types = client.get_callback_event_types()  # 14 个类别下的 26 种事件类型
+client = LansengerClient(
+    app_id="your-appid", app_secret="your-secret",
+    encoding_key="BASE64_AES密钥",
+    callback_token="回调签名令牌",
+)
 ```
+
+也可通过环境变量：`LANSENGER_ENCODING_KEY`、`LANSENGER_CALLBACK_TOKEN`。
+
+### 解析回调载荷（自动识别加密/明文）
+
+```python
+from lansenger_sdk import parse_callback_payload, decrypt_callback_payload
+
+# 明文 JSON
+events = parse_callback_payload('{"events": [...]}')
+
+# AES 加密载荷（自动用 encoding_key 解密）
+events = parse_callback_payload(
+    encrypted_data,
+    encoding_key="BASE64_AES密钥",
+    known_app_id="your-appid",  # 辅助解密后 orgId/appId 的边界拆分
+)
+```
+
+### 验证签名
+
+```python
+from lansenger_sdk import verify_callback_signature
+
+# sha1(sort(token, timestamp, nonce, dataEncrypt))
+is_valid = verify_callback_signature(
+    timestamp, nonce, signature, encoding_key,
+    data_encrypt=encrypted_data,
+    callback_token="回调签名令牌",  # 为空时回退到 encoding_key
+)
+```
+
+### 直接解密
+
+```python
+result = decrypt_callback_payload(encrypted_data, encoding_key="密钥", known_app_id="应用ID")
+# result = {"orgId": "...", "appId": "...", "events": [...], "length": N}
+```
+
+### 事件类型
+
+```python
+types = client.get_callback_event_types()  # 13 个类别下共 25 种事件类型
+```
+
+AES 解密需安装 `pycryptodome` 或 `cryptography` 包（自动检测）。
 
 ## 消息类型能力矩阵
 
@@ -352,6 +399,8 @@ types = client.get_callback_event_types()  # 14 个类别下的 26 种事件类�
 | `LANSENGER_APP_SECRET` | ✓ | 应用/机器人 Secret | — |
 | `LANSENGER_API_GATEWAY_URL` | ✗ | API 网关 URL | `https://open.e.lanxin.cn/open/apigw` |
 | `LANSENGER_PASSPORT_URL` | ✗ | 通行证 URL（用于 OAuth2） | — |
+| `LANSENGER_ENCODING_KEY` | ✗ | 回调 AES 加密密钥（Base64） | — |
+| `LANSENGER_CALLBACK_TOKEN` | ✗ | 回调签名令牌 | — |
 
 ### 凭据与令牌持久化
 
@@ -361,7 +410,11 @@ types = client.get_callback_event_types()  # 14 个类别下的 26 种事件类�
 from lansenger_sdk import LansengerClient, CredentialStore
 
 # 持久化到 ~/.lansenger/sdk_state.json（0600 权限）
-client = LansengerClient(app_id="...", app_secret="...", store_path="~/.lansenger/sdk_state.json")
+client = LansengerClient(
+    app_id="...", app_secret="...",
+    encoding_key="BASE64_AES密钥", callback_token="回调签名令牌",
+    store_path="~/.lansenger/sdk_state.json",
+)
 
 # 或从环境变量创建并持久化
 client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
@@ -391,7 +444,7 @@ org = client.fetch_org_info(org_id="orgId")
 ## 项目结构
 
 ```
-lansenger-skills-official/
+lansenger-sdk-python/
 ├── src/lansenger_sdk/
 │   ├── __init__.py          # 全部导出
 │   ├── client.py            # LansengerClient（异步）
@@ -410,13 +463,12 @@ lansenger-skills-official/
 │   ├── media.py             # 上传/下载
 │   ├── streaming.py         # SSE 流式推送
 │   ├── persistence.py       # CredentialStore — 凭据与令牌文件持久化
-│   ├── callbacks.py         # 回调事件
+│   ├── callbacks.py         # 回调事件 — 25 种事件类型、结构化解析、AES 解密（4.10.1.4）、SHA1 签名验证
 │   ├── groups.py            # 群组 API
 │   ├── todos.py             # 统一待办
 │   ├── calendars.py         # 日历与日程
 │   └── users.py             # 用户信息
-├── tests/                   # 296 项测试，全部通过
-├── skills/                  # 9 项技能（Agent Skills 标准：<name>/SKILL.md）+ manifest
+├── tests/                   # 341 项测试，全部通过
 ├── pyproject.toml
 └── README*.md               # 5 语言 README
 ```
