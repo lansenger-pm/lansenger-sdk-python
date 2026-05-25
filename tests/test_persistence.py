@@ -90,12 +90,13 @@ def test_credential_store_file_permissions(tmp_store):
 def test_credential_store_preserves_state(tmp_store):
     tmp_store.save_credentials("app1", "secret1", api_gateway_url="https://gw.example.com", passport_url="https://pp.example.com")
     tmp_store.save_app_token("token1", expires_in=7200)
-    state = tmp_store.load()
-    assert state["app_id"] == "app1"
-    assert state["app_secret"] == "secret1"
-    assert state["api_gateway_url"] == "https://gw.example.com"
-    assert state["passport_url"] == "https://pp.example.com"
-    assert state["app_token"] == "token1"
+    creds = tmp_store.load_credentials()
+    assert creds["app_id"] == "app1"
+    assert creds["app_secret"] == "secret1"
+    assert creds["api_gateway_url"] == "https://gw.example.com"
+    assert creds["passport_url"] == "https://pp.example.com"
+    token = tmp_store.load_app_token()
+    assert token == "token1"
 
 
 def test_credential_store_custom_path():
@@ -144,3 +145,61 @@ def test_client_without_store():
     from lansenger_sdk import LansengerClient
     client = LansengerClient(app_id="id", app_secret="secret")
     assert client._store is None
+
+
+def test_credential_store_save_and_load_encoding_key(tmp_store):
+    tmp_store.save_credentials("app123", "secret456", encoding_key="NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM", callback_token="48D32458EB80C61EBB08C7E86CB5BFB1")
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == "NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM"
+    assert creds["callback_token"] == "48D32458EB80C61EBB08C7E86CB5BFB1"
+
+
+def test_credential_store_encoding_key_only(tmp_store):
+    tmp_store.save_credentials("app123", "secret456", encoding_key="NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM")
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == "NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM"
+    assert creds["callback_token"] == ""
+
+
+def test_credential_store_callback_token_only(tmp_store):
+    tmp_store.save_credentials("app123", "secret456", callback_token="48D32458EB80C61EBB08C7E86CB5BFB1")
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == ""
+    assert creds["callback_token"] == "48D32458EB80C61EBB08C7E86CB5BFB1"
+
+
+def test_credential_store_preserves_encoding_key(tmp_store):
+    tmp_store.save_credentials("app1", "secret1", encoding_key="myKey", callback_token="myToken")
+    tmp_store.save_app_token("token1", expires_in=7200)
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == "myKey"
+    assert creds["callback_token"] == "myToken"
+
+
+def test_sync_client_from_store_with_encoding_key():
+    from lansenger_sdk import LansengerSyncClient
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+    store = CredentialStore(path=path)
+    store.save_credentials("app123", "secret456", encoding_key="NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM", callback_token="48D32458EB80C61EBB08C7E86CB5BFB1")
+    client = LansengerSyncClient.from_store(profile="default", path=path)
+    assert client._encoding_key == "NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM"
+    assert client._callback_token == "48D32458EB80C61EBB08C7E86CB5BFB1"
+    if os.path.exists(path):
+        os.unlink(path)
+
+
+def test_async_client_from_store_with_encoding_key():
+    from lansenger_sdk import LansengerClient
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+    store = CredentialStore(path=path)
+    store.save_credentials("app123", "secret456", encoding_key="NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM", callback_token="48D32458EB80C61EBB08C7E86CB5BFB1")
+    client = LansengerClient.from_store(profile="default", path=path)
+    assert client._config.encoding_key == "NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM"
+    assert client._config.callback_token == "48D32458EB80C61EBB08C7E86CB5BFB1"
+    assert client._store is not None
+    if os.path.exists(path):
+        os.unlink(path)

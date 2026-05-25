@@ -184,6 +184,34 @@ class LansengerClient:
             callback_token=config.callback_token,
         )
 
+    @classmethod
+    def from_store(cls, profile: str = "default", path: Optional[str] = None) -> LansengerClient:
+        """Create client from a CredentialStore profile.
+
+        Args:
+            profile: Named profile in the credential store (default: "default").
+            path: Optional custom path to the state file.
+
+        Raises LansengerConfigError if the profile has no credentials.
+        """
+        from .exceptions import LansengerConfigError
+        store = CredentialStore(path=path, profile=profile)
+        creds = store.load_credentials()
+        if not creds.get("app_id") or not creds.get("app_secret"):
+            raise LansengerConfigError(
+                f"No credentials found for profile '{profile}'. "
+                "Run lansenger config set or set LANSENGER_APP_ID / LANSENGER_APP_SECRET env vars."
+            )
+        config = LansengerConfig(
+            app_id=creds["app_id"],
+            app_secret=creds["app_secret"],
+            api_gateway_url=creds.get("api_gateway_url") or "https://open.e.lanxin.cn/open/apigw",
+            passport_url=creds.get("passport_url", ""),
+            encoding_key=creds.get("encoding_key", ""),
+            callback_token=creds.get("callback_token", ""),
+        )
+        return cls.from_config(config, store_path=path)
+
     def _ensure_clients(self) -> None:
         """Lazily initialize HTTP client and token manager."""
         if self._http_client is None:
@@ -2869,6 +2897,42 @@ class LansengerClient:
             known_app_id=known_app_id,
         )
 
+    def parse_callback(
+        self,
+        encrypted_data: str,
+        *,
+        verify_signature: bool = False,
+        timestamp: str = "",
+        nonce: str = "",
+        signature: str = "",
+        known_app_id: str = "",
+    ) -> list:
+        """Parse callback payload using encoding_key/callback_token from this client's config.
+
+        If a CredentialStore is attached and the config fields are empty,
+        values are read from the store file automatically.
+        """
+        from .callbacks import parse_callback_payload
+
+        encoding_key = self._config.encoding_key
+        callback_token = self._config.callback_token
+        if self._store and not encoding_key:
+            creds = self._store.load_credentials()
+            encoding_key = creds.get("encoding_key", "")
+            if not callback_token:
+                callback_token = creds.get("callback_token", "")
+
+        return parse_callback_payload(
+            encrypted_data,
+            encoding_key=encoding_key,
+            verify_signature=verify_signature,
+            timestamp=timestamp,
+            nonce=nonce,
+            signature=signature,
+            callback_token=callback_token,
+            known_app_id=known_app_id,
+        )
+
     @staticmethod
     def verify_callback_signature(
         timestamp: str,
@@ -2880,6 +2944,35 @@ class LansengerClient:
         callback_token: str = "",
     ) -> bool:
         from .callbacks import verify_callback_signature
+
+        return verify_callback_signature(
+            timestamp, nonce, signature, encoding_key,
+            data_encrypt=data_encrypt,
+            callback_token=callback_token,
+        )
+
+    def verify_callback(
+        self,
+        timestamp: str,
+        nonce: str,
+        signature: str,
+        *,
+        data_encrypt: str = "",
+    ) -> bool:
+        """Verify callback signature using encoding_key/callback_token from this client's config.
+
+        If a CredentialStore is attached and the config fields are empty,
+        values are read from the store file automatically.
+        """
+        from .callbacks import verify_callback_signature
+
+        encoding_key = self._config.encoding_key
+        callback_token = self._config.callback_token
+        if self._store and not encoding_key:
+            creds = self._store.load_credentials()
+            encoding_key = creds.get("encoding_key", "")
+            if not callback_token:
+                callback_token = creds.get("callback_token", "")
 
         return verify_callback_signature(
             timestamp, nonce, signature, encoding_key,

@@ -159,6 +159,8 @@ class LansengerSyncClient:
             app_secret=creds["app_secret"],
             api_gateway_url=creds.get("api_gateway_url") or "https://open.e.lanxin.cn/open/apigw",
             passport_url=creds.get("passport_url", ""),
+            encoding_key=creds.get("encoding_key", ""),
+            callback_token=creds.get("callback_token", ""),
         )
         return cls.from_config(config)
 
@@ -1456,6 +1458,8 @@ class LansengerSyncClient:
         timestamp: str = "",
         nonce: str = "",
         signature: str = "",
+        callback_token: str = "",
+        known_app_id: str = "",
     ) -> list:
         from .callbacks import parse_callback_payload
 
@@ -1466,6 +1470,39 @@ class LansengerSyncClient:
             timestamp=timestamp,
             nonce=nonce,
             signature=signature,
+            callback_token=callback_token,
+            known_app_id=known_app_id,
+        )
+
+    def parse_callback(
+        self,
+        encrypted_data: str,
+        *,
+        verify_signature: bool = False,
+        timestamp: str = "",
+        nonce: str = "",
+        signature: str = "",
+        known_app_id: str = "",
+    ) -> list:
+        """Parse callback payload using encoding_key/callback_token from this client.
+
+        Values are read from the client's encoding_key/callback_token fields,
+        falling back to the CredentialStore if from_store() was used.
+        """
+        from .callbacks import parse_callback_payload
+
+        encoding_key = self._encoding_key
+        callback_token = self._callback_token
+
+        return parse_callback_payload(
+            encrypted_data,
+            encoding_key=encoding_key,
+            verify_signature=verify_signature,
+            timestamp=timestamp,
+            nonce=nonce,
+            signature=signature,
+            callback_token=callback_token,
+            known_app_id=known_app_id,
         )
 
     @staticmethod
@@ -1474,10 +1511,41 @@ class LansengerSyncClient:
         nonce: str,
         signature: str,
         encoding_key: str,
+        *,
+        data_encrypt: str = "",
+        callback_token: str = "",
     ) -> bool:
         from .callbacks import verify_callback_signature
 
-        return verify_callback_signature(timestamp, nonce, signature, encoding_key)
+        return verify_callback_signature(
+            timestamp, nonce, signature, encoding_key,
+            data_encrypt=data_encrypt,
+            callback_token=callback_token,
+        )
+
+    def verify_callback(
+        self,
+        timestamp: str,
+        nonce: str,
+        signature: str,
+        *,
+        data_encrypt: str = "",
+    ) -> bool:
+        """Verify callback signature using encoding_key/callback_token from this client.
+
+        Values are read from the client's encoding_key/callback_token fields,
+        falling back to the CredentialStore if from_store() was used.
+        """
+        from .callbacks import verify_callback_signature
+
+        encoding_key = self._encoding_key
+        callback_token = self._callback_token
+
+        return verify_callback_signature(
+            timestamp, nonce, signature, encoding_key,
+            data_encrypt=data_encrypt,
+            callback_token=callback_token,
+        )
 
     @staticmethod
     def get_callback_event_types() -> dict:

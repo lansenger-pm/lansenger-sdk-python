@@ -39,6 +39,7 @@ DEFAULT_STATE_FILE = "sdk_state.json"
 DEFAULT_PROFILE = "default"
 
 _LEGACY_KEYS = {"app_id", "app_secret", "api_gateway_url", "passport_url",
+                "encoding_key", "callback_token",
                 "app_token", "app_token_expiry", "user_token", "refresh_token",
                 "user_token_expiry"}
 
@@ -118,7 +119,7 @@ class CredentialStore:
         return state
 
     def load_credentials(self) -> Dict[str, str]:
-        """Load app_id, app_secret, api_gateway_url, passport_url for current profile."""
+        """Load app_id, app_secret, api_gateway_url, passport_url, encoding_key, callback_token for current profile."""
         state = self.load()
         data = self._get_profile_data(state)
         return {
@@ -126,6 +127,8 @@ class CredentialStore:
             "app_secret": data.get("app_secret", ""),
             "api_gateway_url": data.get("api_gateway_url", ""),
             "passport_url": data.get("passport_url", ""),
+            "encoding_key": data.get("encoding_key", ""),
+            "callback_token": data.get("callback_token", ""),
         }
 
     def save_credentials(
@@ -134,8 +137,10 @@ class CredentialStore:
         app_secret: str,
         api_gateway_url: str = "",
         passport_url: str = "",
+        encoding_key: str = "",
+        callback_token: str = "",
     ) -> None:
-        """Save app_id, app_secret, api_gateway_url, passport_url for current profile."""
+        """Save app_id, app_secret, api_gateway_url, passport_url, encoding_key, callback_token for current profile."""
         state = self.load()
         data = self._get_profile_data(state)
         data["app_id"] = app_id
@@ -144,6 +149,10 @@ class CredentialStore:
             data["api_gateway_url"] = api_gateway_url
         if passport_url:
             data["passport_url"] = passport_url
+        if encoding_key:
+            data["encoding_key"] = encoding_key
+        if callback_token:
+            data["callback_token"] = callback_token
         state = self._set_profile_data(state, data)
         self.save(state)
 
