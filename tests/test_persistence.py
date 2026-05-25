@@ -168,6 +168,35 @@ def test_credential_store_callback_token_only(tmp_store):
     assert creds["callback_token"] == "48D32458EB80C61EBB08C7E86CB5BFB1"
 
 
+def test_credential_store_clear_encoding_key_via_save_credentials(tmp_store):
+    tmp_store.save_credentials("app123", "secret456", encoding_key="myKey", callback_token="myToken")
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == "myKey"
+    assert creds["callback_token"] == "myToken"
+    tmp_store.save_credentials("app123", "secret456", encoding_key="", callback_token="")
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == ""
+    assert creds["callback_token"] == ""
+
+
+def test_credential_store_save_callback_config(tmp_store):
+    tmp_store.save_credentials("app123", "secret456")
+    tmp_store.save_callback_config(encoding_key="NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM", callback_token="48D32458EB80C61EBB08C7E86CB5BFB1")
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == "NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM"
+    assert creds["callback_token"] == "48D32458EB80C61EBB08C7E86CB5BFB1"
+    assert creds["app_id"] == "app123"
+
+
+def test_credential_store_clear_callback_config(tmp_store):
+    tmp_store.save_credentials("app123", "secret456", encoding_key="myKey", callback_token="myToken")
+    tmp_store.save_callback_config(encoding_key="", callback_token="")
+    creds = tmp_store.load_credentials()
+    assert creds["encoding_key"] == ""
+    assert creds["callback_token"] == ""
+    assert creds["app_id"] == "app123"
+
+
 def test_credential_store_preserves_encoding_key(tmp_store):
     tmp_store.save_credentials("app1", "secret1", encoding_key="myKey", callback_token="myToken")
     tmp_store.save_app_token("token1", expires_in=7200)

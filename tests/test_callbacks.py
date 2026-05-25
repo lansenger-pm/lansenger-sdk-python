@@ -623,3 +623,21 @@ def test_config_encoding_key_from_direct_params():
     config = LansengerConfig.create(app_id="id", app_secret="secret", encoding_key="key", callback_token="token")
     assert config.encoding_key == "key"
     assert config.callback_token == "token"
+
+
+def test_parse_callback_payload_dataencrypt_without_encoding_key_raises():
+    payload = json.dumps({"dataEncrypt": "someEncryptedValue", "orgId": "123"})
+    with pytest.raises(ValueError, match="requires encoding_key"):
+        parse_callback_payload(payload)
+
+
+def test_parse_callback_payload_dataencrypt_with_encoding_key_does_not_raise():
+    try:
+        from Crypto.Cipher import AES
+    except ImportError:
+        pytest.skip("pycryptodome not installed")
+    events_json = json.dumps([{"eventType": "staff_create", "data": {"staffId": "524288-new", "timestamp": "999"}}])
+    encrypted = _encrypt_payload(events_json)
+    wrapper = json.dumps({"dataEncrypt": encrypted})
+    events = parse_callback_payload(wrapper, encoding_key=AES_KEY_B64, known_app_id="2285568-12042496")
+    assert len(events) > 0

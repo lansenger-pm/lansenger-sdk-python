@@ -140,7 +140,11 @@ class CredentialStore:
         encoding_key: str = "",
         callback_token: str = "",
     ) -> None:
-        """Save app_id, app_secret, api_gateway_url, passport_url, encoding_key, callback_token for current profile."""
+        """Save app_id, app_secret, api_gateway_url, passport_url, encoding_key, callback_token for current profile.
+
+        encoding_key and callback_token are always written (even empty strings)
+        so they can be explicitly cleared.
+        """
         state = self.load()
         data = self._get_profile_data(state)
         data["app_id"] = app_id
@@ -149,10 +153,25 @@ class CredentialStore:
             data["api_gateway_url"] = api_gateway_url
         if passport_url:
             data["passport_url"] = passport_url
-        if encoding_key:
-            data["encoding_key"] = encoding_key
-        if callback_token:
-            data["callback_token"] = callback_token
+        data["encoding_key"] = encoding_key
+        data["callback_token"] = callback_token
+        state = self._set_profile_data(state, data)
+        self.save(state)
+
+    def save_callback_config(
+        self,
+        encoding_key: str,
+        callback_token: str = "",
+    ) -> None:
+        """Save or clear encoding_key and callback_token for current profile.
+
+        This method always writes the values, allowing explicit clearing
+        by passing empty strings.
+        """
+        state = self.load()
+        data = self._get_profile_data(state)
+        data["encoding_key"] = encoding_key
+        data["callback_token"] = callback_token
         state = self._set_profile_data(state, data)
         self.save(state)
 

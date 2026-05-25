@@ -497,6 +497,8 @@ def parse_callback_payload(
         return _parse_decrypted_payload(payload)
 
     payload = json.loads(encrypted_data)
+    if "dataEncrypt" in payload and not encoding_key:
+        raise ValueError("Encrypted callback payload requires encoding_key for decryption")
     if verify_signature and not verify_callback_signature(
         timestamp, nonce, signature, encoding_key,
         data_encrypt=encrypted_data,
