@@ -18,7 +18,8 @@ class LansengerConfig:
     Resolution order:
     1. Direct params passed to LansengerConfig.create()
     2. LANSENGER_APP_ID / LANSENGER_APP_SECRET / LANSENGER_API_GATEWAY_URL
-       LANSENGER_PASSPORT_URL env vars
+       LANSENGER_PASSPORT_URL / LANSENGER_ENCODING_KEY / LANSENGER_CALLBACK_TOKEN
+       env vars
     """
 
     app_id: str
@@ -26,6 +27,8 @@ class LansengerConfig:
     api_gateway_url: str = DEFAULT_API_GATEWAY_URL
     passport_url: str = ""
     http_timeout: float = 30.0
+    encoding_key: str = ""
+    callback_token: str = ""
 
     @classmethod
     def create(
@@ -35,6 +38,8 @@ class LansengerConfig:
         api_gateway_url: str | None = None,
         passport_url: str | None = None,
         http_timeout: float | None = None,
+        encoding_key: str | None = None,
+        callback_token: str | None = None,
     ) -> LansengerConfig:
         """Create config from params with env var fallback.
 
@@ -49,6 +54,12 @@ class LansengerConfig:
             "LANSENGER_PASSPORT_URL", ""
         ).strip()
         resolved_timeout = http_timeout or 30.0
+        resolved_encoding_key = encoding_key or os.environ.get(
+            "LANSENGER_ENCODING_KEY", ""
+        ).strip()
+        resolved_callback_token = callback_token or os.environ.get(
+            "LANSENGER_CALLBACK_TOKEN", ""
+        ).strip()
 
         if not resolved_app_id or not resolved_app_secret:
             raise LansengerConfigError(
@@ -63,6 +74,8 @@ class LansengerConfig:
             api_gateway_url=resolved_gateway,
             passport_url=resolved_passport,
             http_timeout=resolved_timeout,
+            encoding_key=resolved_encoding_key,
+            callback_token=resolved_callback_token,
         )
 
     @classmethod

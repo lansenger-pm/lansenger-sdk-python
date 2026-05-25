@@ -97,12 +97,16 @@ class LansengerSyncClient:
         api_gateway_url: str = "https://open.e.lanxin.cn/open/apigw",
         passport_url: str = "",
         http_timeout: float = 30.0,
+        encoding_key: str = "",
+        callback_token: str = "",
     ):
         self._app_id = app_id
         self._app_secret = app_secret
         self._api_gateway_url = api_gateway_url
         self._passport_url = passport_url
         self._http_timeout = http_timeout
+        self._encoding_key = encoding_key
+        self._callback_token = callback_token
 
     @classmethod
     def from_env(cls) -> LansengerSyncClient:
@@ -114,6 +118,8 @@ class LansengerSyncClient:
             api_gateway_url=config.api_gateway_url,
             passport_url=config.passport_url,
             http_timeout=config.http_timeout,
+            encoding_key=config.encoding_key,
+            callback_token=config.callback_token,
         )
 
     @classmethod
@@ -125,6 +131,8 @@ class LansengerSyncClient:
             api_gateway_url=config.api_gateway_url,
             passport_url=config.passport_url,
             http_timeout=config.http_timeout,
+            encoding_key=config.encoding_key,
+            callback_token=config.callback_token,
         )
 
     @classmethod
@@ -161,6 +169,8 @@ class LansengerSyncClient:
             app_secret=self._app_secret,
             api_gateway_url=self._api_gateway_url,
             http_timeout=self._http_timeout,
+            encoding_key=self._encoding_key,
+            callback_token=self._callback_token,
         )
         try:
             method = getattr(client, method_name)

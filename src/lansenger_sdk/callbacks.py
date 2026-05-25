@@ -2,16 +2,19 @@
 
 This module handles parsing and verifying callback payloads sent by the
 Lansenger platform to your app's HTTP callback endpoint. It provides event
-type categorization, structured data parsing, and signature verification
-(placeholder).
+type categorization, structured data parsing, AES decryption (per 4.10.1.4),
+and SHA1 signature verification.
 
 No HTTP calls are made — this is purely data parsing.
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import logging
+import struct
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
@@ -426,54 +429,109 @@ def parse_callback_payload(
     timestamp: str = "",
     nonce: str = "",
     signature: str = "",
+    callback_token: str = "",
+    known_app_id: str = "",
 ) -> list[CallbackEvent]:
     """Parse a callback payload into a list of CallbackEvent objects.
 
     Each event's data field is parsed into a structured dataclass when
     the event_type is recognized, otherwise left as a raw dict.
 
-    Args:
-        encrypted_data: The callback payload (encrypted if encoding_key is
-            provided, otherwise raw JSON).
-        encoding_key: Key for decrypting the payload (placeholder — raises
-            NotImplementedError if provided).
-        verify_signature: Whether to verify the payload signature.
-        timestamp: Timestamp for signature verification.
-        nonce: Nonce for signature verification.
-        signature: Expected signature for verification.
-    """
-    if encoding_key:
-        raise NotImplementedError(
-            "Payload decryption is not yet implemented. "
-            "Pass the already-decrypted JSON string as encrypted_data."
-        )
+    Supports two formats:
+    1. Plain JSON — pass the JSON string directly (no encoding_key needed)
+    2. AES encrypted — pass the dataEncrypt value and encoding_key for
+       decryption per 4.10.1.4
 
+    Args:
+        encrypted_data: The callback payload (encrypted dataEncrypt value
+            if encoding_key is provided, otherwise raw JSON).
+        encoding_key: Base64-encoded AES key for decrypting the payload.
+            When provided, encrypted_data is treated as AES-encrypted.
+        verify_signature: Whether to verify the payload signature.
+        timestamp: Timestamp from callback URL query params (for sig verify).
+        nonce: Nonce from callback URL query params (for sig verify).
+        signature: Expected signature for verification.
+        callback_token: Token for signature verification (from developer
+            center callback config). Falls back to encoding_key.
+    """
+    if encoding_key and encrypted_data.strip().startswith("{"):
+        try:
+            json.loads(encrypted_data)
+        except json.JSONDecodeError:
+            pass
+        else:
+            payload_inner = json.loads(encrypted_data)
+            data_encrypt = payload_inner.get("dataEncrypt", "")
+            if isinstance(data_encrypt, str) and data_encrypt:
+                encrypted_data = data_encrypt
+            else:
+                payload = payload_inner
+                if verify_signature:
+                    if not verify_callback_signature(
+                        timestamp, nonce, signature, encoding_key,
+                        data_encrypt=encrypted_data,
+                        callback_token=callback_token,
+                    ):
+                        raise ValueError("Callback signature verification failed")
+                return _parse_decrypted_payload(payload)
+
+    if encoding_key:
+        if verify_signature:
+            data_encrypt = encrypted_data
+            if encrypted_data.strip().startswith("{"):
+                payload_inner = json.loads(encrypted_data)
+                data_encrypt = payload_inner.get("dataEncrypt", "")
+            if not verify_callback_signature(
+                timestamp, nonce, signature, encoding_key,
+                data_encrypt=data_encrypt,
+                callback_token=callback_token,
+            ):
+                raise ValueError("Callback signature verification failed")
+
+        decrypted = decrypt_callback_payload(encrypted_data, encoding_key, known_app_id=known_app_id)
+        payload = {
+            "orgId": decrypted.get("orgId", ""),
+            "appId": decrypted.get("appId", ""),
+            "events": decrypted.get("events", []),
+        }
+        return _parse_decrypted_payload(payload)
+
+    payload = json.loads(encrypted_data)
     if verify_signature and not verify_callback_signature(
-        timestamp, nonce, signature, encoding_key
+        timestamp, nonce, signature, encoding_key,
+        data_encrypt=encrypted_data,
+        callback_token=callback_token,
     ):
         raise ValueError("Callback signature verification failed")
 
-    payload = json.loads(encrypted_data)
+    return _parse_decrypted_payload(payload)
 
+
+def _parse_decrypted_payload(payload: dict) -> list[CallbackEvent]:
     events: list[CallbackEvent] = []
     event_list = payload.get("events", [])
     if isinstance(event_list, dict):
         event_list = [event_list]
 
+    top_app_id = payload.get("appId", "")
+    top_org_id = payload.get("orgId", "")
+
     for entry in event_list:
-        event_type = entry.get("eventType", "")
+        event_type = entry.get("eventType", entry.get("type", ""))
         category = CALLBACK_EVENT_TYPES.get(event_type, "unknown")
         raw_data = entry.get("data", {})
+        if not raw_data and event_type:
+            raw_data = entry
         parsed_data = _parse_event_data(event_type, raw_data)
 
         events.append(
             CallbackEvent(
-                event_id=entry.get("eventId", 0),
+                event_id=entry.get("eventId", entry.get("id", 0)),
                 event_type=event_type,
                 category=category,
                 data=parsed_data,
-                app_id=entry.get("appId", ""),
-                org_id=entry.get("orgId", ""),
+                app_id=entry.get("appId", top_app_id),
+                org_id=entry.get("orgId", top_org_id),
             )
         )
 
@@ -485,14 +543,145 @@ def verify_callback_signature(
     nonce: str,
     signature: str,
     encoding_key: str,
+    data_encrypt: str = "",
+    *,
+    callback_token: str = "",
 ) -> bool:
-    """Verify callback payload signature.
+    """Verify callback payload signature per 4.10.1.4.
 
-    Placeholder implementation — always returns True. The actual verification
-    algorithm requires the encryption spec from section 4.10.1.4 of the
-    Lansenger API documentation.
+    dev_data_signature = sha1(sort(token, timestamp, nonce, dataEncrypt))
+
+    When callback_token is provided it is used as the token; otherwise
+    encoding_key is used as the token (蓝信开发者中心配置回调地址时
+    指定的签名参数).
+
+    Args:
+        timestamp: Timestamp from callback URL query params.
+        nonce: Nonce from callback URL query params.
+        signature: Signature from callback URL query params.
+        encoding_key: Encoding key for AES decryption.
+        data_encrypt: The encrypted data string (dataEncrypt field value).
+        callback_token: Token specified when configuring the callback URL
+            in the Lansenger developer center. Falls back to encoding_key.
+
+    Returns:
+        True if signature matches, False otherwise.
     """
-    return True
+    token = callback_token or encoding_key
+    params = [token, timestamp, nonce, data_encrypt]
+    params.sort()
+    joined = "".join(params)
+    computed = hashlib.sha1(joined.encode("utf-8")).hexdigest()
+    return computed == signature
+
+
+def decrypt_callback_payload(
+    encrypted_data: str,
+    encoding_key: str,
+    *,
+    known_app_id: str = "",
+) -> dict:
+    """Decrypt a callback payload per 4.10.1.4.
+
+    AES-256-CBC, key = Base64_Decode(encoding_key), IV = key[:16].
+    Decrypted structure: random(16B) + eventsLen(4B) + orgId + appId + events
+
+    Args:
+        encrypted_data: The dataEncrypt value from callback body.
+        encoding_key: Base64-encoded AES key from developer center.
+        known_app_id: Known appId to help split orgId/appId in the middle
+            buffer. If empty, orgId and appId will be left as the raw
+            concatenated middle string in orgId and appId="" returned.
+
+    Returns:
+        Dict with: random, orgId, appId, events (list), length.
+
+    Raises:
+        ValueError: If decryption fails or data is malformed.
+    """
+    aes_key = _decode_aes_key(encoding_key)
+    iv = aes_key[:16]
+    raw = _aes_decrypt(base64.b64decode(encrypted_data), aes_key, iv)
+    raw = _pkcs7_unpad(raw)
+
+    if len(raw) < 20:
+        raise ValueError(f"Decrypted data too short: {len(raw)} bytes (need >= 20)")
+
+    random_str = raw[:16]
+    events_len = struct.unpack("!I", raw[16:20])[0]
+
+    total_after_header = len(raw) - 20
+    if total_after_header < events_len:
+        raise ValueError(f"Remaining data ({total_after_header}B) shorter than declared events length ({events_len}B)")
+
+    events_bytes = raw[20 + total_after_header - events_len:]
+    middle_bytes = raw[20:20 + total_after_header - events_len]
+
+    events_data = json.loads(events_bytes.decode("utf-8"))
+    if not isinstance(events_data, list):
+        events_data = [events_data]
+
+    middle_str = middle_bytes.decode("utf-8")
+    org_id, app_id = _split_org_app_id(middle_str, known_app_id)
+
+    return {
+        "random": random_str.decode("utf-8", errors="replace"),
+        "orgId": org_id,
+        "appId": app_id,
+        "events": events_data,
+        "length": events_len,
+    }
+
+
+def _decode_aes_key(encoding_key: str) -> bytes:
+    padded = encoding_key + "=" * (-len(encoding_key) % 4)
+    aes_key = base64.b64decode(padded)
+    if len(aes_key) not in (16, 24, 32):
+        raise ValueError(f"Invalid AES key length: {len(aes_key)} bytes (expected 16, 24, or 32)")
+    return aes_key
+
+
+def _aes_decrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
+    try:
+        from Crypto.Cipher import AES
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        return cipher.decrypt(data)
+    except ImportError:
+        pass
+    try:
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+        from cryptography.hazmat.backends import default_backend
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        return decryptor.update(data) + decryptor.finalize()
+    except ImportError:
+        raise ImportError(
+            "AES decryption requires either 'pycryptodome' or 'cryptography' package. "
+            "Install one: pip install pycryptodome  OR  pip install cryptography"
+        )
+
+
+def _pkcs7_unpad(data: bytes) -> bytes:
+    pad_len = data[-1]
+    if pad_len < 1 or pad_len > 32:
+        raise ValueError(f"Invalid PKCS7 padding: {pad_len}")
+    for i in range(pad_len):
+        if data[-(i + 1)] != pad_len:
+            raise ValueError("Invalid PKCS7 padding bytes")
+    return data[:-pad_len]
+
+
+def _split_org_app_id(middle_str: str, known_app_id: str = "") -> tuple[str, str]:
+    if not middle_str:
+        return "", ""
+    if known_app_id and middle_str.endswith(known_app_id):
+        org_id = middle_str[:-len(known_app_id)]
+        return org_id, known_app_id
+    if known_app_id:
+        idx = middle_str.find(known_app_id)
+        if idx >= 0:
+            return middle_str[:idx], known_app_id
+    return middle_str, ""
 
 
 def get_callback_event_types() -> Dict[str, str]:

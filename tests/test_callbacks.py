@@ -1,31 +1,55 @@
 """Tests for Lansenger SDK callback event parsing and verification."""
 
+import base64
+import hashlib
 import json
+import struct
+
 import pytest
 
 from lansenger_sdk.callbacks import (
     CALLBACK_EVENT_TYPES,
     CallbackEvent,
+    decrypt_callback_payload,
+    get_callback_event_types,
     parse_callback_payload,
     verify_callback_signature,
-    get_callback_event_types,
+    _decode_aes_key,
+    _pkcs7_unpad,
     AccountSubscribeData,
-    StaffModifyData,
-    StaffInfoData,
-    BotPrivateMessageData,
-    BotGroupMessageData,
-    TelephoneTrackData,
-    DeptCreateData,
     AppInstallData,
-    GroupCreateApproveData,
-    ScheduleModifyData,
-    ScheduleDeleteData,
+    BotGroupMessageData,
+    BotPrivateMessageData,
     DataScopeData,
-    WbVisibleConfigData,
-    UserLogoutData,
+    DeptCreateData,
+    GroupCreateApproveData,
     ReportLocationData,
+    ScheduleDeleteData,
+    ScheduleModifyData,
+    StaffInfoData,
+    StaffModifyData,
+    TelephoneTrackData,
+    UserLogoutData,
+    WbVisibleConfigData,
 )
 from lansenger_sdk import LansengerClient
+
+AES_KEY_B64 = "NEVFNjNFREZDNUU4QzMxMUQ5MTgzMkI5NTVBMzJFODM"
+CALLBACK_TOKEN = "48D32458EB80C61EBB08C7E86CB5BFB1"
+
+
+def _encrypt_payload(events_json_str, org_id="3211264", app_id="2285568-12042496", encoding_key=AES_KEY_B64):
+    aes_key = base64.b64decode(encoding_key + "=" * (-len(encoding_key) % 4))
+    iv = aes_key[:16]
+    events_bytes = events_json_str.encode("utf-8")
+    events_len = struct.pack("!I", len(events_bytes))
+    random_bytes = b"random16bytes!!!"
+    plaintext = random_bytes + events_len + org_id.encode() + app_id.encode() + events_bytes
+    pad_len = 32 - (len(plaintext) % 32)
+    plaintext += bytes([pad_len] * pad_len)
+    from Crypto.Cipher import AES
+    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    return base64.b64encode(cipher.encrypt(plaintext)).decode()
 
 
 def test_callback_event_types_count():
@@ -389,9 +413,63 @@ def test_parse_report_location():
     assert data.location_info["city"] == "北京"
 
 
-def test_parse_callback_payload_encryption_raises():
-    with pytest.raises(NotImplementedError):
-        parse_callback_payload("encrypted_data", encoding_key="some_key")
+def test_parse_callback_payload_encrypted_with_key():
+    try:
+        from Crypto.Cipher import AES
+    except ImportError:
+        pytest.skip("pycryptodome not installed")
+
+    events_json = json.dumps([{"eventType": "staff_modify", "data": {"staffId": "s1", "timestamp": "123456"}}])
+    encrypted = _encrypt_payload(events_json)
+    events = parse_callback_payload(encrypted, encoding_key=AES_KEY_B64, known_app_id="2285568-12042496")
+    assert len(events) == 1
+    assert events[0].event_type == "staff_modify"
+    assert isinstance(events[0].data, StaffModifyData)
+    assert events[0].data.staff_id == "s1"
+    assert events[0].app_id == "2285568-12042496"
+    assert events[0].org_id == "3211264"
+
+
+def test_parse_callback_payload_encrypted_json_wrapper():
+    try:
+        from Crypto.Cipher import AES
+    except ImportError:
+        pytest.skip("pycryptodome not installed")
+
+    events_json = json.dumps([{"eventType": "bot_private_message", "data": {"from": "524288-xxx", "msgType": "text", "msgData": {"text": {"content": "hi"}}}}])
+    encrypted = _encrypt_payload(events_json)
+    wrapper = json.dumps({"dataEncrypt": encrypted})
+    events = parse_callback_payload(wrapper, encoding_key=AES_KEY_B64, known_app_id="2285568-12042496")
+    assert len(events) == 1
+    assert events[0].event_type == "bot_private_message"
+    assert isinstance(events[0].data, BotPrivateMessageData)
+
+
+def test_parse_callback_payload_encrypted_with_signature():
+    try:
+        from Crypto.Cipher import AES
+    except ImportError:
+        pytest.skip("pycryptodome not installed")
+
+    events_json = json.dumps([{"eventType": "staff_create", "data": {"staffId": "524288-new", "timestamp": "999"}}])
+    encrypted = _encrypt_payload(events_json)
+    timestamp = "1710000000"
+    nonce = "nonce123"
+    params = sorted([CALLBACK_TOKEN, timestamp, nonce, encrypted])
+    sig = hashlib.sha1("".join(params).encode()).hexdigest()
+
+    events = parse_callback_payload(
+        encrypted,
+        encoding_key=AES_KEY_B64,
+        known_app_id="2285568-12042496",
+        verify_signature=True,
+        timestamp=timestamp,
+        nonce=nonce,
+        signature=sig,
+        callback_token=CALLBACK_TOKEN,
+    )
+    assert len(events) == 1
+    assert events[0].event_type == "staff_create"
 
 
 def test_parse_callback_payload_invalid_json():
@@ -399,8 +477,29 @@ def test_parse_callback_payload_invalid_json():
         parse_callback_payload("not valid json{}")
 
 
-def test_verify_callback_signature_returns_true():
-    result = verify_callback_signature("ts", "nonce", "sig", "key")
+def test_verify_callback_signature():
+    timestamp = "1710000000"
+    nonce = "nonce123"
+    data_encrypt = "ENCRYPTED_DATA"
+    params = sorted([CALLBACK_TOKEN, timestamp, nonce, data_encrypt])
+    computed = hashlib.sha1("".join(params).encode()).hexdigest()
+    result = verify_callback_signature(timestamp, nonce, computed, AES_KEY_B64, data_encrypt=data_encrypt, callback_token=CALLBACK_TOKEN)
+    assert result is True
+
+
+def test_verify_callback_signature_wrong_sig():
+    result = verify_callback_signature("ts", "nonce", "wrong_sig", "key", data_encrypt="data", callback_token="token")
+    assert result is False
+
+
+def test_verify_callback_signature_fallback_to_encoding_key():
+    encoding_key = "my_key"
+    timestamp = "1710000000"
+    nonce = "nonce123"
+    data_encrypt = "ENCRYPTED_DATA"
+    params = sorted([encoding_key, timestamp, nonce, data_encrypt])
+    computed = hashlib.sha1("".join(params).encode()).hexdigest()
+    result = verify_callback_signature(timestamp, nonce, computed, encoding_key, data_encrypt=data_encrypt)
     assert result is True
 
 
@@ -429,7 +528,12 @@ def test_client_parse_callback_payload():
 
 
 def test_client_verify_callback_signature():
-    result = LansengerClient.verify_callback_signature("ts", "nonce", "sig", "key")
+    timestamp = "1710000000"
+    nonce = "nonce123"
+    data_encrypt = "ENCRYPTED_DATA"
+    params = sorted([CALLBACK_TOKEN, timestamp, nonce, data_encrypt])
+    computed = hashlib.sha1("".join(params).encode()).hexdigest()
+    result = LansengerClient.verify_callback_signature(timestamp, nonce, computed, AES_KEY_B64, data_encrypt=data_encrypt, callback_token=CALLBACK_TOKEN)
     assert result is True
 
 
@@ -437,3 +541,85 @@ def test_client_get_callback_event_types():
     result = LansengerClient.get_callback_event_types()
     assert isinstance(result, dict)
     assert "account_message" in result
+
+
+def test_decode_aes_key_valid():
+    decoded = _decode_aes_key(AES_KEY_B64)
+    assert len(decoded) == 32
+
+
+def test_decode_aes_key_padding():
+    key = base64.b64encode(b"aes_key_16bytes_").decode().rstrip("=")
+    decoded = _decode_aes_key(key)
+    assert len(decoded) == 16
+
+
+def test_decode_aes_key_invalid_length():
+    key = base64.b64encode(b"short5").decode()
+    with pytest.raises(ValueError, match="Invalid AES key length"):
+        _decode_aes_key(key)
+
+
+def test_pkcs7_unpad_valid():
+    data = b"hello\x03\x03\x03"
+    result = _pkcs7_unpad(data)
+    assert result == b"hello"
+
+
+def test_pkcs7_unpad_invalid():
+    with pytest.raises(ValueError, match="Invalid PKCS7 padding"):
+        _pkcs7_unpad(b"hello\x00")
+
+
+def test_decrypt_callback_payload_basic():
+    try:
+        from Crypto.Cipher import AES
+    except ImportError:
+        pytest.skip("pycryptodome not installed")
+
+    events_json = json.dumps([{"eventType": "staff_create", "data": {"staffId": "524288-new", "timestamp": "999"}}])
+    encrypted = _encrypt_payload(events_json)
+    result = decrypt_callback_payload(encrypted, AES_KEY_B64, known_app_id="2285568-12042496")
+    assert result["orgId"] == "3211264"
+    assert result["appId"] == "2285568-12042496"
+    assert isinstance(result["events"], list)
+    assert result["events"][0]["eventType"] == "staff_create"
+
+
+def test_decrypt_callback_payload_without_known_app_id():
+    try:
+        from Crypto.Cipher import AES
+    except ImportError:
+        pytest.skip("pycryptodome not installed")
+
+    events_json = json.dumps([{"eventType": "staff_create", "data": {"staffId": "524288-new", "timestamp": "999"}}])
+    encrypted = _encrypt_payload(events_json)
+    result = decrypt_callback_payload(encrypted, AES_KEY_B64)
+    assert result["orgId"] == "32112642285568-12042496"
+    assert result["appId"] == ""
+    assert isinstance(result["events"], list)
+
+
+def test_config_encoding_key_from_env():
+    import os
+    os.environ["LANSENGER_APP_ID"] = "test_id"
+    os.environ["LANSENGER_APP_SECRET"] = "test_secret"
+    os.environ["LANSENGER_ENCODING_KEY"] = "test_encoding_key"
+    os.environ["LANSENGER_CALLBACK_TOKEN"] = "test_callback_token"
+    try:
+        from lansenger_sdk.config import LansengerConfig
+        config = LansengerConfig.from_env()
+        assert config.encoding_key == "test_encoding_key"
+        assert config.callback_token == "test_callback_token"
+    finally:
+        os.environ.pop("LANSENGER_APP_ID", None)
+        os.environ.pop("LANSENGER_APP_SECRET", None)
+        os.environ.pop("LANSENGER_ENCODING_KEY", None)
+        os.environ.pop("LANSENGER_CALLBACK_TOKEN", None)
+
+
+def test_config_encoding_key_from_direct_params():
+    from lansenger_sdk.config import LansengerConfig
+    config = LansengerConfig.create(app_id="id", app_secret="secret", encoding_key="key", callback_token="token")
+    assert config.encoding_key == "key"
+    assert config.callback_token == "token"

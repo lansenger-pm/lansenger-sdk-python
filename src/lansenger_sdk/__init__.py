@@ -171,6 +171,7 @@ from .calendars import (
 from .callbacks import (
     parse_callback_payload,
     verify_callback_signature,
+    decrypt_callback_payload,
     get_callback_event_types,
     CallbackEvent,
     CallbackEventData,
@@ -329,6 +330,7 @@ __all__ = [
     "send_group_message",
     "parse_callback_payload",
     "verify_callback_signature",
+    "decrypt_callback_payload",
     "get_callback_event_types",
     "CallbackEvent",
     "CallbackEventData",
@@ -363,4 +365,4 @@ __all__ = [
     "fetch_chat_messages",
 ]
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"

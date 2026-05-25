@@ -134,6 +134,8 @@ class LansengerClient:
         passport_url: str = "",
         http_timeout: float = 30.0,
         store_path: Optional[str] = None,
+        encoding_key: str = "",
+        callback_token: str = "",
     ):
         self._config = LansengerConfig(
             app_id=app_id,
@@ -141,6 +143,8 @@ class LansengerClient:
             api_gateway_url=api_gateway_url,
             passport_url=passport_url,
             http_timeout=http_timeout,
+            encoding_key=encoding_key,
+            callback_token=callback_token,
         )
         self._http_client: Optional[httpx.AsyncClient] = None
         self._token_manager: Optional[TokenManager] = None
@@ -162,6 +166,8 @@ class LansengerClient:
             passport_url=config.passport_url,
             http_timeout=config.http_timeout,
             store_path=store_path,
+            encoding_key=config.encoding_key,
+            callback_token=config.callback_token,
         )
 
     @classmethod
@@ -174,6 +180,8 @@ class LansengerClient:
             passport_url=config.passport_url,
             http_timeout=config.http_timeout,
             store_path=store_path,
+            encoding_key=config.encoding_key,
+            callback_token=config.callback_token,
         )
 
     def _ensure_clients(self) -> None:
@@ -2845,6 +2853,8 @@ class LansengerClient:
         timestamp: str = "",
         nonce: str = "",
         signature: str = "",
+        callback_token: str = "",
+        known_app_id: str = "",
     ) -> list:
         from .callbacks import parse_callback_payload
 
@@ -2855,6 +2865,8 @@ class LansengerClient:
             timestamp=timestamp,
             nonce=nonce,
             signature=signature,
+            callback_token=callback_token,
+            known_app_id=known_app_id,
         )
 
     @staticmethod
@@ -2863,10 +2875,17 @@ class LansengerClient:
         nonce: str,
         signature: str,
         encoding_key: str,
+        *,
+        data_encrypt: str = "",
+        callback_token: str = "",
     ) -> bool:
         from .callbacks import verify_callback_signature
 
-        return verify_callback_signature(timestamp, nonce, signature, encoding_key)
+        return verify_callback_signature(
+            timestamp, nonce, signature, encoding_key,
+            data_encrypt=data_encrypt,
+            callback_token=callback_token,
+        )
 
     @staticmethod
     def get_callback_event_types() -> dict:
