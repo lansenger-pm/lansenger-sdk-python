@@ -40,13 +40,16 @@ from .models import (
     GroupMemberResult,
     IsInGroupResult,
     LinkCardParams,
+    MediaPathResult,
     OaCardParams,
     OrgInfoResult,
     QueryGroupsResult,
+    ScheduleAttendeeMetaResult,
     ScheduleAttendeesResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
+    ScheduleUpdateResult,
     SendMessageResult,
     StaffBasicInfoResult,
     StaffDetailResult,
@@ -504,12 +507,33 @@ class LansengerSyncClient:
         file_path: str,
         *,
         media_type: Optional[int] = None,
+        user_token: str = "",
     ) -> SendMessageResult:
-        """Upload a media file (blocking)."""
+        """Upload a media file via core service endpoint (blocking, 4.5.1)."""
         return _run_async(self._ephemeral_call(
             "upload_media",
             file_path=file_path,
             media_type=media_type,
+            user_token=user_token,
+        ))
+
+    def upload_app_media(
+        self,
+        file_path: str,
+        *,
+        media_type: Optional[str] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        duration: Optional[int] = None,
+    ) -> SendMessageResult:
+        """Upload a media file via app/bot endpoint (blocking, 4.5.4)."""
+        return _run_async(self._ephemeral_call(
+            "upload_app_media",
+            file_path=file_path,
+            media_type=media_type,
+            width=width,
+            height=height,
+            duration=duration,
         ))
 
     def download_media(self, media_id: str) -> DownloadMediaResult:
@@ -1596,5 +1620,113 @@ class LansengerSyncClient:
             start_time=start_time,
             end_time=end_time,
             sender_id=sender_id,
+            user_token=user_token,
+        ))
+
+    def dismiss_group(
+        self,
+        group_id: str,
+        *,
+        user_token: str = "",
+    ) -> UpdateGroupResult:
+        """Dismiss/delete a group (blocking, 4.28.6)."""
+        return _run_async(self._ephemeral_call(
+            "dismiss_group",
+            group_id=group_id,
+            user_token=user_token,
+        ))
+
+    def send_reminder(
+        self,
+        msg_id: str,
+        reminder_types: List[int],
+        user_id_list: List[str],
+    ) -> SendMessageResult:
+        """Send an urgent reminder for a message (blocking, 4.6.14)."""
+        return _run_async(self._ephemeral_call(
+            "send_reminder",
+            msg_id=msg_id,
+            reminder_types=reminder_types,
+            user_id_list=user_id_list,
+        ))
+
+    def update_schedule(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        operation_type: str = "modify_all",
+        current_time: Optional[int] = None,
+        reminder_type: Optional[str] = None,
+        repeat_type: Optional[str] = None,
+        rule: Optional[str] = None,
+        expire_date_type: Optional[str] = None,
+        all_day: Optional[str] = None,
+        attendee_permissions: Optional[str] = None,
+        start_time: Optional[Dict[str, Any]] = None,
+        end_time: Optional[Dict[str, Any]] = None,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleUpdateResult:
+        """Update a schedule (blocking, 4.23.12)."""
+        return _run_async(self._ephemeral_call(
+            "update_schedule",
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            summary=summary,
+            description=description,
+            operation_type=operation_type,
+            current_time=current_time,
+            reminder_type=reminder_type,
+            repeat_type=repeat_type,
+            rule=rule,
+            expire_date_type=expire_date_type,
+            all_day=all_day,
+            attendee_permissions=attendee_permissions,
+            start_time=start_time,
+            end_time=end_time,
+            user_token=user_token,
+            user_id=user_id,
+        ))
+
+    def update_schedule_attendee_meta(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        rsvp_status: Optional[str] = None,
+        color: Optional[str] = None,
+        permissions: Optional[str] = None,
+        busy_free_state: Optional[str] = None,
+        remind_times: Optional[List[int]] = None,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleAttendeeMetaResult:
+        """Update schedule attendee metadata (blocking, 4.23.17)."""
+        return _run_async(self._ephemeral_call(
+            "update_schedule_attendee_meta",
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            rsvp_status=rsvp_status,
+            color=color,
+            permissions=permissions,
+            busy_free_state=busy_free_state,
+            remind_times=remind_times,
+            user_token=user_token,
+            user_id=user_id,
+        ))
+
+    def fetch_media_path(
+        self,
+        media_id: str,
+        *,
+        user_token: str = "",
+    ) -> MediaPathResult:
+        """Get the download URL path for a media file (blocking, 4.5.3)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_media_path",
+            media_id=media_id,
             user_token=user_token,
         ))

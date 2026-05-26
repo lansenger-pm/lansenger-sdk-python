@@ -361,7 +361,7 @@ EVENT_DATA_PARSERS: Dict[str, Any] = {
 FIELD_MAPS: Dict[str, Dict[str, str]] = {
     "account_subscribe": {"staffId": "staff_id", "createTime": "create_time"},
     "account_unsubscribe": {"staffId": "staff_id", "createTime": "create_time"},
-    "staff_info": {"staffId": "staff_id", "name": "name", "mobile": "mobile", "state": "state", "sex": "sex", "email": "email", "employId": "employee_id", "avatarId": "avatar_id", "timestamp": "timestamp"},
+    "staff_info": {"staffId": "staff_id", "name": "name", "mobile": "mobile", "state": "state", "sex": "sex", "email": "email", "employId": "employee_id", "employeeId": "employee_id", "avatarId": "avatar_id", "timestamp": "timestamp"},
     "staff_modify": {"staffId": "staff_id", "timestamp": "timestamp"},
     "staff_create": {"staffId": "staff_id", "timestamp": "timestamp"},
     "staff_delete": {"staffId": "staff_id", "timestamp": "timestamp"},

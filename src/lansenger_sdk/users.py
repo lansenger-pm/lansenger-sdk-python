@@ -79,7 +79,7 @@ async def fetch_user_info(
         staff_id=user_data.get("staffId"),
         name=user_data.get("name"),
         org_id=user_data.get("orgId"),
-        org_name=user_data.get("orgname") or user_data.get("orgName"),
+        org_name=user_data.get("orgid") or user_data.get("orgName") or user_data.get("orgname"),
         avatar_id=user_data.get("avatarId"),
         avatar_url=user_data.get("avatarUrl"),
         mobile_phone=user_data.get("mobilePhone"),

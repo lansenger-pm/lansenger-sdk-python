@@ -27,13 +27,13 @@
 - **OAuth2 使用者認證** — 構建授權 URL、換取 userToken、刷新令牌
 - **組織與部門** — 組織資訊、部門詳情/子部門/員工
 - **員工與通訊錄** — 基礎/詳細資訊、ID 映射、部門祖先鏈、搜尋
-- **訊息傳遞** — 3 種私聊通道（機器人、公眾號、人→人）+ 群聊，支援所有訊息類型，含 @提及和真人/機器人發送身分
+- **訊息傳遞** — 3 種私聊通道（機器人、公眾號、人→人）+ 群聊，支援所有訊息類型，含 @提及和真人/機器人發送身分，加急提醒
 - **富卡片** — appCard（支援動態狀態更新）、oacard、linkCard、verifyCard、appArticles
 - **流式訊息** — SSE 即時投遞，專為 AI Agent 設計
-- **媒體上傳/下載** — 檔案、圖片、影片，自動偵測類型
+- **媒體上傳/下載** — 檔案、圖片、影片，自動偵測類型，媒體路徑取得
 - **訊息管理** — 撤回、動態卡片更新
-- **群組** — 建立、查詢資訊/成員/列表、檢查成員、更新設定與成員
-- **日曆日程** — 主日曆、日程 CRUD、參會人管理
+- **群組** — 建立、查詢資訊/成員/列表、檢查成員、更新設定與成員、解散
+- **日曆日程** — 主日曆、日程 CRUD + 更新、參會人管理 + 參會人元資料
 - **統一待辦** — 建立、更新、刪除、查詢、執行人管理、狀態統計
 - **回調事件** — 25 種事件類型、結構化解析、AES 解密（按 4.10.1.4規範）、SHA1 簽名驗證
 
@@ -217,8 +217,23 @@ upload = await client.upload_media(file_path="/path/to/file.pdf")
 # 下載
 download = await client.download_media(media_id="media123")
 
+# 取得下載路徑（4.5.3）
+path_result = await client.fetch_media_path(media_id="media123")
+
 # 撤回訊息
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
+```
+
+#### 加急提醒（4.6.14）
+
+```python
+from lansenger_sdk import REMINDER_TYPE_POPUP, REMINDER_TYPE_SMS, REMINDER_TYPE_PHONE
+
+result = await client.send_reminder(
+    msg_id="msg123",
+    reminder_types=[REMINDER_TYPE_POPUP, REMINDER_TYPE_SMS],
+    user_id_list=["staff1", "staff2"],
+)
 ```
 
 ## 5. 群組
@@ -242,6 +257,9 @@ await client.update_group_info(group_id="groupId", name="新名稱", manage_mode
 await client.update_group_members(
     group_id="groupId", add_user_list=["staff4"], del_user_list=["staff3"],
 )
+
+# 解散群組（僅群主，4.28.6）
+await client.dismiss_group(group_id="groupId")
 ```
 
 ## 6. 日曆日程
@@ -272,6 +290,20 @@ schedules = await client.fetch_schedule_list(
 attendees = await client.fetch_schedule_attendees(calendar_id="cal1", schedule_id="sch1", user_token="ut")
 await client.add_schedule_attendees(calendar_id="cal1", schedule_id="sch1", attendees=["staff2"], user_token="ut")
 await client.delete_schedule_attendees(calendar_id="cal1", schedule_id="sch1", attendees=["staff2"], user_token="ut")
+
+# 更新日程（4.23.12）
+await client.update_schedule(
+    calendar_id="cal1", schedule_id="sch1",
+    summary="更新的會議", operation_type="modify_all",
+    user_token="ut",
+)
+
+# 更新參會人元資料（4.23.17）— RSVP、顏色、忙/閒、提醒
+await client.update_schedule_attendee_meta(
+    calendar_id="cal1", schedule_id="sch1",
+    rsvp_status="accept", busy_free_state="busy",
+    remind_times=[5, 15], user_token="ut",
+)
 ```
 
 ## 7. 統一待辦
@@ -454,7 +486,7 @@ lansenger-sdk-python/
 │   ├── oauth.py             # OAuth2 輔助函式
 │   ├── constants.py         # API 端點、媒體類型、OAuth 范围
 │   ├── exceptions.py        # LansengerError 异常层级
-│   ├── models.py            # 35+ dataclass 结果类型
+│   ├── models.py            # 38+ dataclass 结果类型
 │   ├── contacts.py          # 員工與組織資訊 API
 │   ├── departments.py       # 部門 API
 │   ├── account_messages.py  # 公眾號通道
@@ -464,9 +496,10 @@ lansenger-sdk-python/
 │   ├── streaming.py         # SSE 流式訊息
 │   ├── persistence.py       # CredentialStore — 憑證與令牌檔案持久化
 │   ├── callbacks.py         # 回調事件 — 25 種事件類型、結構化解析、AES 解密（4.10.1.4）、SHA1 簽名驗證
-│   ├── groups.py            # 群組 API
+│   ├── groups.py            # 群組 API（含解散 4.28.6）
 │   ├── todos.py             # 統一待辦
-│   ├── calendars.py         # 日曆日程
+│   ├── calendars.py         # 日曆日程（含更新 4.23.12、參會人元資料 4.23.17）
+│   ├── reminders.py         # 加急提醒（4.6.14）
 │   └── users.py             # 使用者資訊
 ├── tests/                   # 341 個測試，全部通過
 ├── pyproject.toml

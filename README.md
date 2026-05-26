@@ -27,13 +27,13 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **OAuth2 user authentication** — authorize URL, code exchange, token refresh
 - **Organization & departments** — org info, department detail/children/staff
 - **Staff & contacts** — basic/detailed info, ID mapping, department ancestors, search
-- **Messaging** — 3 private chat channels (bot, official account, user impersonate) + group chat, all message types, @mention, human/bot sender identity
+- **Messaging** — 3 private chat channels (bot, official account, user impersonate) + group chat, all message types, @mention, human/bot sender identity, urgent reminders
 - **Rich cards** — appCard (with dynamic status updates), oacard, linkCard, verifyCard, appArticles
 - **Streaming messages** — SSE-based real-time delivery for AI agents
-- **Media upload/download** — files, images, videos with auto type detection
+- **Media upload/download** — files, images, videos with auto type detection, media path fetch
 - **Message management** — revoke, dynamic card update
-- **Groups** — create, info, members, list, membership check, update settings & members
-- **Calendar & schedule** — primary calendar, schedule CRUD, attendee management
+- **Groups** — create, info, members, list, membership check, update settings & members, dismiss
+- **Calendar & schedule** — primary calendar, schedule CRUD + update, attendee management + attendee metadata
 - **Unified todo** — create, update, delete, query, executor management, status counts
 - **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
 
@@ -217,8 +217,23 @@ upload = await client.upload_media(file_path="/path/to/file.pdf")
 # Download
 download = await client.download_media(media_id="media123")
 
+# Get download URL path (4.5.3)
+path_result = await client.fetch_media_path(media_id="media123")
+
 # Revoke messages
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
+```
+
+#### Urgent reminders (4.6.14)
+
+```python
+from lansenger_sdk import REMINDER_TYPE_POPUP, REMINDER_TYPE_SMS, REMINDER_TYPE_PHONE
+
+result = await client.send_reminder(
+    msg_id="msg123",
+    reminder_types=[REMINDER_TYPE_POPUP, REMINDER_TYPE_SMS],
+    user_id_list=["staff1", "staff2"],
+)
 ```
 
 ## 5. Groups
@@ -242,6 +257,9 @@ await client.update_group_info(group_id="groupId", name="New Name", manage_mode=
 await client.update_group_members(
     group_id="groupId", add_user_list=["staff4"], del_user_list=["staff3"],
 )
+
+# Dismiss/delete group (owner only, 4.28.6)
+await client.dismiss_group(group_id="groupId")
 ```
 
 ## 6. Calendar & Schedule
@@ -272,6 +290,20 @@ schedules = await client.fetch_schedule_list(
 attendees = await client.fetch_schedule_attendees(calendar_id="cal1", schedule_id="sch1", user_token="ut")
 await client.add_schedule_attendees(calendar_id="cal1", schedule_id="sch1", attendees=["staff2"], user_token="ut")
 await client.delete_schedule_attendees(calendar_id="cal1", schedule_id="sch1", attendees=["staff2"], user_token="ut")
+
+# Update schedule (4.23.12)
+await client.update_schedule(
+    calendar_id="cal1", schedule_id="sch1",
+    summary="Updated Meeting", operation_type="modify_all",
+    user_token="ut",
+)
+
+# Update attendee metadata (4.23.17) — RSVP, color, busy/free, reminders
+await client.update_schedule_attendee_meta(
+    calendar_id="cal1", schedule_id="sch1",
+    rsvp_status="accept", busy_free_state="busy",
+    remind_times=[5, 15], user_token="ut",
+)
 ```
 
 ## 7. Unified Todo
@@ -456,7 +488,7 @@ lansenger-sdk-python/
 │   ├── oauth.py             # OAuth2 helpers
 │   ├── constants.py         # API endpoints, media types, OAuth scopes
 │   ├── exceptions.py        # LansengerError hierarchy
-│   ├── models.py            # 35+ dataclass result types
+│   ├── models.py            # 38+ dataclass result types
 │   ├── contacts.py          # Staff & org info APIs
 │   ├── departments.py       # Department APIs
 │   ├── account_messages.py  # Public account channel
@@ -466,9 +498,10 @@ lansenger-sdk-python/
 │   ├── streaming.py         # SSE streaming
 │   ├── persistence.py       # CredentialStore — file-based token & credential persistence
 │   ├── callbacks.py         # Callback events — 25 event types, structured parsing, AES decryption (4.10.1.4), SHA1 signature verification
-│   ├── groups.py            # Group APIs
+│   ├── groups.py            # Group APIs (including dismiss 4.28.6)
 │   ├── todos.py             # Unified Todo
-│   ├── calendars.py         # Calendar & Schedule
+│   ├── calendars.py         # Calendar & Schedule (including update 4.23.12, attendee-meta 4.23.17)
+│   ├── reminders.py         # Urgent message reminders (4.6.14)
 │   └── users.py             # User info
 ├── tests/                   # 341 tests, all passing
 ├── pyproject.toml

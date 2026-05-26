@@ -508,3 +508,38 @@ async def update_group_members(
         invalid_department=d.get("invalidDepartment"),
         raw_response=data,
     )
+
+
+async def dismiss_group(
+    config: LansengerConfig,
+    app_token: str,
+    group_id: str,
+    *,
+    user_token: str = "",
+    http_client: Optional[httpx.AsyncClient] = None,
+) -> UpdateGroupResult:
+    """Dismiss/delete a group (4.28.6).
+
+    Only the group owner can dismiss a group. This is a high-risk operation.
+
+    Args:
+        config: LansengerConfig.
+        app_token: Bot's appToken.
+        group_id: Group openId (required).
+        user_token: Optional userToken.
+        http_client: Optional httpx client.
+    """
+    if not group_id:
+        return UpdateGroupResult(success=False, error="group_id is required")
+
+    url = build_api_url(config, "groups_v2", "delete", app_token, user_token=user_token, group_id=group_id)
+
+    data, http_err = await _do_post(config, url, {}, http_client)
+    if http_err:
+        return UpdateGroupResult(success=False, error=http_err)
+
+    ok, api_err = _parse_api_response(data)
+    if not ok:
+        return UpdateGroupResult(success=False, error=api_err)
+
+    return UpdateGroupResult(success=True, raw_response=data)

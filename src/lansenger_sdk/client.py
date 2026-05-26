@@ -25,6 +25,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+from urllib.parse import quote
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -60,13 +61,15 @@ from .models import (
     GroupMemberResult,
     IsInGroupResult,
     LinkCardParams,
+    MediaPathResult,
     OaCardParams,
     OrgInfoResult,
     QueryGroupsResult,
-    ScheduleAttendeesResult,
+    ScheduleAttendeeMetaResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
+    ScheduleUpdateResult,
     SendMessageResult,
     StaffBasicInfoResult,
     StaffDetailResult,
@@ -280,7 +283,7 @@ class LansengerClient:
         token = await self._get_token()
         url = self._group_msg_url(token)
         if user_token:
-            url += f"&user_token={user_token}"
+            url += f"&user_token={quote(user_token, safe='')}"
         payload: Dict[str, Any] = {
             "groupId": group_id,
             "msgType": msg_type,
@@ -723,13 +726,17 @@ class LansengerClient:
             return SendMessageResult(success=False, error="body_title is required for appCard")
 
         app_card_data: Dict[str, Any] = {
-            "headTitle": head_title,
-            "headIconUrl": head_icon_url,
-            "isDynamic": is_dynamic,
             "bodyTitle": body_title,
-            "cardLink": card_link,
-            "pcCardLink": pc_card_link,
         }
+        if head_title:
+            app_card_data["headTitle"] = head_title
+        if head_icon_url:
+            app_card_data["headIconUrl"] = head_icon_url
+        app_card_data["isDynamic"] = is_dynamic
+        if card_link:
+            app_card_data["cardLink"] = card_link
+        if pc_card_link:
+            app_card_data["pcCardLink"] = pc_card_link
 
         if is_dynamic and not head_status_info:
             head_status_info = {
@@ -759,29 +766,7 @@ class LansengerClient:
         if is_group:
             return await self._send_group(chat_id, "appCard", msg_data, user_token=user_token, sender_id=sender_id)
 
-        token = await self._get_token()
-        url = self._private_msg_url(token)
-
-        payload = {
-            "userIdList": [chat_id],
-            "msgType": "appCard",
-            "msgData": msg_data,
-        }
-
-        try:
-            response = await self._http_client.post(url, json=payload)
-            response.raise_for_status()
-
-            if not response.text or not response.text.strip():
-                return SendMessageResult(
-                    success=False, error="Empty API response — likely a payload format issue", retryable=True
-                )
-
-            data = response.json()
-        except httpx.HTTPError as e:
-            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
-
-        return _parse_send_response(data, msg_type="appCard", operation="appCard")
+        return await self._send_private(chat_id, "appCard", msg_data)
 
     async def send_app_card_with_params(
         self,
@@ -851,13 +836,14 @@ class LansengerClient:
             return SendMessageResult(success=False, error="title is required for oaCard")
 
         oa_card_data: Dict[str, Any] = {
-            "head": head,
             "title": title,
         }
+        if head:
+            oa_card_data["head"] = head
         if sub_title:
             oa_card_data["subTitle"] = sub_title
         if staff_id:
-            oa_card_data["staffID"] = staff_id
+            oa_card_data["staffId"] = staff_id
         if fields:
             oa_card_data["fields"] = fields
         if link:
@@ -874,29 +860,7 @@ class LansengerClient:
         if is_group:
             return await self._send_group(chat_id, "oacard", msg_data, user_token=user_token, sender_id=sender_id)
 
-        token = await self._get_token()
-        url = self._private_msg_url(token)
-
-        payload = {
-            "userIdList": [chat_id],
-            "msgType": "oacard",
-            "msgData": msg_data,
-        }
-
-        try:
-            response = await self._http_client.post(url, json=payload)
-            response.raise_for_status()
-
-            if not response.text or not response.text.strip():
-                return SendMessageResult(
-                    success=False, error="Empty API response — likely a payload format issue", retryable=True
-                )
-
-            data = response.json()
-        except httpx.HTTPError as e:
-            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
-
-        return _parse_send_response(data, msg_type="oacard", operation="oacard")
+        return await self._send_private(chat_id, "oacard", msg_data)
 
     async def send_oacard_with_params(
         self,
@@ -1075,23 +1039,64 @@ class LansengerClient:
         file_path: str,
         *,
         media_type: Optional[int] = None,
+        user_token: str = "",
     ) -> SendMessageResult:
-        """Upload a media file and return result with media_id in message_id field.
+        """Upload a media file via core service endpoint (4.5.1).
 
         Args:
             file_path: Path to the local file.
             media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+            user_token: Optional userToken (4.5.1 accepts this).
         """
         self._ensure_clients()
         mt = media_type or guess_media_type(file_path) or MEDIA_TYPE_FILE
         result = await upload_media(
-            self._config, self._token_manager, self._http_client, file_path, mt
+            self._config, self._token_manager, self._http_client,
+            file_path, mt, user_token=user_token,
         )
         if result.success:
             return SendMessageResult(
-                success=True, message_id=result.media_id, operation="upload_media"
+                success=True, message_id=result.media_id, operation="upload_media",
+                raw_response=result.raw_response if hasattr(result, "raw_response") else None,
             )
         return SendMessageResult(success=False, error=result.error, operation="upload_media")
+
+    async def upload_app_media(
+        self,
+        file_path: str,
+        *,
+        media_type: Optional[str] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        duration: Optional[int] = None,
+    ) -> SendMessageResult:
+        """Upload a media file via app/bot endpoint (4.5.4).
+
+        Uses /v1/app/medias/create with string type values ("file", "video", "image", "audio").
+        Higher size limits: 10MB for image, 20MB for others.
+        Only for self-built apps (not ISV apps). No userToken parameter.
+
+        Args:
+            file_path: Path to the local file.
+            media_type: "file", "video", "image", or "audio". Auto-detected if omitted.
+            width: Optional width (for video/image).
+            height: Optional height (for video/image).
+            duration: Optional duration in seconds (for video/audio).
+        """
+        self._ensure_clients()
+        from .media import upload_app_media
+        from .constants import guess_app_media_type, APP_MEDIA_TYPE_FILE
+
+        mt = media_type or guess_app_media_type(file_path) or APP_MEDIA_TYPE_FILE
+        result = await upload_app_media(
+            self._config, self._token_manager, self._http_client,
+            file_path, mt, width=width, height=height, duration=duration,
+        )
+        if result.success:
+            return SendMessageResult(
+                success=True, message_id=result.media_id, operation="upload_app_media",
+            )
+        return SendMessageResult(success=False, error=result.error, operation="upload_app_media")
 
     async def download_media(
         self,
@@ -1680,11 +1685,13 @@ class LansengerClient:
         token = await self._get_token()
         url = build_api_url(self._config, "bot", "message_create", token, user_token=user_token)
         payload: Dict[str, Any] = {
-            "userIdList": chat_ids or [],
-            "departmentIdList": department_ids or [],
             "msgType": msg_type,
             "msgData": msg_data,
         }
+        if chat_ids:
+            payload["userIdList"] = chat_ids
+        if department_ids:
+            payload["departmentIdList"] = department_ids
         if entry_id:
             payload["entryId"] = entry_id
         try:
@@ -2186,6 +2193,27 @@ class LansengerClient:
             add_user_list=add_user_list,
             del_user_list=del_user_list,
             add_department_id_list=add_department_id_list,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def dismiss_group(
+        self,
+        group_id: str,
+        *,
+        user_token: str = "",
+    ) -> UpdateGroupResult:
+        """Dismiss/delete a group (4.28.6). Only the group owner can dismiss."""
+        if not group_id:
+            return UpdateGroupResult(success=False, error="group_id is required")
+        self._ensure_clients()
+        from .groups import dismiss_group
+
+        app_token = await self._get_token()
+        return await dismiss_group(
+            self._config,
+            app_token=app_token,
+            group_id=group_id,
             user_token=user_token,
             http_client=self._http_client,
         )
@@ -2867,6 +2895,152 @@ class LansengerClient:
             reminder_type=reminder_type,
             user_token=user_token,
             user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def update_schedule(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        operation_type: str = "modify_all",
+        current_time: Optional[int] = None,
+        reminder_type: Optional[str] = None,
+        repeat_type: Optional[str] = None,
+        rule: Optional[str] = None,
+        expire_date_type: Optional[str] = None,
+        all_day: Optional[str] = None,
+        attendee_permissions: Optional[str] = None,
+        start_time: Optional[Dict[str, Any]] = None,
+        end_time: Optional[Dict[str, Any]] = None,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleUpdateResult:
+        """Update a schedule (4.23.12)."""
+        if not calendar_id:
+            return ScheduleUpdateResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleUpdateResult(success=False, error="schedule_id is required")
+        self._ensure_clients()
+        from .calendars import update_schedule
+
+        app_token = await self._get_token()
+        return await update_schedule(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            summary=summary,
+            description=description,
+            operation_type=operation_type,
+            current_time=current_time,
+            reminder_type=reminder_type,
+            repeat_type=repeat_type,
+            rule=rule,
+            expire_date_type=expire_date_type,
+            all_day=all_day,
+            attendee_permissions=attendee_permissions,
+            start_time=start_time,
+            end_time=end_time,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def update_schedule_attendee_meta(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        rsvp_status: Optional[str] = None,
+        color: Optional[str] = None,
+        permissions: Optional[str] = None,
+        busy_free_state: Optional[str] = None,
+        remind_times: Optional[List[int]] = None,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleAttendeeMetaResult:
+        """Update schedule attendee metadata (4.23.17)."""
+        if not calendar_id:
+            return ScheduleAttendeeMetaResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleAttendeeMetaResult(success=False, error="schedule_id is required")
+        self._ensure_clients()
+        from .calendars import update_schedule_attendee_meta
+
+        app_token = await self._get_token()
+        return await update_schedule_attendee_meta(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            rsvp_status=rsvp_status,
+            color=color,
+            permissions=permissions,
+            busy_free_state=busy_free_state,
+            remind_times=remind_times,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
+    async def send_reminder(
+        self,
+        msg_id: str,
+        reminder_types: List[int],
+        user_id_list: List[str],
+    ) -> SendMessageResult:
+        """Send an urgent reminder for a previously sent message (4.6.14).
+
+        Args:
+            msg_id: The message ID to remind about.
+            reminder_types: List of reminder type ints (1=popup, 2=SMS, 3=phone).
+            user_id_list: List of staff openIds to remind (max 100).
+        """
+        if not msg_id:
+            return SendMessageResult(success=False, error="msg_id is required")
+        if not reminder_types:
+            return SendMessageResult(success=False, error="reminder_types is required")
+        if not user_id_list:
+            return SendMessageResult(success=False, error="user_id_list is required")
+        self._ensure_clients()
+        from .reminders import send_reminder
+
+        app_token = await self._get_token()
+        return await send_reminder(
+            self._config,
+            app_token=app_token,
+            msg_id=msg_id,
+            reminder_types=reminder_types,
+            user_id_list=user_id_list,
+            http_client=self._http_client,
+        )
+
+    async def fetch_media_path(
+        self,
+        media_id: str,
+        *,
+        user_token: str = "",
+    ) -> MediaPathResult:
+        """Get the download URL path for a media file (4.5.3).
+
+        Args:
+            media_id: Lansenger media ID.
+            user_token: Optional userToken.
+        """
+        if not media_id:
+            return MediaPathResult(success=False, error="media_id is required")
+        self._ensure_clients()
+        from .media import fetch_media_path
+
+        app_token = await self._get_token()
+        return await fetch_media_path(
+            self._config,
+            app_token=app_token,
+            media_id=media_id,
+            user_token=user_token,
             http_client=self._http_client,
         )
 

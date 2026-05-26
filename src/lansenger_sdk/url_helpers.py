@@ -39,9 +39,9 @@ def build_api_url(
     for var_name, var_value in path_vars.items():
         path = path.replace(f"{{{var_name}}}", quote(var_value, safe=""))
 
-    url = f"{config.api_gateway_url}{path}?app_token={app_token}"
+    url = f"{config.api_gateway_url}{path}?app_token={quote(app_token, safe='')}"
     if user_token:
-        url += f"&user_token={user_token}"
+        url += f"&user_token={quote(user_token, safe='')}"
     if user_id:
-        url += f"&user_id={quote(user_id)}"
+        url += f"&user_id={quote(user_id, safe='')}"
     return url

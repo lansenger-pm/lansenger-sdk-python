@@ -28,10 +28,12 @@ import httpx
 from .config import LansengerConfig
 from .models import (
     CalendarPrimaryResult,
+    ScheduleAttendeeMetaResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
     ScheduleAttendeesResult,
+    ScheduleUpdateResult,
 )
 from .url_helpers import build_api_url
 
@@ -152,12 +154,12 @@ async def create_schedule(
     attendees: List[Dict[str, str]],
     *,
     description: str = "",
-    all_day: str = "no",
-    repeat_type: str = "no",
+    all_day: Optional[str] = None,
+    repeat_type: Optional[str] = None,
     rule: str = "",
-    expire_date_type: str = "no",
-    reminder_type: str = "yes",
-    attendee_permissions: str = "can_see",
+    expire_date_type: Optional[str] = None,
+    reminder_type: Optional[str] = None,
+    attendee_permissions: Optional[str] = None,
     user_token: str = "",
     user_id: str = "",
     http_client: Optional[httpx.AsyncClient] = None,
@@ -171,10 +173,12 @@ async def create_schedule(
         end_time: Dict with time/date/timeZone.
         attendees: List of dicts with staffId + attendeeFlag.
         description: Optional description (max 6000 chars).
-        all_day: "yes" or "no".
-        repeat_type: "no"/"day"/"week"/"month"/"year"/"work_day"/"custom".
+        all_day: "yes" or "no". Defaults to "no" if omitted.
+        repeat_type: "no"/"day"/"week"/"month"/"year"/"work_day"/"custom". Defaults to "no" if omitted.
         rule: RFC 5545 repeat rule when repeat_type != "no".
-        attendee_permissions: "can_modify"/"can_invite"/"can_see"/"none".
+        expire_date_type: "no" or "yes". Defaults to "no" if omitted.
+        reminder_type: "yes" or "no". Defaults to "yes" if omitted.
+        attendee_permissions: "can_modify"/"can_invite"/"can_see"/"none". Defaults to "can_see" if omitted.
     """
     if not calendar_id:
         return ScheduleCreateResult(success=False, error="calendar_id is required")
@@ -197,17 +201,17 @@ async def create_schedule(
     }
     if description:
         body["description"] = description
-    if all_day:
+    if all_day is not None:
         body["allDay"] = all_day
-    if repeat_type:
+    if repeat_type is not None:
         body["repeatType"] = repeat_type
     if rule:
         body["rule"] = rule
-    if expire_date_type:
+    if expire_date_type is not None:
         body["expireDateType"] = expire_date_type
-    if reminder_type:
+    if reminder_type is not None:
         body["reminderType"] = reminder_type
-    if attendee_permissions:
+    if attendee_permissions is not None:
         body["attendeePermissions"] = attendee_permissions
 
     data, http_err = await _do_post(config, url, body, http_client)
@@ -287,7 +291,7 @@ async def delete_schedule(
     url = build_api_url(config, "calendars", "schedule_delete", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
     body: Dict[str, Any] = {
-        "reminder_type": reminder_type,
+        "reminderType": reminder_type,
     }
     if operation_type != "delete_all":
         body["operationType"] = operation_type
@@ -304,6 +308,101 @@ async def delete_schedule(
     return ScheduleCreateResult(
         success=True,
         schedule_id=d.get("scheduleIds", [schedule_id])[0] if isinstance(d.get("scheduleIds"), list) else schedule_id,
+        raw_response=data,
+    )
+
+
+async def update_schedule(
+    config: LansengerConfig,
+    app_token: str,
+    calendar_id: str,
+    schedule_id: str,
+    *,
+    summary: Optional[str] = None,
+    description: Optional[str] = None,
+    operation_type: str = "modify_all",
+    current_time: Optional[int] = None,
+    reminder_type: Optional[str] = None,
+    repeat_type: Optional[str] = None,
+    rule: Optional[str] = None,
+    expire_date_type: Optional[str] = None,
+    all_day: Optional[str] = None,
+    attendee_permissions: Optional[str] = None,
+    start_time: Optional[Dict[str, Any]] = None,
+    end_time: Optional[Dict[str, Any]] = None,
+    user_token: str = "",
+    user_id: str = "",
+    http_client: Optional[httpx.AsyncClient] = None,
+) -> ScheduleUpdateResult:
+    """Update a schedule (4.23.12).
+
+    Only sends fields you explicitly provide. operation_type defaults to
+    "modify_all" (modify entire repeating series). Use "modify_current" or
+    "modify_current_after" for specific instances of repeating schedules.
+
+    Args:
+        calendar_id: Calendar openId (required).
+        schedule_id: Schedule openId (required).
+        summary: New schedule title.
+        description: New schedule description.
+        operation_type: "modify_current"/"modify_current_after"/"modify_all".
+        current_time: Required when operation_type is NOT modify_all.
+        reminder_type: "yes" or "no".
+        repeat_type: "no"/"day"/"week"/"month"/"year"/"work_day"/"custom".
+        rule: RFC 5545 repeat rule.
+        expire_date_type: "no" or "yes".
+        all_day: "yes" or "no".
+        attendee_permissions: "can_modify"/"can_invite"/"can_see"/"none".
+        start_time: Dict with time/date/timeZone.
+        end_time: Dict with time/date/timeZone.
+    """
+    if not calendar_id:
+        return ScheduleUpdateResult(success=False, error="calendar_id is required")
+    if not schedule_id:
+        return ScheduleUpdateResult(success=False, error="schedule_id is required")
+
+    url = build_api_url(config, "calendars", "schedule_update", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
+
+    body: Dict[str, Any] = {}
+    if summary is not None:
+        body["summary"] = summary
+    if description is not None:
+        body["description"] = description
+    if operation_type != "modify_all":
+        body["operationType"] = operation_type
+        if current_time is not None:
+            body["currentTime"] = current_time
+    if reminder_type is not None:
+        body["reminderType"] = reminder_type
+    if repeat_type is not None:
+        body["repeatType"] = repeat_type
+    if rule is not None:
+        body["rule"] = rule
+    if expire_date_type is not None:
+        body["expireDateType"] = expire_date_type
+    if all_day is not None:
+        body["allDay"] = all_day
+    if attendee_permissions is not None:
+        body["attendeePermissions"] = attendee_permissions
+    if start_time is not None:
+        body["startTime"] = start_time
+    if end_time is not None:
+        body["endTime"] = end_time
+
+    if not body:
+        return ScheduleUpdateResult(success=False, error="at least one field to update is required")
+
+    data, http_err = await _do_post(config, url, body, http_client)
+    if http_err:
+        return ScheduleUpdateResult(success=False, error=http_err)
+    ok, api_err = _parse_api_response(data)
+    if not ok:
+        return ScheduleUpdateResult(success=False, error=api_err)
+
+    d = data.get("data", {})
+    return ScheduleUpdateResult(
+        success=True,
+        schedule_ids=d.get("scheduleIds"),
         raw_response=data,
     )
 
@@ -391,12 +490,16 @@ async def add_schedule_attendees(
     schedule_id: str,
     attendees: List[str],
     *,
-    reminder_type: str = "yes",
+    reminder_type: Optional[str] = None,
     user_token: str = "",
     user_id: str = "",
     http_client: Optional[httpx.AsyncClient] = None,
 ) -> ScheduleCreateResult:
-    """Add attendees to a schedule (4.23.16)."""
+    """Add attendees to a schedule (4.23.16).
+
+    Args:
+        reminder_type: "yes" or "no". Defaults to "yes" if omitted.
+    """
     if not calendar_id:
         return ScheduleCreateResult(success=False, error="calendar_id is required")
     if not schedule_id:
@@ -407,7 +510,7 @@ async def add_schedule_attendees(
     url = build_api_url(config, "calendars", "attendees_create", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
     body: Dict[str, Any] = {"attendees": attendees}
-    if reminder_type:
+    if reminder_type is not None:
         body["reminderType"] = reminder_type
 
     data, http_err = await _do_post(config, url, body, http_client)
@@ -432,12 +535,16 @@ async def delete_schedule_attendees(
     schedule_id: str,
     attendees: List[str],
     *,
-    reminder_type: str = "no",
+    reminder_type: Optional[str] = None,
     user_token: str = "",
     user_id: str = "",
     http_client: Optional[httpx.AsyncClient] = None,
 ) -> ScheduleCreateResult:
-    """Delete attendees from a schedule (4.23.18)."""
+    """Delete attendees from a schedule (4.23.18).
+
+    Args:
+        reminder_type: "yes" or "no". Defaults to "no" if omitted.
+    """
     if not calendar_id:
         return ScheduleCreateResult(success=False, error="calendar_id is required")
     if not schedule_id:
@@ -448,7 +555,7 @@ async def delete_schedule_attendees(
     url = build_api_url(config, "calendars", "attendees_delete", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
     body: Dict[str, Any] = {"attendees": attendees}
-    if reminder_type:
+    if reminder_type is not None:
         body["reminderType"] = reminder_type
 
     data, http_err = await _do_post(config, url, body, http_client)
@@ -459,3 +566,64 @@ async def delete_schedule_attendees(
         return ScheduleCreateResult(success=False, error=api_err)
 
     return ScheduleCreateResult(success=True, schedule_id=schedule_id, raw_response=data)
+
+
+async def update_schedule_attendee_meta(
+    config: LansengerConfig,
+    app_token: str,
+    calendar_id: str,
+    schedule_id: str,
+    *,
+    rsvp_status: Optional[str] = None,
+    color: Optional[str] = None,
+    permissions: Optional[str] = None,
+    busy_free_state: Optional[str] = None,
+    remind_times: Optional[List[int]] = None,
+    user_token: str = "",
+    user_id: str = "",
+    http_client: Optional[httpx.AsyncClient] = None,
+) -> ScheduleAttendeeMetaResult:
+    """Update schedule attendee metadata (4.23.17).
+
+    Updates RSVP status, color, visibility, busy/free state, and reminder
+    times for the current identity on a specific schedule.
+
+    Args:
+        calendar_id: Calendar openId (required).
+        schedule_id: Schedule openId (required).
+        rsvp_status: "accept"/"tentative"/"decline".
+        color: Hex color string (e.g. "#FF347AFC").
+        permissions: "private"/"public"/"default".
+        busy_free_state: "busy"/"free".
+        remind_times: Reminder time offsets in minutes (list of ints).
+    """
+    if not calendar_id:
+        return ScheduleAttendeeMetaResult(success=False, error="calendar_id is required")
+    if not schedule_id:
+        return ScheduleAttendeeMetaResult(success=False, error="schedule_id is required")
+
+    url = build_api_url(config, "calendars", "attendees_meta_update", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
+
+    body: Dict[str, Any] = {}
+    if rsvp_status is not None:
+        body["rsvpStatus"] = rsvp_status
+    if color is not None:
+        body["color"] = color
+    if permissions is not None:
+        body["permissions"] = permissions
+    if busy_free_state is not None:
+        body["busyFreeState"] = busy_free_state
+    if remind_times is not None:
+        body["remindTimes"] = remind_times
+
+    if not body:
+        return ScheduleAttendeeMetaResult(success=False, error="at least one field to update is required")
+
+    data, http_err = await _do_post(config, url, body, http_client)
+    if http_err:
+        return ScheduleAttendeeMetaResult(success=False, error=http_err)
+    ok, api_err = _parse_api_response(data)
+    if not ok:
+        return ScheduleAttendeeMetaResult(success=False, error=api_err)
+
+    return ScheduleAttendeeMetaResult(success=True, raw_response=data)

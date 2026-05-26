@@ -126,7 +126,7 @@ async def exchange_code_for_user_token(
         return UserTokenResult(success=False, error="app_token is required")
 
     url = build_api_url(config, "oauth2", "user_token_create", app_token)
-    url += f"&grant_type=authorization_code&code={code}"
+    url += f"&grant_type=authorization_code&code={quote(code, safe='')}"
     if redirect_uri:
         url += f"&redirect_uri={quote(redirect_uri)}"
 
@@ -203,7 +203,7 @@ async def refresh_user_token(
         return UserTokenResult(success=False, error="app_token is required")
 
     url = build_api_url(config, "oauth2", "refresh_token_create", app_token)
-    url += f"&grant_type=refresh_token&refresh_token={refresh_token}"
+    url += f"&grant_type=refresh_token&refresh_token={quote(refresh_token, safe='')}"
     if scope:
         url += f"&scope={quote(scope)}"
 

@@ -226,12 +226,15 @@ class QueryGroupsResult:
 class UploadMediaResult:
     success: bool
     media_id: Optional[str] = None
+    created_time: Optional[str] = None
     error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {"success": self.success}
         if self.media_id is not None:
             d["media_id"] = self.media_id
+        if self.created_time is not None:
+            d["created_time"] = self.created_time
         if self.error is not None:
             d["error"] = self.error
         return d
@@ -247,6 +250,27 @@ class DownloadMediaResult:
         d: Dict[str, Any] = {"success": self.success}
         if self.data is not None:
             d["size"] = len(self.data)
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class MediaPathResult:
+    success: bool
+    media_path: Optional[str] = None
+    name: Optional[str] = None
+    type: Optional[str] = None
+    size: Optional[str] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        for key in ("media_path", "name", "type", "size"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
         if self.error is not None:
             d["error"] = self.error
         return d
@@ -880,6 +904,35 @@ class ScheduleAttendeesResult:
         d: Dict[str, Any] = {"success": self.success, "total": self.total}
         if self.attendees is not None:
             d["attendees"] = self.attendees
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class ScheduleUpdateResult:
+    success: bool
+    schedule_ids: Optional[List[str]] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        if self.schedule_ids is not None:
+            d["schedule_ids"] = self.schedule_ids
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class ScheduleAttendeeMetaResult:
+    success: bool
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
         if self.error is not None:
             d["error"] = self.error
         return d

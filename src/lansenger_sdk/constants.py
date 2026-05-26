@@ -55,11 +55,14 @@ API_ENDPOINTS = {
     },
     "media": {
         "create": "/v1/medias/create",
+        "app_create": "/v1/app/medias/create",
         "fetch": "/v1/medias/{media_id}/fetch",
+        "path_fetch": "/v1/medias/{media_id}/path/fetch",
     },
     "message": {
         "revoke": "/v1/messages/revoke",
         "dynamic_update": "/v1/messages/dynamic/update",
+        "reminder_create": "/v1/messages/reminder/create",
     },
     "groups": {
         "fetch": "/v2/groups/fetch",
@@ -72,6 +75,7 @@ API_ENDPOINTS = {
         "members_update": "/v2/groups/{group_id}/members/update",
         "groups_fetch": "/v2/groups/fetch",
         "is_in_group": "/v2/groups/{group_id}/members/is_in_group",
+        "delete": "/v2/groups/{group_id}/delete",
     },
     "chats": {
         "fetch": "/v1/chats/fetch",
@@ -81,12 +85,13 @@ API_ENDPOINTS = {
         "primary": "/v1/calendars/primary",
         "schedule_create": "/v1/calendars/{calendar_id}/schedules/create",
         "schedule_fetch": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/fetch",
-        "schedule_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/update",
+        "schedule_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/update",  # not yet implemented
         "schedule_delete": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/delete",
         "schedule_list": "/v1/calendars/{calendar_id}/schedules/fetch",
         "attendees_fetch": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/fetch",
         "attendees_create": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/create",
         "attendees_delete": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/delete",
+        "attendees_meta_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/meta/update",  # not yet implemented
     },
     "todo": {
         "create": "/xtra/task/unified/v1/todotask/create",
@@ -101,7 +106,7 @@ API_ENDPOINTS = {
         "executor_create": "/xtra/task/unified/v1/todotask/executor/create",
         "executor_delete": "/xtra/task/unified/v1/todotask/executor/delete",
         "executor_list_fetch": "/xtra/task/unified/v1/todotask/executor/list/fetch",
-        "staff_application_fetch": "/xtra/task/unified/v1/staff/application/fetch",
+        "staff_application_fetch": "/xtra/task/unified/v1/staff/application/fetch",  # not yet implemented
     },
 }
 
@@ -115,16 +120,18 @@ MEDIA_TYPE_VIDEO = 1
 MEDIA_TYPE_IMAGE = 2
 MEDIA_TYPE_FILE = 3
 
+APP_MEDIA_TYPE_FILE = "file"
+APP_MEDIA_TYPE_VIDEO = "video"
+APP_MEDIA_TYPE_IMAGE = "image"
+APP_MEDIA_TYPE_AUDIO = "audio"
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
-
-MAX_MESSAGE_LENGTH = 4000
-
-RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".amr", ".m4a", ".ogg", ".flac", ".aac"}
 
 
 def guess_media_type(file_path: str) -> int:
-    """Guess media_type (1=video, 2=image, 3=file) from file extension."""
+    """Guess media_type (1=video, 2=image, 3=file) from file extension — for 4.5.1."""
     import os
 
     ext = os.path.splitext(file_path)[1].lower()
@@ -133,3 +140,17 @@ def guess_media_type(file_path: str) -> int:
     if ext in VIDEO_EXTENSIONS:
         return MEDIA_TYPE_VIDEO
     return MEDIA_TYPE_FILE
+
+
+def guess_app_media_type(file_path: str) -> str:
+    """Guess app media type string ('file', 'video', 'image', 'audio') from file extension — for 4.5.4."""
+    import os
+
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in IMAGE_EXTENSIONS:
+        return APP_MEDIA_TYPE_IMAGE
+    if ext in VIDEO_EXTENSIONS:
+        return APP_MEDIA_TYPE_VIDEO
+    if ext in AUDIO_EXTENSIONS:
+        return APP_MEDIA_TYPE_AUDIO
+    return APP_MEDIA_TYPE_FILE
