@@ -309,6 +309,7 @@ class LansengerClient:
         *,
         file_path: str = "",
         media_type: Optional[int] = None,
+        cover_image_path: str = "",
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
         is_group: bool = False,
@@ -330,6 +331,10 @@ class LansengerClient:
             content: Plain text content (no Markdown).
             file_path: Optional local file/image/video to attach.
             media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+            cover_image_path: Optional cover image for video attachments.
+                When sending a video, the API requires mediaIds to be
+                [videoMediaId, coverImageMediaId]. If omitted for video,
+                mediaIds will only contain the video mediaId.
             reminder_all: @mention all members in group chat.
             reminder_user_ids: @mention specific user IDs in group chat.
             is_group: True if chat_id is a group ID.
@@ -358,7 +363,17 @@ class LansengerClient:
             )
             if upload_result.success and upload_result.media_id:
                 text_data["mediaType"] = mt
-                text_data["mediaIds"] = [upload_result.media_id]
+                media_ids = [upload_result.media_id]
+                if cover_image_path and mt == MEDIA_TYPE_VIDEO:
+                    cover_upload = await upload_media(
+                        self._config, self._token_manager, self._http_client,
+                        cover_image_path, MEDIA_TYPE_IMAGE,
+                    )
+                    if cover_upload.success and cover_upload.media_id:
+                        media_ids.append(cover_upload.media_id)
+                    else:
+                        logger.warning("Cover image upload failed: %s", cover_upload.error)
+                text_data["mediaIds"] = media_ids
             else:
                 logger.warning("Media upload failed, sending plain text only: %s", upload_result.error)
 
@@ -432,6 +447,7 @@ class LansengerClient:
         *,
         caption: str = "",
         media_type: Optional[int] = None,
+        cover_image_path: str = "",
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
@@ -448,6 +464,9 @@ class LansengerClient:
             file_path: Path to the local file. Must exist on disk.
             caption: Optional plain-text caption.
             media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+            cover_image_path: Optional cover image for video attachments.
+                When sending a video, the API requires mediaIds to be
+                [videoMediaId, coverImageMediaId].
             is_group: True if chat_id is a group ID.
             user_token: For group messages — makes sender appear as human.
             sender_id: For group messages — explicit sender openId.
@@ -475,10 +494,19 @@ class LansengerClient:
                 error=f"Failed to upload file: {upload_result.error}",
             )
 
+        media_ids = [upload_result.media_id]
+        if cover_image_path and mt == MEDIA_TYPE_VIDEO:
+            cover_upload = await upload_media(
+                self._config, self._token_manager, self._http_client,
+                cover_image_path, MEDIA_TYPE_IMAGE,
+            )
+            if cover_upload.success and cover_upload.media_id:
+                media_ids.append(cover_upload.media_id)
+
         text_data: Dict[str, Any] = {
             "content": caption,
             "mediaType": mt,
-            "mediaIds": [upload_result.media_id],
+            "mediaIds": media_ids,
         }
         msg_data = {"text": text_data}
 
