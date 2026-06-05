@@ -130,6 +130,7 @@ class UserTokenManager:
         self._user_token: Optional[str] = None
         self._refresh_token: Optional[str] = None
         self._user_token_expiry: float = 0
+        self._refresh_token_expiry: float = 0
         self._staff_id: Optional[str] = None
 
         if self._store:
@@ -141,6 +142,7 @@ class UserTokenManager:
                 self._user_token = ut
                 self._refresh_token = rt
                 self._user_token_expiry = expiry
+                self._refresh_token_expiry = cached.get("refresh_token_expiry", 0)
                 logger.debug("Restored cached userToken (expires in %ds)", int(expiry - time.time()))
 
     async def get_token(self) -> str:
@@ -180,20 +182,27 @@ class UserTokenManager:
         token_data = data.get("data", {})
         self._user_token = token_data.get("userToken")
         expires_in = token_data.get("expiresIn", 7200)
-        self._refresh_token = token_data.get("refreshToken")
+        new_refresh_token = token_data.get("refreshToken")
+        if new_refresh_token:
+            self._refresh_token = new_refresh_token
+        refresh_expires_in = token_data.get("refreshExpiresIn", 0)
+        if refresh_expires_in:
+            self._refresh_token_expiry = time.time() + refresh_expires_in
         self._staff_id = token_data.get("staffId")
         self._user_token_expiry = time.time() + expires_in - _USER_TOKEN_REFRESH_MARGIN
 
         if not self._user_token:
             raise LansengerAuthError("Refresh response missing userToken field")
 
-        logger.debug("Refreshed userToken (expires_in=%ds, new refreshToken received)", expires_in)
+        logger.debug("Refreshed userToken (expires_in=%ds, refreshExpiresIn=%ds)", expires_in, refresh_expires_in)
 
         if self._store:
             self._store.save_user_token(
                 user_token=self._user_token,
                 refresh_token=self._refresh_token or "",
                 expires_in=expires_in,
+                margin=_USER_TOKEN_REFRESH_MARGIN,
+                refresh_expires_in=refresh_expires_in,
             )
 
         return self._user_token
@@ -204,6 +213,7 @@ class UserTokenManager:
         refresh_token: str,
         expires_in: int = 7200,
         staff_id: str = "",
+        refresh_expires_in: int = 0,
     ) -> None:
         """Set userToken + refreshToken after a successful exchange_code or manual authorization.
 
@@ -212,6 +222,8 @@ class UserTokenManager:
         self._user_token = user_token
         self._refresh_token = refresh_token
         self._user_token_expiry = time.time() + expires_in - _USER_TOKEN_REFRESH_MARGIN
+        if refresh_expires_in:
+            self._refresh_token_expiry = time.time() + refresh_expires_in
         if staff_id:
             self._staff_id = staff_id
 
@@ -220,6 +232,8 @@ class UserTokenManager:
                 user_token=user_token,
                 refresh_token=refresh_token,
                 expires_in=expires_in,
+                margin=_USER_TOKEN_REFRESH_MARGIN,
+                refresh_expires_in=refresh_expires_in,
             )
 
         logger.debug("Registered userToken (expires_in=%ds)", expires_in)
@@ -233,6 +247,11 @@ class UserTokenManager:
     def refresh_token(self) -> Optional[str]:
         """Return the current refreshToken (for diagnostics only)."""
         return self._refresh_token
+
+    @property
+    def refresh_token_expiry(self) -> float:
+        """Return the absolute expiry time of the refreshToken (epoch seconds)."""
+        return self._refresh_token_expiry
 
     def invalidate(self) -> None:
         """Force userToken refresh on next get_token() call."""

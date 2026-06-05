@@ -646,6 +646,7 @@ class LansengerSyncClient:
         refresh_token: str,
         expires_in: int = 7200,
         staff_id: str = "",
+        refresh_expires_in: int = 0,
     ) -> None:
         """Register userToken + refreshToken for auto-refresh."""
         _run_async(self._ephemeral_call(
@@ -654,6 +655,7 @@ class LansengerSyncClient:
             refresh_token=refresh_token,
             expires_in=expires_in,
             staff_id=staff_id,
+            refresh_expires_in=refresh_expires_in,
         ))
 
     def fetch_user_info(

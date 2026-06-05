@@ -271,6 +271,7 @@ class LansengerClient:
         refresh_token: str,
         expires_in: int = 7200,
         staff_id: str = "",
+        refresh_expires_in: int = 0,
     ) -> None:
         """Register userToken + refreshToken for auto-refresh.
 
@@ -283,6 +284,7 @@ class LansengerClient:
             refresh_token=refresh_token,
             expires_in=expires_in,
             staff_id=staff_id,
+            refresh_expires_in=refresh_expires_in,
         )
 
     def _private_msg_url(self, token: str) -> str:
