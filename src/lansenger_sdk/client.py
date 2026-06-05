@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from .auth import TokenManager
+from .auth import TokenManager, UserTokenManager
 from .config import LansengerConfig
 from .constants import MEDIA_TYPE_FILE, guess_media_type
 from .exceptions import LansengerAPIError, LansengerFileError, LansengerNetworkError
@@ -151,6 +151,7 @@ class LansengerClient:
         )
         self._http_client: Optional[httpx.AsyncClient] = None
         self._token_manager: Optional[TokenManager] = None
+        self._user_token_manager: Optional[UserTokenManager] = None
         self._owns_http_client = True
         self._store: Optional[CredentialStore] = CredentialStore(store_path) if store_path else None
 
@@ -216,10 +217,13 @@ class LansengerClient:
         return cls.from_config(config, store_path=path)
 
     def _ensure_clients(self) -> None:
-        """Lazily initialize HTTP client and token manager."""
+        """Lazily initialize HTTP client and token managers."""
         if self._http_client is None:
             self._http_client = httpx.AsyncClient(timeout=self._config.http_timeout)
             self._token_manager = TokenManager(self._config, self._http_client, store=self._store)
+            self._user_token_manager = UserTokenManager(
+                self._config, self._http_client, self._token_manager, store=self._store
+            )
             self._owns_http_client = True
 
     def attach_http_client(self, http_client: httpx.AsyncClient) -> None:
@@ -250,6 +254,36 @@ class LansengerClient:
     async def _get_token(self) -> str:
         self._ensure_clients()
         return await self._token_manager.get_token()
+
+    async def get_user_token(self) -> str:
+        """Get a valid userToken, auto-refreshing if expired.
+
+        Requires that tokens were registered via exchange_code() or
+        set_user_tokens() first. Raises LansengerAuthError if
+        refreshToken has expired (must re-authorize).
+        """
+        self._ensure_clients()
+        return await self._user_token_manager.get_token()
+
+    def set_user_tokens(
+        self,
+        user_token: str,
+        refresh_token: str,
+        expires_in: int = 7200,
+        staff_id: str = "",
+    ) -> None:
+        """Register userToken + refreshToken for auto-refresh.
+
+        Call after exchange_code() or any manual OAuth2 authorization
+        to enable proactive refresh before expiry.
+        """
+        self._ensure_clients()
+        self._user_token_manager.set_tokens(
+            user_token=user_token,
+            refresh_token=refresh_token,
+            expires_in=expires_in,
+            staff_id=staff_id,
+        )
 
     def _private_msg_url(self, token: str) -> str:
         return build_api_url(self._config, "smart_bot", "private_message", token)
@@ -1311,10 +1345,18 @@ class LansengerClient:
             redirect_uri=redirect_uri,
         )
 
-        if result.success and self._store:
-            self._store.save_user_token(
+        if result.success:
+            if self._store:
+                self._store.save_user_token(
+                    user_token=result.user_token,
+                    refresh_token=result.refresh_token,
+                    expires_in=result.expires_in,
+                )
+            self._user_token_manager.set_tokens(
                 user_token=result.user_token,
                 refresh_token=result.refresh_token,
+                expires_in=result.expires_in,
+                staff_id=result.staff_id or "",
             )
 
         return result

@@ -1011,6 +1011,20 @@ class ChatMessageInfo:
             d["content"] = self.content
         return d
 
+    def plain_text(self) -> str:
+        if self.content is None:
+            return ""
+        if isinstance(self.content, str):
+            return self.content
+        if isinstance(self.content, dict):
+            format_text = self.content.get("formatText")
+            if isinstance(format_text, dict):
+                return format_text.get("content", "")
+            text = self.content.get("text")
+            if isinstance(text, str):
+                return text
+        return ""
+
 
 @dataclass
 class ChatMessagesResult:

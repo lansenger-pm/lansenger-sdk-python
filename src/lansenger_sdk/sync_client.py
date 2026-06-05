@@ -631,6 +631,29 @@ class LansengerSyncClient:
             scope=scope,
         ))
 
+    def get_user_token(self) -> str:
+        """Get a valid userToken with auto-refresh (blocking).
+
+        Requires tokens registered via exchange_code or set_user_tokens first.
+        """
+        return _run_async(self._ephemeral_call("get_user_token"))
+
+    def set_user_tokens(
+        self,
+        user_token: str,
+        refresh_token: str,
+        expires_in: int = 7200,
+        staff_id: str = "",
+    ) -> None:
+        """Register userToken + refreshToken for auto-refresh."""
+        _run_async(self._ephemeral_call(
+            "set_user_tokens",
+            user_token=user_token,
+            refresh_token=refresh_token,
+            expires_in=expires_in,
+            staff_id=staff_id,
+        ))
+
     def fetch_user_info(
         self,
         user_token: str,

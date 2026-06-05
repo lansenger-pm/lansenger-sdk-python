@@ -1,9 +1,10 @@
-"""Lansenger SDK token management — get/refresh app access token with file persistence."""
+"""Lansenger SDK token management — get/refresh app access token and user token with file persistence."""
 
 from __future__ import annotations
 
 import logging
 import time
+from urllib.parse import quote
 from typing import Optional
 
 import httpx
@@ -11,11 +12,14 @@ import httpx
 from .config import LansengerConfig
 from .constants import API_ENDPOINTS
 from .exceptions import LansengerAuthError, LansengerNetworkError
+from .models import UserTokenResult
 from .persistence import CredentialStore
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.auth")
 
 _TOKEN_REFRESH_MARGIN = 300  # Refresh 5 minutes before expiry
+_USER_TOKEN_REFRESH_MARGIN = 300
 
 
 class TokenManager:
@@ -98,3 +102,139 @@ class TokenManager:
         """Force token refresh on next get_token() call."""
         self._token = None
         self._token_expiry = 0
+
+
+class UserTokenManager:
+    """Manages Lansenger userToken lifecycle with auto-refresh.
+
+    userToken expires in 2 hours. refreshToken is long-lived (30 days)
+    and single-use (rotated on each refresh). This manager:
+    - Proactively refreshes userToken before expiry
+    - Persists new tokens after refresh (refreshToken rotation)
+    - Falls back to requiring re-authorization if refreshToken is expired
+
+    Requires a TokenManager instance to obtain appToken for API calls.
+    """
+
+    def __init__(
+        self,
+        config: LansengerConfig,
+        http_client: httpx.AsyncClient,
+        app_token_manager: TokenManager,
+        store: Optional[CredentialStore] = None,
+    ):
+        self._config = config
+        self._http_client = http_client
+        self._app_token_manager = app_token_manager
+        self._store = store
+        self._user_token: Optional[str] = None
+        self._refresh_token: Optional[str] = None
+        self._user_token_expiry: float = 0
+        self._staff_id: Optional[str] = None
+
+        if self._store:
+            cached = self._store.load_user_token()
+            ut = cached.get("user_token", "")
+            rt = cached.get("refresh_token", "")
+            expiry = cached.get("user_token_expiry", 0)
+            if ut and expiry > time.time():
+                self._user_token = ut
+                self._refresh_token = rt
+                self._user_token_expiry = expiry
+                logger.debug("Restored cached userToken (expires in %ds)", int(expiry - time.time()))
+
+    async def get_token(self) -> str:
+        """Get a valid userToken, refreshing if expired.
+
+        Raises LansengerAuthError if token cannot be obtained
+        (e.g. refreshToken expired — must re-authorize).
+        """
+        if self._user_token and time.time() < self._user_token_expiry:
+            return self._user_token
+
+        if not self._refresh_token:
+            raise LansengerAuthError(
+                "No userToken available and no refreshToken for auto-refresh. "
+                "Run OAuth2 authorize flow: build_authorize_url → exchange_code."
+            )
+
+        app_token = await self._app_token_manager.get_token()
+        url = build_api_url(self._config, "oauth2", "refresh_token_create", app_token)
+        url += f"&grant_type=refresh_token&refresh_token={quote(self._refresh_token, safe='')}"
+
+        try:
+            response = await self._http_client.get(url)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            raise LansengerNetworkError(f"userToken refresh failed: {e}") from e
+
+        err_code = data.get("errCode", -1)
+        if err_code != 0:
+            msg = data.get("errMsg", "Unknown refresh error")
+            raise LansengerAuthError(
+                f"userToken refresh error (errCode={err_code}): {msg}",
+                err_code=err_code,
+            )
+
+        token_data = data.get("data", {})
+        self._user_token = token_data.get("userToken")
+        expires_in = token_data.get("expiresIn", 7200)
+        self._refresh_token = token_data.get("refreshToken")
+        self._staff_id = token_data.get("staffId")
+        self._user_token_expiry = time.time() + expires_in - _USER_TOKEN_REFRESH_MARGIN
+
+        if not self._user_token:
+            raise LansengerAuthError("Refresh response missing userToken field")
+
+        logger.debug("Refreshed userToken (expires_in=%ds, new refreshToken received)", expires_in)
+
+        if self._store:
+            self._store.save_user_token(
+                user_token=self._user_token,
+                refresh_token=self._refresh_token or "",
+                expires_in=expires_in,
+            )
+
+        return self._user_token
+
+    def set_tokens(
+        self,
+        user_token: str,
+        refresh_token: str,
+        expires_in: int = 7200,
+        staff_id: str = "",
+    ) -> None:
+        """Set userToken + refreshToken after a successful exchange_code or manual authorization.
+
+        Call this after exchange_code() to register the tokens for auto-refresh.
+        """
+        self._user_token = user_token
+        self._refresh_token = refresh_token
+        self._user_token_expiry = time.time() + expires_in - _USER_TOKEN_REFRESH_MARGIN
+        if staff_id:
+            self._staff_id = staff_id
+
+        if self._store:
+            self._store.save_user_token(
+                user_token=user_token,
+                refresh_token=refresh_token,
+                expires_in=expires_in,
+            )
+
+        logger.debug("Registered userToken (expires_in=%ds)", expires_in)
+
+    @property
+    def staff_id(self) -> Optional[str]:
+        """Return staffId associated with the current userToken."""
+        return self._staff_id
+
+    @property
+    def refresh_token(self) -> Optional[str]:
+        """Return the current refreshToken (for diagnostics only)."""
+        return self._refresh_token
+
+    def invalidate(self) -> None:
+        """Force userToken refresh on next get_token() call."""
+        self._user_token = None
+        self._user_token_expiry = 0

@@ -225,6 +225,7 @@ from .callbacks import (
     TagMemberData,
 )
 from .persistence import CredentialStore
+from .auth import TokenManager, UserTokenManager
 from .sync_client import LansengerSyncClient
 
 __all__ = [
@@ -400,8 +401,10 @@ __all__ = [
     "ScheduleDeleteData",
     "TagMemberData",
     "CredentialStore",
+    "TokenManager",
+    "UserTokenManager",
     "fetch_chat_list",
     "fetch_chat_messages",
 ]
 
-__version__ = "1.4.1"
+__version__ = "1.5.0"
