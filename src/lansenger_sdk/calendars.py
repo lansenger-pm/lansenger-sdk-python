@@ -411,8 +411,8 @@ async def fetch_schedule_list(
     config: LansengerConfig,
     app_token: str,
     calendar_id: str,
-    start_time: int,
-    end_time: int,
+    start_time: Optional[int] = None,
+    end_time: Optional[int] = None,
     *,
     user_token: str = "",
     user_id: str = "",
@@ -424,7 +424,7 @@ async def fetch_schedule_list(
     """
     if not calendar_id:
         return ScheduleListResult(success=False, error="calendar_id is required")
-    if not start_time or not end_time:
+    if start_time is None or end_time is None:
         return ScheduleListResult(success=False, error="start_time and end_time are required")
 
     url = build_api_url(config, "calendars", "schedule_list", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id)

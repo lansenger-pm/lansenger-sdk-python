@@ -85,13 +85,13 @@ API_ENDPOINTS = {
         "primary": "/v1/calendars/primary",
         "schedule_create": "/v1/calendars/{calendar_id}/schedules/create",
         "schedule_fetch": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/fetch",
-        "schedule_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/update",  # not yet implemented
+        "schedule_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/update",
         "schedule_delete": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/delete",
         "schedule_list": "/v1/calendars/{calendar_id}/schedules/fetch",
         "attendees_fetch": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/fetch",
         "attendees_create": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/create",
         "attendees_delete": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/delete",
-        "attendees_meta_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/meta/update",  # not yet implemented
+        "attendees_meta_update": "/v1/calendars/{calendar_id}/schedules/{schedule_id}/members/meta/update",
     },
     "todo": {
         "create": "/xtra/task/unified/v1/todotask/create",

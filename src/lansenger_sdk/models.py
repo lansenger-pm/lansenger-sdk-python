@@ -1034,6 +1034,7 @@ class ChatMessagesResult:
     last_version: str = ""
     name: str = ""
     chat_type: str = ""
+    retryable: bool = False
     messages: Optional[List[ChatMessageInfo]] = None
     error: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None

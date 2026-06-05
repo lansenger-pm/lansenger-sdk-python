@@ -414,7 +414,7 @@ async def fetch_todo_task_status_counts(
     if app_id:
         body["appId"] = app_id
     if status_list:
-        body["status"] = status_list
+        body["statusList"] = status_list
 
     data, http_err = await _do_post(config, url, body, http_client)
     if http_err:

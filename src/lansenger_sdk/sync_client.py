@@ -191,6 +191,8 @@ class LansengerSyncClient:
             app_secret=self._app_secret,
             api_gateway_url=self._api_gateway_url,
             http_timeout=self._http_timeout,
+            encoding_key=self._encoding_key,
+            callback_token=self._callback_token,
         )
         try:
             method = getattr(client, method_name)
@@ -1419,8 +1421,8 @@ class LansengerSyncClient:
     def fetch_schedule_list(
         self,
         calendar_id: str,
-        start_time: int,
-        end_time: int,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
         *,
         user_token: str = "",
         user_id: str = "",
