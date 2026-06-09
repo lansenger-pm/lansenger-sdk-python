@@ -138,12 +138,23 @@ class UserTokenManager:
             ut = cached.get("user_token", "")
             rt = cached.get("refresh_token", "")
             expiry = cached.get("user_token_expiry", 0)
+            refresh_expiry = cached.get("refresh_token_expiry", 0)
+
+            # Load userToken (only if still valid, accounting for refresh margin)
             if ut and expiry > time.time():
                 self._user_token = ut
-                self._refresh_token = rt
                 self._user_token_expiry = expiry
-                self._refresh_token_expiry = cached.get("refresh_token_expiry", 0)
                 logger.debug("Restored cached userToken (expires in %ds)", int(expiry - time.time()))
+
+            # Load refreshToken independently — it stays valid (30 days)
+            # even after userToken (2h) has expired. Previously we only
+            # loaded it inside the ut-expiry guard, so a process restart
+            # after userToken expiry would lose the still-valid refreshToken.
+            if rt and refresh_expiry > time.time():
+                self._refresh_token = rt
+                self._refresh_token_expiry = refresh_expiry
+                logger.debug("Restored cached refreshToken (valid until %s)", 
+                             time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(refresh_expiry)))
 
     async def get_token(self) -> str:
         """Get a valid userToken, refreshing if expired.
@@ -158,6 +169,15 @@ class UserTokenManager:
             raise LansengerAuthError(
                 "No userToken available and no refreshToken for auto-refresh. "
                 "Run OAuth2 authorize flow: build_authorize_url → exchange_code."
+            )
+
+        # Check if refreshToken has actually expired before calling the API.
+        # Without this, the SDK would call the API with an expired token and
+        # return a confusing "invalid CODE" error (errCode=40036).
+        if self._refresh_token_expiry > 0 and time.time() >= self._refresh_token_expiry:
+            raise LansengerAuthError(
+                "RefreshToken has expired. "
+                "Re-run OAuth2 authorize flow: build_authorize_url → exchange_code."
             )
 
         app_token = await self._app_token_manager.get_token()
