@@ -56,7 +56,7 @@ async def test_fetch_staff_basic_info_success():
             "name": "Alice",
             "gender": 1,
             "signature": "Hello",
-            "avatarUrl": "https://avatar.url",
+            "avatar": "https://avatar.url",
             "avatarId": "av1",
             "status": 1,
             "departments": [{"departmentId": "d1"}],

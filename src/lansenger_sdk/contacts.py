@@ -105,7 +105,7 @@ async def fetch_staff_basic_info(
         name=d.get("name"),
         gender=d.get("gender"),
         signature=d.get("signature"),
-        avatar_url=d.get("avatarUrl"),
+        avatar_url=d.get("avatar"),
         avatar_id=d.get("avatarId"),
         status=d.get("status"),
         departments=d.get("departments"),
