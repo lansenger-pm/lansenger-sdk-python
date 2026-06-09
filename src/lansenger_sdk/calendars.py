@@ -20,10 +20,7 @@ Note: 4.23.1-8 (calendar CRUD, subscribe, unsubscribe, member list) are marked
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Dict, List, Optional
-
-import httpx
 
 from .config import LansengerConfig
 from .models import (
@@ -36,69 +33,7 @@ from .models import (
     ScheduleUpdateResult,
 )
 from .url_helpers import build_api_url
-
-logger = logging.getLogger("lansenger_sdk.calendars")
-
-
-async def _do_get(
-    config: LansengerConfig,
-    url: str,
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        if owns_client:
-            await http_client.aclose()
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        if owns_client:
-            await http_client.aclose()
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
-
-
-async def _do_post(
-    config: LansengerConfig,
-    url: str,
-    body: Dict[str, Any],
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.post(url, json=body)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        if owns_client:
-            await http_client.aclose()
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        if owns_client:
-            await http_client.aclose()
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
-
-
-def _parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
-    err_code = data.get("errCode", -1)
-    if err_code != 0:
-        msg = data.get("errMsg", "Unknown error")
-        return False, f"API error (errCode={err_code}): {msg}"
-    return True, None
+from .api_utils import do_get, do_post, parse_api_response
 
 
 async def fetch_primary_calendar(
@@ -122,11 +57,11 @@ async def fetch_primary_calendar(
         http_client: Optional httpx client.
     """
     url = build_api_url(config, "calendars", "primary", app_token, user_token=user_token, user_id=user_id)
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return CalendarPrimaryResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return CalendarPrimaryResult(success=False, error=api_err)
 
@@ -214,10 +149,10 @@ async def create_schedule(
     if attendee_permissions is not None:
         body["attendeePermissions"] = attendee_permissions
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return ScheduleCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleCreateResult(success=False, error=api_err)
 
@@ -246,10 +181,10 @@ async def fetch_schedule(
         return ScheduleInfoResult(success=False, error="schedule_id is required")
 
     url = build_api_url(config, "calendars", "schedule_fetch", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return ScheduleInfoResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleInfoResult(success=False, error=api_err)
 
@@ -297,10 +232,10 @@ async def delete_schedule(
         body["operationType"] = operation_type
         body["currentTime"] = current_time
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return ScheduleCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleCreateResult(success=False, error=api_err)
 
@@ -392,10 +327,10 @@ async def update_schedule(
     if not body:
         return ScheduleUpdateResult(success=False, error="at least one field to update is required")
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return ScheduleUpdateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleUpdateResult(success=False, error=api_err)
 
@@ -431,10 +366,10 @@ async def fetch_schedule_list(
 
     body: Dict[str, Any] = {"startTime": start_time, "endTime": end_time}
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return ScheduleListResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleListResult(success=False, error=api_err)
 
@@ -467,10 +402,10 @@ async def fetch_schedule_attendees(
     url = build_api_url(config, "calendars", "attendees_fetch", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
     url += f"&page={page}&page_size={page_size}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return ScheduleAttendeesResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleAttendeesResult(success=False, error=api_err)
 
@@ -513,10 +448,10 @@ async def add_schedule_attendees(
     if reminder_type is not None:
         body["reminderType"] = reminder_type
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return ScheduleCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleCreateResult(success=False, error=api_err)
 
@@ -558,10 +493,10 @@ async def delete_schedule_attendees(
     if reminder_type is not None:
         body["reminderType"] = reminder_type
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return ScheduleCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleCreateResult(success=False, error=api_err)
 
@@ -619,10 +554,10 @@ async def update_schedule_attendee_meta(
     if not body:
         return ScheduleAttendeeMetaResult(success=False, error="at least one field to update is required")
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return ScheduleAttendeeMetaResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ScheduleAttendeeMetaResult(success=False, error=api_err)
 

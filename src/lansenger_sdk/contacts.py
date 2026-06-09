@@ -16,14 +16,12 @@ Endpoints:
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
-import httpx
-
 from .config import LansengerConfig
 from .url_helpers import build_api_url
+from .api_utils import do_get, do_post, parse_api_response
 from .models import (
     DepartmentAncestorsResult,
     ExtraFieldIdsResult,
@@ -33,38 +31,6 @@ from .models import (
     StaffIdMappingResult,
     StaffSearchResult,
 )
-
-logger = logging.getLogger("lansenger_sdk.contacts")
-
-
-def _parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
-    err_code = data.get("errCode", -1)
-    if err_code != 0:
-        msg = data.get("errMsg", "Unknown error")
-        return False, f"API error (errCode={err_code}): {msg}"
-    return True, None
-
-
-async def _do_get(
-    config: LansengerConfig,
-    url: str,
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
 
 
 async def fetch_staff_basic_info(
@@ -89,11 +55,11 @@ async def fetch_staff_basic_info(
 
     url = build_api_url(config, "staffs", "fetch", app_token, user_token=user_token, staff_id=staff_id)
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return StaffBasicInfoResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return StaffBasicInfoResult(success=False, error=api_err)
 
@@ -135,11 +101,11 @@ async def fetch_staff_detail(
 
     url = build_api_url(config, "staffs", "detail_fetch", app_token, user_token=user_token, staff_id=staff_id)
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return StaffDetailResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return StaffDetailResult(success=False, error=api_err)
 
@@ -202,11 +168,11 @@ async def fetch_department_ancestors(
 
     url = build_api_url(config, "staffs", "department_ancestors", app_token, user_token=user_token, staff_id=staff_id)
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return DepartmentAncestorsResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return DepartmentAncestorsResult(success=False, error=api_err)
 
@@ -254,11 +220,11 @@ async def fetch_staff_id_mapping(
     url = build_api_url(config, "staffs", "id_mapping", app_token, user_token=user_token)
     url += f"&org_id={quote(org_id)}&id_type={quote(id_type)}&id_value={quote(id_value)}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return StaffIdMappingResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return StaffIdMappingResult(success=False, error=api_err)
 
@@ -297,11 +263,11 @@ async def fetch_org_extra_field_ids(
     url = build_api_url(config, "org", "extra_field_ids", app_token, user_token=user_token, org_id=org_id)
     url += f"&page={page}&page_size={page_size}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return ExtraFieldIdsResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return ExtraFieldIdsResult(success=False, error=api_err)
 
@@ -356,23 +322,11 @@ async def search_staff(
     if sector_ids:
         body["searchScope"] = {"sectorIds": sector_ids}
 
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
+    data, http_err = await do_post(config, url, body, http_client)
+    if http_err:
+        return StaffSearchResult(success=False, error=http_err)
 
-    try:
-        response = await http_client.post(url, json=body)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        if owns_client:
-            await http_client.aclose()
-        return StaffSearchResult(success=False, error=f"HTTP error: {e}")
-    finally:
-        if owns_client:
-            await http_client.aclose()
-
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return StaffSearchResult(success=False, error=api_err)
 
@@ -408,11 +362,11 @@ async def fetch_org_info(
 
     url = build_api_url(config, "org", "fetch", app_token, user_token=user_token, org_id=org_id)
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return OrgInfoResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return OrgInfoResult(success=False, error=api_err)
 

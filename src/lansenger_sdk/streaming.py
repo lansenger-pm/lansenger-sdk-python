@@ -10,47 +10,12 @@ Endpoints:
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Dict, Optional
-
-import httpx
 
 from .config import LansengerConfig
 from .url_helpers import build_api_url
 from .models import StreamMessageResult
-
-logger = logging.getLogger("lansenger_sdk.streaming")
-
-
-def _parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
-    err_code = data.get("errCode", -1)
-    if err_code != 0:
-        msg = data.get("errMsg", "Unknown error")
-        return False, f"API error (errCode={err_code}): {msg}"
-    return True, None
-
-
-async def _do_post(
-    config: LansengerConfig,
-    url: str,
-    body: Dict[str, Any],
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.post(url, json=body)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
+from .api_utils import do_post, parse_api_response
 
 
 async def create_stream_message(
@@ -87,11 +52,11 @@ async def create_stream_message(
         "streamId": stream_id,
     }
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return StreamMessageResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return StreamMessageResult(success=False, error=api_err)
 
@@ -127,11 +92,11 @@ async def fetch_stream_message(
         "msgId": msg_id,
     }
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return StreamMessageResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return StreamMessageResult(success=False, error=api_err)
 

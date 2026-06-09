@@ -14,14 +14,12 @@ Endpoints:
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
-import httpx
-
 from .config import LansengerConfig
 from .url_helpers import build_api_url
+from .api_utils import do_get, do_post, parse_api_response
 from .models import (
     CreateGroupResult,
     GroupInfoResult,
@@ -31,61 +29,6 @@ from .models import (
     UpdateGroupMembersResult,
     UpdateGroupResult,
 )
-
-logger = logging.getLogger("lansenger_sdk.groups")
-
-
-def _parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
-    err_code = data.get("errCode", -1)
-    if err_code != 0:
-        msg = data.get("errMsg", "Unknown error")
-        return False, f"API error (errCode={err_code}): {msg}"
-    return True, None
-
-
-async def _do_get(
-    config: LansengerConfig,
-    url: str,
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
-
-
-async def _do_post(
-    config: LansengerConfig,
-    url: str,
-    body: Dict[str, Any],
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.post(url, json=body)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
 
 
 async def create_group(
@@ -155,11 +98,11 @@ async def create_group(
     if apply_session_unique_id:
         body["applySessionUniqueId"] = apply_session_unique_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return CreateGroupResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return CreateGroupResult(success=False, error=api_err)
 
@@ -196,11 +139,11 @@ async def fetch_group_info(
 
     url = build_api_url(config, "groups_v2", "info_fetch", app_token, user_token=user_token, group_id=group_id)
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return GroupInfoResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return GroupInfoResult(success=False, error=api_err)
 
@@ -254,11 +197,11 @@ async def fetch_group_members(
     url = build_api_url(config, "groups_v2", "members_fetch", app_token, user_token=user_token, group_id=group_id)
     url += f"&page_offset={page_offset}&page_size={page_size}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return GroupMemberResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return GroupMemberResult(success=False, error=api_err)
 
@@ -293,11 +236,11 @@ async def fetch_group_list(
     url = build_api_url(config, "groups_v2", "groups_fetch", app_token, user_token=user_token)
     url += f"&page_offset={page_offset}&page_size={page_size}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return GroupListResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return GroupListResult(success=False, error=api_err)
 
@@ -336,11 +279,11 @@ async def check_is_in_group(
     if staff_id:
         url += f"&staff_id={quote(staff_id)}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return IsInGroupResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return IsInGroupResult(success=False, error=api_err)
 
@@ -438,11 +381,11 @@ async def update_group_info(
     if not body:
         return UpdateGroupResult(success=False, error="at least one field to update is required")
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return UpdateGroupResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return UpdateGroupResult(success=False, error=api_err)
 
@@ -490,11 +433,11 @@ async def update_group_members(
     if add_department_id_list:
         body["addDepartmentIdList"] = add_department_id_list
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return UpdateGroupMembersResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return UpdateGroupMembersResult(success=False, error=api_err)
 
@@ -534,11 +477,11 @@ async def dismiss_group(
 
     url = build_api_url(config, "groups_v2", "delete", app_token, user_token=user_token, group_id=group_id)
 
-    data, http_err = await _do_post(config, url, {}, http_client)
+    data, http_err = await do_post(config, url, {}, http_client)
     if http_err:
         return UpdateGroupResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return UpdateGroupResult(success=False, error=api_err)
 

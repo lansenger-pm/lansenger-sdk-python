@@ -30,10 +30,7 @@ Endpoints:
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Dict, List, Optional
-
-import httpx
 
 from .config import LansengerConfig
 from .models import (
@@ -43,10 +40,8 @@ from .models import (
     TodoTaskStatusCountResult,
     TodoTaskExecutorListResult,
 )
-from .exceptions import LansengerNetworkError
 from .url_helpers import build_api_url
-
-logger = logging.getLogger("lansenger_sdk.todos")
+from .api_utils import do_post, parse_api_response
 
 TODO_TODO_STATUS_PENDING_READ = "11"
 TODO_TODO_STATUS_READ = "12"
@@ -55,41 +50,6 @@ TODO_TODO_STATUS_DONE = "22"
 
 TODO_TYPE_NOTIFICATION = 1
 TODO_TYPE_APPROVAL = 2
-
-
-async def _do_post(
-    config: LansengerConfig,
-    url: str,
-    body: Dict[str, Any],
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.post(url, json=body)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        if owns_client:
-            await http_client.aclose()
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        if owns_client:
-            await http_client.aclose()
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
-
-
-def _parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
-    err_code = data.get("errCode", -1)
-    if err_code != 0:
-        msg = data.get("errMsg", "Unknown error")
-        return False, f"API error (errCode={err_code}): {msg}"
-    return True, None
 
 
 async def create_todo_task(
@@ -135,10 +95,10 @@ async def create_todo_task(
     if sender_id:
         body["senderId"] = sender_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskCreateResult(success=False, error=api_err)
 
@@ -181,10 +141,10 @@ async def update_todo_task(
     if desc:
         body["desc"] = desc
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskCreateResult(success=False, error=api_err)
 
@@ -219,10 +179,10 @@ async def update_todo_task_status(
     if staff_id:
         body["staffId"] = staff_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskCreateResult(success=False, error=api_err)
 
@@ -252,10 +212,10 @@ async def delete_todo_task(
     if staff_id:
         body["staffId"] = staff_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskCreateResult(success=False, error=api_err)
 
@@ -285,10 +245,10 @@ async def fetch_todo_task_list(
     if status_list:
         body["statusList"] = status_list
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskListResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskListResult(success=False, error=api_err)
 
@@ -321,10 +281,10 @@ async def fetch_todo_task_by_source_id(
     if staff_id:
         body["staffId"] = staff_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskInfoResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskInfoResult(success=False, error=api_err)
 
@@ -367,10 +327,10 @@ async def fetch_todo_task_by_id(
     if staff_id:
         body["staffId"] = staff_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskInfoResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskInfoResult(success=False, error=api_err)
 
@@ -416,10 +376,10 @@ async def fetch_todo_task_status_counts(
     if status_list:
         body["status"] = status_list
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskStatusCountResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskStatusCountResult(success=False, error=api_err)
 
@@ -454,10 +414,10 @@ async def update_executor_status(
     if todotask_id:
         body["todotaskId"] = todotask_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskCreateResult(success=False, error=api_err)
 
@@ -487,10 +447,10 @@ async def add_executors(
     if todotask_id:
         body["todotaskId"] = todotask_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskCreateResult(success=False, error=api_err)
 
@@ -520,10 +480,10 @@ async def delete_executors(
     if todotask_id:
         body["todotaskId"] = todotask_id
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskCreateResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskCreateResult(success=False, error=api_err)
 
@@ -553,10 +513,10 @@ async def fetch_executor_list(
     if status_list:
         body["statusList"] = status_list
 
-    data, http_err = await _do_post(config, url, body, http_client)
+    data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return TodoTaskExecutorListResult(success=False, error=http_err)
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return TodoTaskExecutorListResult(success=False, error=api_err)
 

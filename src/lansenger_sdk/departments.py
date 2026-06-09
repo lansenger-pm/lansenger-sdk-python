@@ -12,51 +12,17 @@ Endpoints:
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
-import httpx
-
 from .config import LansengerConfig
 from .url_helpers import build_api_url
+from .api_utils import do_get, parse_api_response
 from .models import (
     DepartmentChildrenResult,
     DepartmentDetailResult,
     DepartmentStaffsResult,
 )
-
-logger = logging.getLogger("lansenger_sdk.departments")
-
-
-def _parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
-    err_code = data.get("errCode", -1)
-    if err_code != 0:
-        msg = data.get("errMsg", "Unknown error")
-        return False, f"API error (errCode={err_code}): {msg}"
-    return True, None
-
-
-async def _do_get(
-    config: LansengerConfig,
-    url: str,
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
-    owns_client = http_client is None
-    if owns_client:
-        http_client = httpx.AsyncClient(timeout=config.http_timeout)
-    try:
-        response = await http_client.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except httpx.HTTPError as e:
-        return None, f"HTTP error: {e}"
-    except Exception as e:
-        return None, f"Request error: {e}"
-    finally:
-        if owns_client:
-            await http_client.aclose()
-    return data, None
 
 
 async def fetch_department_detail(
@@ -85,11 +51,11 @@ async def fetch_department_detail(
     if tag_id:
         url += f"&tag_id={quote(tag_id)}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return DepartmentDetailResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return DepartmentDetailResult(success=False, error=api_err)
 
@@ -140,11 +106,11 @@ async def fetch_department_children(
 
     url = build_api_url(config, "departments", "children_fetch", app_token, user_token=user_token, department_id=department_id)
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return DepartmentChildrenResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return DepartmentChildrenResult(success=False, error=api_err)
 
@@ -183,11 +149,11 @@ async def fetch_department_staffs(
     url = build_api_url(config, "departments", "staffs_fetch", app_token, user_token=user_token, department_id=department_id)
     url += f"&page={page}&page_size={page_size}"
 
-    data, http_err = await _do_get(config, url, http_client)
+    data, http_err = await do_get(config, url, http_client)
     if http_err:
         return DepartmentStaffsResult(success=False, error=http_err)
 
-    ok, api_err = _parse_api_response(data)
+    ok, api_err = parse_api_response(data)
     if not ok:
         return DepartmentStaffsResult(success=False, error=api_err)
 
