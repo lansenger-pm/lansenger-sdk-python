@@ -32,11 +32,19 @@ import httpx
 
 from .auth import TokenManager, UserTokenManager
 from .config import LansengerConfig
-from .constants import MEDIA_TYPE_IMAGE, guess_media_type
+from .constants import (
+    APP_MEDIA_TYPE_FILE,
+    APP_MEDIA_TYPE_IMAGE,
+    APP_MEDIA_TYPE_VIDEO,
+    MEDIA_TYPE_IMAGE,
+    MEDIA_TYPE_FILE,
+    guess_app_media_type,
+    guess_media_type,
+)
 from .exceptions import LansengerAPIError, LansengerFileError, LansengerNetworkError
 from .oauth import exchange_code_for_user_token, refresh_user_token
 from .url_helpers import build_api_url
-from .media import download_media, upload_media
+from .media import download_media, upload_app_media, upload_media
 from .persistence import CredentialStore
 from .models import (
     AccountMessageResult,
@@ -345,7 +353,7 @@ class LansengerClient:
         content: str,
         *,
         file_path: str = "",
-        media_type: Optional[int] = None,
+        media_type: Optional[str] = None,
         cover_image_path: str = "",
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
@@ -367,7 +375,7 @@ class LansengerClient:
             chat_id: Recipient user ID or group chat ID.
             content: Plain text content (no Markdown).
             file_path: Optional local file/image/video to attach.
-            media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+            media_type: "file"/"video"/"image"/"audio". Auto-detected if omitted.
             cover_image_path: Optional cover image for video attachments.
                 When sending a video, the API requires mediaIds to be
                 [videoMediaId, coverImageMediaId]. If omitted for video,
@@ -394,17 +402,17 @@ class LansengerClient:
             text_data["reminder"] = reminder
 
         if file_path and os.path.isfile(file_path):
-            mt = media_type or guess_media_type(file_path) or MEDIA_TYPE_FILE
-            upload_result = await upload_media(
+            mt = media_type or guess_app_media_type(file_path) or APP_MEDIA_TYPE_FILE
+            upload_result = await upload_app_media(
                 self._config, self._token_manager, self._http_client, file_path, mt
             )
             if upload_result.success and upload_result.media_id:
                 text_data["mediaType"] = mt
                 media_ids = [upload_result.media_id]
-                if cover_image_path and mt == MEDIA_TYPE_VIDEO:
-                    cover_upload = await upload_media(
+                if cover_image_path and mt == APP_MEDIA_TYPE_VIDEO:
+                    cover_upload = await upload_app_media(
                         self._config, self._token_manager, self._http_client,
-                        cover_image_path, MEDIA_TYPE_IMAGE,
+                        cover_image_path, APP_MEDIA_TYPE_IMAGE,
                     )
                     if cover_upload.success and cover_upload.media_id:
                         media_ids.append(cover_upload.media_id)
@@ -483,7 +491,7 @@ class LansengerClient:
         file_path: str,
         *,
         caption: str = "",
-        media_type: Optional[int] = None,
+        media_type: Optional[str] = None,
         cover_image_path: str = "",
         is_group: bool = False,
         user_token: str = "",
@@ -500,7 +508,7 @@ class LansengerClient:
             chat_id: Recipient user ID or group chat ID.
             file_path: Path to the local file. Must exist on disk.
             caption: Optional plain-text caption.
-            media_type: 1=video, 2=image, 3=file. Auto-detected if omitted.
+            media_type: "file"/"video"/"image"/"audio". Auto-detected if omitted.
             cover_image_path: Optional cover image for video attachments.
                 When sending a video, the API requires mediaIds to be
                 [videoMediaId, coverImageMediaId].
@@ -520,9 +528,9 @@ class LansengerClient:
         if not os.path.isfile(file_path):
             return SendMessageResult(success=False, error=f"File not found: {file_path}")
 
-        mt = media_type or guess_media_type(file_path) or MEDIA_TYPE_FILE
+        mt = media_type or guess_app_media_type(file_path) or APP_MEDIA_TYPE_FILE
 
-        upload_result = await upload_media(
+        upload_result = await upload_app_media(
             self._config, self._token_manager, self._http_client, file_path, mt
         )
         if not upload_result.success or not upload_result.media_id:
@@ -532,10 +540,10 @@ class LansengerClient:
             )
 
         media_ids = [upload_result.media_id]
-        if cover_image_path and mt == MEDIA_TYPE_VIDEO:
-            cover_upload = await upload_media(
+        if cover_image_path and mt == APP_MEDIA_TYPE_VIDEO:
+            cover_upload = await upload_app_media(
                 self._config, self._token_manager, self._http_client,
-                cover_image_path, MEDIA_TYPE_IMAGE,
+                cover_image_path, APP_MEDIA_TYPE_IMAGE,
             )
             if cover_upload.success and cover_upload.media_id:
                 media_ids.append(cover_upload.media_id)

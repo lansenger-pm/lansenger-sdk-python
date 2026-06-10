@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.7] - 2026-06-10
+
+### Changed
+
+- **send_text / send_file**: File uploads now use app/bot upload endpoint (4.5.4) instead of core service endpoint (4.5.1). The `media_type` parameter type changed from `Optional[int]` to `Optional[str]` (values: `"file"`, `"video"`, `"image"`, `"audio"`).
+- **send_text / send_file**: `mediaType` field in msg data now sends string values instead of integers.
+
+### Fixed
+
+- **guess_media_type()**: Now returns `None` for unknown file extensions instead of `MEDIA_TYPE_IMAGE`, allowing callers to fall back to `MEDIA_TYPE_FILE`.
+
+### Added
+
+- **constants**: `MEDIA_TYPE_FILE = 3` constant added.
+
 ## [1.6.6] - 2026-06-10
 
 ### Fixed
