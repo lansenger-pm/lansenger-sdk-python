@@ -36,7 +36,6 @@ from .constants import (
     APP_MEDIA_TYPE_FILE,
     APP_MEDIA_TYPE_IMAGE,
     APP_MEDIA_TYPE_VIDEO,
-    MEDIA_TYPE_IMAGE,
     MEDIA_TYPE_FILE,
     guess_app_media_type,
     guess_media_type,
@@ -608,7 +607,7 @@ class LansengerClient:
         os.close(fd)
 
         try:
-            result = await self.send_file(chat_id, temp_path, caption=caption, media_type=MEDIA_TYPE_IMAGE, is_group=is_group, user_token=user_token, sender_id=sender_id)
+            result = await self.send_file(chat_id, temp_path, caption=caption, media_type=APP_MEDIA_TYPE_IMAGE, is_group=is_group, user_token=user_token, sender_id=sender_id)
             try:
                 os.remove(temp_path)
             except OSError:

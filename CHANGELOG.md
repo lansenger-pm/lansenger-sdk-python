@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.8] - 2026-06-10
+
+### Fixed
+
+- **send_image_url**: Uses `upload_app_media` (4.5.4) instead of core `upload_media` (4.5.1), consistent with `send_text`/`send_file`.
+
 ## [1.6.7] - 2026-06-10
 
 ### Changed
