@@ -12,10 +12,12 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 from .client import LansengerClient
 from .config import LansengerConfig
+from .exceptions import LansengerAuthError
 from .models import (
     AccountMessageResult,
     AppCardParams,
@@ -110,6 +112,7 @@ class LansengerSyncClient:
         self._http_timeout = http_timeout
         self._encoding_key = encoding_key
         self._callback_token = callback_token
+        self._async_client_for_tokens: Optional[LansengerClient] = None
 
     @classmethod
     def from_env(cls) -> LansengerSyncClient:
@@ -166,7 +169,34 @@ class LansengerSyncClient:
             encoding_key=creds.get("encoding_key", ""),
             callback_token=creds.get("callback_token", ""),
         )
-        return cls.from_config(config)
+        client = cls.from_config(config)
+
+        # Auto-load user token if available in store
+        user_token_data = store.load_user_token()
+        if user_token_data.get("user_token"):
+            # Create a temporary async client to register tokens
+            async_client = LansengerClient(
+                app_id=config.app_id,
+                app_secret=config.app_secret,
+                api_gateway_url=config.api_gateway_url,
+                http_timeout=config.http_timeout,
+                encoding_key=config.encoding_key,
+                callback_token=config.callback_token,
+            )
+            try:
+                async_client.set_user_tokens(
+                    user_token=user_token_data["user_token"],
+                    refresh_token=user_token_data.get("refresh_token", ""),
+                    expires_in=int(user_token_data.get("user_token_expiry", 0) - time.time()) if user_token_data.get("user_token_expiry") else 7200,
+                    staff_id=user_token_data.get("staff_id", ""),
+                    refresh_expires_in=int(user_token_data.get("refresh_token_expiry", 0) - time.time()) if user_token_data.get("refresh_token_expiry") else 0,
+                )
+                # Store the async client instance for token management
+                client._async_client_for_tokens = async_client
+            except Exception as e:
+                logger.warning("Failed to load user token from store: %s", e)
+
+        return client
 
     async def _ephemeral_call(self, method_name: str, **kwargs) -> Any:
         """Create an ephemeral async client, call method, then close."""
@@ -639,7 +669,12 @@ class LansengerSyncClient:
 
         Requires tokens registered via exchange_code or set_user_tokens first.
         """
-        return _run_async(self._ephemeral_call("get_user_token"))
+        if self._async_client_for_tokens:
+            return _run_async(self._async_client_for_tokens.get_user_token())
+        else:
+            raise LansengerAuthError(
+                "No userToken available. Call exchange_code() or set_user_tokens() first."
+            )
 
     def set_user_tokens(
         self,
@@ -650,14 +685,22 @@ class LansengerSyncClient:
         refresh_expires_in: int = 0,
     ) -> None:
         """Register userToken + refreshToken for auto-refresh."""
-        _run_async(self._ephemeral_call(
-            "set_user_tokens",
+        if self._async_client_for_tokens is None:
+            self._async_client_for_tokens = LansengerClient(
+                app_id=self._app_id,
+                app_secret=self._app_secret,
+                api_gateway_url=self._api_gateway_url,
+                http_timeout=self._http_timeout,
+                encoding_key=self._encoding_key,
+                callback_token=self._callback_token,
+            )
+        self._async_client_for_tokens.set_user_tokens(
             user_token=user_token,
             refresh_token=refresh_token,
             expires_in=expires_in,
             staff_id=staff_id,
             refresh_expires_in=refresh_expires_in,
-        ))
+        )
 
     def fetch_user_info(
         self,

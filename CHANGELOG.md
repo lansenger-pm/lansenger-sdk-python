@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.6] - 2026-06-10
+
+### Fixed
+
+- **sync_client**: `from_store()` now auto-loads user token from credential store and registers it with `UserTokenManager`.
+- **sync_client**: `set_user_tokens()` fixed TypeError — now directly calls async client instead of going through `_ephemeral_call` wrapper.
+- **sync_client**: `get_user_token()` now uses persistent async client for token management, raising `LansengerAuthError` when no token is available.
+
+### Added
+
+- **sync_client**: `_async_client_for_tokens` instance preserved across method calls for consistent token management.
+
 ## [1.6.5] - 2026-06-10
 
 ### Added
