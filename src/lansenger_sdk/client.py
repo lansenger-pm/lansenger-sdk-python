@@ -36,6 +36,7 @@ from .constants import (
     APP_MEDIA_TYPE_FILE,
     APP_MEDIA_TYPE_IMAGE,
     APP_MEDIA_TYPE_VIDEO,
+    APP_TO_MSG_MEDIA_TYPE,
     MEDIA_TYPE_FILE,
     guess_app_media_type,
     guess_media_type,
@@ -406,7 +407,7 @@ class LansengerClient:
                 self._config, self._token_manager, self._http_client, file_path, mt
             )
             if upload_result.success and upload_result.media_id:
-                text_data["mediaType"] = mt
+                text_data["mediaType"] = APP_TO_MSG_MEDIA_TYPE.get(mt, MEDIA_TYPE_FILE)
                 media_ids = [upload_result.media_id]
                 if cover_image_path and mt == APP_MEDIA_TYPE_VIDEO:
                     cover_upload = await upload_app_media(
@@ -549,7 +550,7 @@ class LansengerClient:
 
         text_data: Dict[str, Any] = {
             "content": caption,
-            "mediaType": mt,
+            "mediaType": APP_TO_MSG_MEDIA_TYPE.get(mt, MEDIA_TYPE_FILE),
             "mediaIds": media_ids,
         }
         msg_data = {"text": text_data}

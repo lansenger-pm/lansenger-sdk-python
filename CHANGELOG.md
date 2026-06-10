@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.9] - 2026-06-10
+
+### Fixed
+
+- **send_text / send_file / send_image_url**: Message body `mediaType` now correctly sent as `int` (1/2/3) per OpenAPI spec, while upload still uses `upload_app_media` (4.5.4) with string type. Added `APP_TO_MSG_MEDIA_TYPE` mapping.
+- **constants**: `APP_MEDIA_TYPE_AUDIO` restored — 4.5.4 app upload endpoint does support `"audio"` type per OpenAPI docs.
+- **guess_app_media_type()**: Audio extensions once again return `APP_MEDIA_TYPE_AUDIO` (was incorrectly mapped to `APP_MEDIA_TYPE_FILE`).
+
 ## [1.6.8] - 2026-06-10
 
 ### Fixed

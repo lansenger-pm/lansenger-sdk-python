@@ -126,6 +126,14 @@ APP_MEDIA_TYPE_VIDEO = "video"
 APP_MEDIA_TYPE_IMAGE = "image"
 APP_MEDIA_TYPE_AUDIO = "audio"
 
+# Map app media type string (4.5.4) → message body mediaType int (1=video, 2=image, 3=file)
+APP_TO_MSG_MEDIA_TYPE = {
+    APP_MEDIA_TYPE_VIDEO: MEDIA_TYPE_VIDEO,   # "video" → 1
+    APP_MEDIA_TYPE_IMAGE: MEDIA_TYPE_IMAGE,   # "image" → 2
+    APP_MEDIA_TYPE_FILE: MEDIA_TYPE_FILE,     # "file"  → 3
+    APP_MEDIA_TYPE_AUDIO: MEDIA_TYPE_FILE,    # "audio" → 3 (msg body has no audio)
+}
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".amr", ".m4a", ".ogg", ".flac", ".aac"}
