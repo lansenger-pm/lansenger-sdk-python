@@ -159,6 +159,12 @@ class UserTokenManager:
                 logger.debug("Restored cached refreshToken (valid until %s)", 
                              time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(refresh_expiry)))
 
+            # Load staff_id from cache
+            sid = cached.get("staff_id", "")
+            if sid:
+                self._staff_id = sid
+                logger.debug("Restored cached staffId: %s", sid)
+
     async def get_token(self) -> str:
         """Get a valid userToken, refreshing if expired.
 
@@ -230,6 +236,7 @@ class UserTokenManager:
                     expires_in=expires_in,
                     margin=_USER_TOKEN_REFRESH_MARGIN,
                     refresh_expires_in=refresh_expires_in,
+                    staff_id=self._staff_id or "",
                 )
 
             return self._user_token
@@ -261,6 +268,7 @@ class UserTokenManager:
                 expires_in=expires_in,
                 margin=_USER_TOKEN_REFRESH_MARGIN,
                 refresh_expires_in=refresh_expires_in,
+                staff_id=staff_id,
             )
 
         logger.debug("Registered userToken (expires_in=%ds)", expires_in)

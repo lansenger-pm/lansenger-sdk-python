@@ -210,6 +210,7 @@ class CredentialStore:
             "refresh_token": data.get("refresh_token", ""),
             "user_token_expiry": data.get("user_token_expiry", 0),
             "refresh_token_expiry": data.get("refresh_token_expiry", 0),
+            "staff_id": data.get("staff_id", ""),
         }
 
     def save_user_token(
@@ -219,6 +220,7 @@ class CredentialStore:
         expires_in: int = 0,
         margin: int = 300,
         refresh_expires_in: int = 0,
+        staff_id: str = "",
     ) -> None:
         """Save userToken and refreshToken for current profile."""
         state = self.load()
@@ -229,6 +231,8 @@ class CredentialStore:
             data["user_token_expiry"] = time.time() + expires_in - margin
         if refresh_expires_in:
             data["refresh_token_expiry"] = time.time() + refresh_expires_in
+        if staff_id:
+            data["staff_id"] = staff_id
         state = self._set_profile_data(state, data)
         self.save(state)
 
