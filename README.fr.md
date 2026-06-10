@@ -2,7 +2,7 @@
 
 # lansenger-sdk
 
-SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — prend en charge les applications Lansenger, les bots d'organisation et les bots personnels.
+SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — prend en charge les applications Lansenger, les robots d'organisation et les robots personnels.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
@@ -10,15 +10,15 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
-## Types de bots pris en charge
+## Types de robots pris en charge
 
-| Type de bot | Auth | WebSocket entrant | Toutes les API |
+| Type de robot | Auth | WebSocket entrant | Toutes les API |
 |-------------|------|-------------------|----------------|
 | **Application Lansenger** | appToken + userToken | ✗ (utilise webhook) | ✓ |
 | **Bot d'organisation** | appToken + userToken | ✗ (utilise webhook) | ✓ |
-| **Bot personnel** | appToken | ✓ (WebSocket) | ✓ (limité pour les API non-bot) |
+| **Bot personnel** | appToken | ✓ (WebSocket) | ✓ (limité pour les API non-robot) |
 
-Les trois types de bots utilisent le même mécanisme d'authentification : `appToken` est requis pour chaque appel API ; `userToken` est uniquement nécessaire pour certaines opérations au niveau utilisateur (infos utilisateur, recherche de staff, calendrier, etc.).
+Les trois types de robots utilisent le même mécanisme d'authentification : `appToken` est requis pour chaque appel API ; `userToken` est uniquement nécessaire pour certaines opérations au niveau utilisateur (infos utilisateur, recherche de staff, calendrier, etc.).
 
 ## Fonctionnalités
 
@@ -27,7 +27,7 @@ Les trois types de bots utilisent le même mécanisme d'authentification : `appT
 - **Authentification utilisateur OAuth2** — URL d'autorisation, échange de code, refresh de token
 - **Organisation & départements** — infos org, détail/children/staff de département
 - **Staff & contacts** — infos basiques/détaillées, mapping d'ID, ancêtres de département, recherche
-- **Messagerie** — 3 canaux de chat privé (bot, compte officiel, impersonnation utilisateur) + chat de groupe, tous les types de messages, @mention, identité humain/bot, rappels urgents
+- **Messagerie** — 3 canaux de chat privé (robot, compte officiel, impersonnation utilisateur) + chat de groupe, tous les types de messages, @mention, identité humain/robot, rappels urgents
 - **Cartes riches** — appCard (avec mises à jour dynamiques), oacard, linkCard, verifyCard, appArticles
 - **Messages en streaming** — delivery en temps réel basé sur SSE pour les agents IA
 - **Upload/download de médias** — fichiers, images, vidéos avec detection automatique du type, récupération du chemin média
@@ -77,11 +77,11 @@ client.invalidate_token()  # force le refresh au prochain appel
 
 ### Obtenir les identifiants
 
-| Type de bot | Comment obtenir app_id + app_secret |
+| Type de robot | Comment obtenir app_id + app_secret |
 |-------------|--------------------------------------|
 | **Bot personnel** | Client Lansenger (desktop) → Contacts → Bots intelligents → Bots personnels → cliquer sur l'icône ℹ️ (le client mobile ne permet pas de voir les identifiants) |
-| **Application Lansenger** | Créer sur le [Lansenger Developer Center](https://dev.lanxin.cn) — peut nécessiter l'approbation de l'administrateur de l'organisation |
-| **Bot d'organisation** | Créer sur le [Lansenger Developer Center](https://dev.lanxin.cn) — peut nécessiter l'approbation de l'administrateur de l'organisation |
+| **Application Lansenger** | Créer sur le Lansenger Developer Center — peut nécessiter l'approbation de l'administrateur de l'organisation |
+| **Bot d'organisation** | Créer sur le Lansenger Developer Center — peut nécessiter l'approbation de l'administrateur de l'organisation |
 
 ### Authentification OAuth2 niveau utilisateur
 
@@ -137,7 +137,7 @@ fields = await client.fetch_org_extra_field_ids(org_id="orgId")
 
 ## 4. Messagerie & Médias
 
-#### Chat privé de bot — le plus courant
+#### Chat privé de robot — le plus courant
 
 ```python
 result = await client.send_text(chat_id="staff123", content="Hello!")

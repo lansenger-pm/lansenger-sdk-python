@@ -79,9 +79,9 @@ client.invalidate_token()  # force refresh on next call
 
 | Bot Type | How to get app_id + app_secret |
 |----------|--------------------------------|
-| **Personal Bot** | Lansenger desktop → Contacts → Smart Bots → Personal Bots → click ℹ️ icon (mobile client does NOT show credentials) |
-| **Lansenger App** | Create at [Lansenger Developer Center](https://dev.lanxin.cn) — may require organization admin approval |
-| **Organization Bot** | Create at [Lansenger Developer Center](https://dev.lanxin.cn) — may require organization admin approval |
+| **Personal Bot** | Lansenger desktop → Contacts → Bots → Personal Bots → click ℹ️ icon (mobile client does NOT show credentials) |
+| **Lansenger App** | Create at Lansenger Developer Center — may require organization admin approval |
+| **Organization Bot** | Create at Lansenger Developer Center — may require organization admin approval |
 
 ### OAuth2 user-level auth
 
