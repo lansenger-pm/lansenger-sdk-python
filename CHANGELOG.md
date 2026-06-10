@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.5] - 2026-06-10
+
+### Added
+
+- **auth**: `UserTokenManager` now persists `staff_id` in credential store and restores it from cache.
+- **auth**: `get_token()` passes `staff_id` to `save_user_token()` and `set_tokens()`.
+
+## [1.6.4] - 2026-06-10
+
+### Added
+
+- **config**: `redirect_uri` field added to `LansengerConfig`, resolvable via `LANSENGER_REDIRECT_URI` env var.
+- **oauth**: `build_authorize_url()` now validates that `redirect_uri` is set (from params, config, or env), raising a clear error if missing.
+- **persistence**: `redirect_uri` persisted in `CredentialStore` (`save_credentials`/`load_credentials`).
+- **client/ sync_client**: `from_store()` now passes `redirect_uri` from stored credentials to config.
+
 ## [1.6.3] - 2026-06-09
 
 ### Fixed
