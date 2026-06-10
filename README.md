@@ -431,6 +431,7 @@ AES decryption requires `pycryptodome` or `cryptography` package (auto-detected)
 | `LANSENGER_APP_SECRET` | ✓ | App/Bot Secret | — |
 | `LANSENGER_API_GATEWAY_URL` | ✗ | API Gateway URL | `https://open.e.lanxin.cn/open/apigw` |
 | `LANSENGER_PASSPORT_URL` | ✗ | Passport URL (for OAuth2) | — |
+| `LANSENGER_REDIRECT_URI` | ✗ | OAuth2 redirect URI | `http://localhost:8765` |
 | `LANSENGER_ENCODING_KEY` | ✗ | Callback AES encryption key (Base64) | — |
 | `LANSENGER_CALLBACK_TOKEN` | ✗ | Callback signature token | — |
 
