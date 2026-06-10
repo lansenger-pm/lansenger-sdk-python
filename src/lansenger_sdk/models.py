@@ -497,7 +497,7 @@ class StreamMessageResult:
 @dataclass
 class GroupCreateInfo:
     name: str
-    org_id: int
+    org_id: str
     owner_id: str = ""
     description: str = ""
     avatar_id: str = ""

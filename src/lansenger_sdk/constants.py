@@ -118,7 +118,7 @@ OAUTH2_SCOPES = {
 
 MEDIA_TYPE_VIDEO = 1
 MEDIA_TYPE_IMAGE = 2
-MEDIA_TYPE_FILE = 3
+MEDIA_TYPE_AUDIO = 3
 
 APP_MEDIA_TYPE_FILE = "file"
 APP_MEDIA_TYPE_VIDEO = "video"
@@ -131,7 +131,7 @@ AUDIO_EXTENSIONS = {".mp3", ".wav", ".amr", ".m4a", ".ogg", ".flac", ".aac"}
 
 
 def guess_media_type(file_path: str) -> int:
-    """Guess media_type (1=video, 2=image, 3=file) from file extension — for 4.5.1."""
+    """Guess media_type for core upload (4.5.1): 1=video, 2=image, 3=audio."""
     import os
 
     ext = os.path.splitext(file_path)[1].lower()
@@ -139,7 +139,9 @@ def guess_media_type(file_path: str) -> int:
         return MEDIA_TYPE_IMAGE
     if ext in VIDEO_EXTENSIONS:
         return MEDIA_TYPE_VIDEO
-    return MEDIA_TYPE_FILE
+    if ext in AUDIO_EXTENSIONS:
+        return MEDIA_TYPE_AUDIO
+    return MEDIA_TYPE_IMAGE
 
 
 def guess_app_media_type(file_path: str) -> str:

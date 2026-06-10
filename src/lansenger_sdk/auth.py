@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from urllib.parse import quote
@@ -50,7 +51,8 @@ class TokenManager:
             if cached:
                 self._token = cached
                 state = self._store.load()
-                self._token_expiry = state.get("app_token_expiry", 0)
+                data = state.get("profiles", {}).get(self._store._profile, {})
+                self._token_expiry = data.get("app_token_expiry", 0)
                 logger.debug("Restored cached appToken from %s", self._store.path)
 
     async def get_token(self) -> str:
@@ -127,6 +129,7 @@ class UserTokenManager:
         self._http_client = http_client
         self._app_token_manager = app_token_manager
         self._store = store
+        self._lock = asyncio.Lock()
         self._user_token: Optional[str] = None
         self._refresh_token: Optional[str] = None
         self._user_token_expiry: float = 0
@@ -165,67 +168,71 @@ class UserTokenManager:
         if self._user_token and time.time() < self._user_token_expiry:
             return self._user_token
 
-        if not self._refresh_token:
-            raise LansengerAuthError(
-                "No userToken available and no refreshToken for auto-refresh. "
-                "Run OAuth2 authorize flow: build_authorize_url → exchange_code."
-            )
+        # Serialize refresh to prevent concurrent calls from racing
+        async with self._lock:
+            # Double-check — another coroutine may have refreshed while we waited
+            if self._user_token and time.time() < self._user_token_expiry:
+                return self._user_token
 
-        # Check if refreshToken has actually expired before calling the API.
-        # Without this, the SDK would call the API with an expired token and
-        # return a confusing "invalid CODE" error (errCode=40036).
-        if self._refresh_token_expiry > 0 and time.time() >= self._refresh_token_expiry:
-            raise LansengerAuthError(
-                "RefreshToken has expired. "
-                "Re-run OAuth2 authorize flow: build_authorize_url → exchange_code."
-            )
+            if not self._refresh_token:
+                raise LansengerAuthError(
+                    "No userToken available and no refreshToken for auto-refresh. "
+                    "Run OAuth2 authorize flow: build_authorize_url → exchange_code."
+                )
 
-        app_token = await self._app_token_manager.get_token()
-        url = build_api_url(self._config, "oauth2", "refresh_token_create", app_token)
-        url += f"&grant_type=refresh_token&refresh_token={quote(self._refresh_token, safe='')}"
+            # Check if refreshToken has actually expired before calling the API.
+            if self._refresh_token_expiry > 0 and time.time() >= self._refresh_token_expiry:
+                raise LansengerAuthError(
+                    "RefreshToken has expired. "
+                    "Re-run OAuth2 authorize flow: build_authorize_url → exchange_code."
+                )
 
-        try:
-            response = await self._http_client.get(url)
-            response.raise_for_status()
-            data = response.json()
-        except httpx.HTTPError as e:
-            raise LansengerNetworkError(f"userToken refresh failed: {e}") from e
+            app_token = await self._app_token_manager.get_token()
+            url = build_api_url(self._config, "oauth2", "refresh_token_create", app_token)
+            url += f"&grant_type=refresh_token&refresh_token={quote(self._refresh_token)}"
 
-        err_code = data.get("errCode", -1)
-        if err_code != 0:
-            msg = data.get("errMsg", "Unknown refresh error")
-            raise LansengerAuthError(
-                f"userToken refresh error (errCode={err_code}): {msg}",
-                err_code=err_code,
-            )
+            try:
+                response = await self._http_client.get(url)
+                response.raise_for_status()
+                data = response.json()
+            except httpx.HTTPError as e:
+                raise LansengerNetworkError(f"userToken refresh failed: {e}") from e
 
-        token_data = data.get("data", {})
-        self._user_token = token_data.get("userToken")
-        expires_in = token_data.get("expiresIn", 7200)
-        new_refresh_token = token_data.get("refreshToken")
-        if new_refresh_token:
-            self._refresh_token = new_refresh_token
-        refresh_expires_in = token_data.get("refreshExpiresIn", 0)
-        if refresh_expires_in:
-            self._refresh_token_expiry = time.time() + refresh_expires_in
-        self._staff_id = token_data.get("staffId")
-        self._user_token_expiry = time.time() + expires_in - _USER_TOKEN_REFRESH_MARGIN
+            err_code = data.get("errCode", -1)
+            if err_code != 0:
+                msg = data.get("errMsg", "Unknown refresh error")
+                raise LansengerAuthError(
+                    f"userToken refresh error (errCode={err_code}): {msg}",
+                    err_code=err_code,
+                )
 
-        if not self._user_token:
-            raise LansengerAuthError("Refresh response missing userToken field")
+            token_data = data.get("data", {})
+            self._user_token = token_data.get("userToken")
+            expires_in = token_data.get("expiresIn", 7200)
+            new_refresh_token = token_data.get("refreshToken")
+            if new_refresh_token:
+                self._refresh_token = new_refresh_token
+            refresh_expires_in = token_data.get("refreshExpiresIn", 0)
+            if refresh_expires_in:
+                self._refresh_token_expiry = time.time() + refresh_expires_in
+            self._staff_id = token_data.get("staffId")
+            self._user_token_expiry = time.time() + expires_in - _USER_TOKEN_REFRESH_MARGIN
 
-        logger.debug("Refreshed userToken (expires_in=%ds, refreshExpiresIn=%ds)", expires_in, refresh_expires_in)
+            if not self._user_token:
+                raise LansengerAuthError("Refresh response missing userToken field")
 
-        if self._store:
-            self._store.save_user_token(
-                user_token=self._user_token,
-                refresh_token=self._refresh_token or "",
-                expires_in=expires_in,
-                margin=_USER_TOKEN_REFRESH_MARGIN,
-                refresh_expires_in=refresh_expires_in,
-            )
+            logger.debug("Refreshed userToken (expires_in=%ds, refreshExpiresIn=%ds)", expires_in, refresh_expires_in)
 
-        return self._user_token
+            if self._store:
+                self._store.save_user_token(
+                    user_token=self._user_token,
+                    refresh_token=self._refresh_token or "",
+                    expires_in=expires_in,
+                    margin=_USER_TOKEN_REFRESH_MARGIN,
+                    refresh_expires_in=refresh_expires_in,
+                )
+
+            return self._user_token
 
     def set_tokens(
         self,

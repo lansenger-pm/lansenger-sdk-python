@@ -53,7 +53,7 @@ class LansengerConfig:
         resolved_passport = passport_url or os.environ.get(
             "LANSENGER_PASSPORT_URL", ""
         ).strip()
-        resolved_timeout = http_timeout or 30.0
+        resolved_timeout = http_timeout if http_timeout is not None else 30.0
         resolved_encoding_key = encoding_key or os.environ.get(
             "LANSENGER_ENCODING_KEY", ""
         ).strip()

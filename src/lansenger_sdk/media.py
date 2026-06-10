@@ -17,15 +17,15 @@ import httpx
 from .auth import TokenManager
 from .config import LansengerConfig
 from .constants import (
-    MEDIA_TYPE_FILE,
+    APP_MEDIA_TYPE_AUDIO,
+    APP_MEDIA_TYPE_FILE,
+    APP_MEDIA_TYPE_IMAGE,
+    APP_MEDIA_TYPE_VIDEO,
+    MEDIA_TYPE_AUDIO,
     MEDIA_TYPE_IMAGE,
     MEDIA_TYPE_VIDEO,
-    APP_MEDIA_TYPE_FILE,
-    APP_MEDIA_TYPE_VIDEO,
-    APP_MEDIA_TYPE_IMAGE,
-    APP_MEDIA_TYPE_AUDIO,
-    guess_media_type,
     guess_app_media_type,
+    guess_media_type,
 )
 from .exceptions import LansengerFileError, LansengerNetworkError
 from .models import DownloadMediaResult, MediaPathResult, UploadMediaResult
@@ -39,13 +39,13 @@ async def upload_media(
     token_manager: TokenManager,
     http_client: httpx.AsyncClient,
     file_path: str,
-    media_type: int = MEDIA_TYPE_FILE,
+    media_type: int = MEDIA_TYPE_IMAGE,
     user_token: str = "",
 ) -> UploadMediaResult:
-    """Upload a media file via core service endpoint (4.5.1).
+    """Upload a file via core platform endpoint (4.5.1).
 
-    Uses /v1/medias/create with numeric type values (1=video, 2=image, 3=file).
-    File size limit: 1MB. Optionally accepts userToken.
+    Uses /v1/medias/create. Type values must match API 4.5.1:
+    1=video, 2=image, 3=audio. No generic "file" type supported.
 
     Args:
         config: SDK config
@@ -111,13 +111,12 @@ async def upload_app_media(
     width: Optional[int] = None,
     height: Optional[int] = None,
     duration: Optional[int] = None,
+    context: Optional[str] = None,
 ) -> UploadMediaResult:
     """Upload a media file via app/bot endpoint (4.5.4).
 
     Uses /v1/app/medias/create with string type values ("file", "video", "image", "audio").
-    File size limits: image 10MB, others 20MB. No userToken parameter.
-    Supports width/height (for video, image) and duration (for video, audio).
-    Only self-built apps (not ISV apps).
+    File size limits: image 10MB, others 20MB. Only self-built apps.
 
     Args:
         config: SDK config
@@ -128,6 +127,7 @@ async def upload_app_media(
         width: Optional width (for video/image)
         height: Optional height (for video/image)
         duration: Optional duration in seconds (for video/audio)
+        context: Optional context string (reserved)
 
     Returns:
         UploadMediaResult with media_id on success
@@ -147,6 +147,8 @@ async def upload_app_media(
         url += f"&height={height}"
     if duration is not None:
         url += f"&duration={duration}"
+    if context is not None:
+        url += f"&context={context}"
 
     try:
         with open(file_path, "rb") as f:
@@ -182,14 +184,17 @@ async def download_media(
     token_manager: TokenManager,
     http_client: httpx.AsyncClient,
     media_id: str,
+    *,
+    user_token: str = "",
 ) -> DownloadMediaResult:
-    """Download a media file from Lansenger by media ID.
+    """Download a media file from Lansenger by media ID (4.5.2).
 
     Args:
         config: SDK config
         token_manager: Token manager for authentication
         http_client: HTTP client
         media_id: Lansenger media ID
+        user_token: Optional user token
 
     Returns:
         DownloadMediaResult with raw bytes on success
@@ -199,7 +204,7 @@ async def download_media(
     except Exception as e:
         return DownloadMediaResult(success=False, error=f"Auth failed: {e}")
 
-    url = build_api_url(config, "media", "fetch", token, media_id=media_id)
+    url = build_api_url(config, "media", "fetch", token, user_token=user_token, media_id=media_id)
 
     try:
         response = await http_client.get(url)

@@ -311,6 +311,10 @@ async def search_staff(
     if not keyword:
         return StaffSearchResult(success=False, error="keyword is required")
 
+    # API requires at least one of user_token or user_id (doc 4.1.16 v2)
+    if not user_token and not user_id:
+        return StaffSearchResult(success=False, error="user_token or user_id is required")
+
     url = build_api_url(config, "staffs", "search", app_token, user_token=user_token, user_id=user_id)
     if page is not None and page_size is not None:
         url += f"&page={page}&page_size={page_size}"

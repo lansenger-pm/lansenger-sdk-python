@@ -32,7 +32,7 @@ import httpx
 
 from .auth import TokenManager, UserTokenManager
 from .config import LansengerConfig
-from .constants import MEDIA_TYPE_FILE, guess_media_type
+from .constants import MEDIA_TYPE_IMAGE, guess_media_type
 from .exceptions import LansengerAPIError, LansengerFileError, LansengerNetworkError
 from .oauth import exchange_code_for_user_token, refresh_user_token
 from .url_helpers import build_api_url

@@ -4,7 +4,7 @@ from lansenger_sdk.constants import (
     API_ENDPOINTS,
     MEDIA_TYPE_VIDEO,
     MEDIA_TYPE_IMAGE,
-    MEDIA_TYPE_FILE,
+    MEDIA_TYPE_AUDIO,
     guess_media_type,
 )
 
@@ -12,7 +12,7 @@ from lansenger_sdk.constants import (
 def test_media_type_constants():
     assert MEDIA_TYPE_VIDEO == 1
     assert MEDIA_TYPE_IMAGE == 2
-    assert MEDIA_TYPE_FILE == 3
+    assert MEDIA_TYPE_AUDIO == 3
 
 
 def test_guess_media_type_image():
@@ -28,11 +28,18 @@ def test_guess_media_type_video():
     assert guess_media_type("clip.avi") == MEDIA_TYPE_VIDEO
 
 
-def test_guess_media_type_file():
-    assert guess_media_type("report.pdf") == MEDIA_TYPE_FILE
-    assert guess_media_type("data.xlsx") == MEDIA_TYPE_FILE
-    assert guess_media_type("archive.zip") == MEDIA_TYPE_FILE
-    assert guess_media_type("unknown.xyz") == MEDIA_TYPE_FILE
+def test_guess_media_type_audio():
+    assert guess_media_type("song.mp3") == MEDIA_TYPE_AUDIO
+    assert guess_media_type("note.wav") == MEDIA_TYPE_AUDIO
+
+
+def test_guess_media_type_unknown_falls_back_to_image():
+    # 4.5.1 endpoint only supports video(1)/image(2)/audio(3),
+    # unknown extensions fall back to MEDIA_TYPE_IMAGE
+    assert guess_media_type("report.pdf") == MEDIA_TYPE_IMAGE
+    assert guess_media_type("data.xlsx") == MEDIA_TYPE_IMAGE
+    assert guess_media_type("archive.zip") == MEDIA_TYPE_IMAGE
+    assert guess_media_type("unknown.xyz") == MEDIA_TYPE_IMAGE
 
 
 def test_api_endpoints_structure():

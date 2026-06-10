@@ -126,7 +126,7 @@ async def exchange_code_for_user_token(
         return UserTokenResult(success=False, error="app_token is required")
 
     url = build_api_url(config, "oauth2", "user_token_create", app_token)
-    url += f"&grant_type=authorization_code&code={quote(code, safe='')}"
+    url += f"&grant_type=authorization_code&code={quote(code)}"
     if redirect_uri:
         url += f"&redirect_uri={quote(redirect_uri)}"
 
@@ -139,8 +139,6 @@ async def exchange_code_for_user_token(
         response.raise_for_status()
         data = response.json()
     except httpx.HTTPError as e:
-        if owns_client:
-            await http_client.aclose()
         return UserTokenResult(success=False, error=f"HTTP error: {e}")
     finally:
         if owns_client:
@@ -203,7 +201,7 @@ async def refresh_user_token(
         return UserTokenResult(success=False, error="app_token is required")
 
     url = build_api_url(config, "oauth2", "refresh_token_create", app_token)
-    url += f"&grant_type=refresh_token&refresh_token={quote(refresh_token, safe='')}"
+    url += f"&grant_type=refresh_token&refresh_token={quote(refresh_token)}"
     if scope:
         url += f"&scope={quote(scope)}"
 
@@ -216,8 +214,6 @@ async def refresh_user_token(
         response.raise_for_status()
         data = response.json()
     except httpx.HTTPError as e:
-        if owns_client:
-            await http_client.aclose()
         return UserTokenResult(success=False, error=f"HTTP error: {e}")
     finally:
         if owns_client:

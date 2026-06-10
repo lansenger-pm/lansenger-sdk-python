@@ -426,6 +426,8 @@ async def add_schedule_attendees(
     attendees: List[str],
     *,
     reminder_type: Optional[str] = None,
+    operation_type: Optional[str] = None,
+    current_time: Optional[int] = None,
     user_token: str = "",
     user_id: str = "",
     http_client: Optional[httpx.AsyncClient] = None,
@@ -433,7 +435,9 @@ async def add_schedule_attendees(
     """Add attendees to a schedule (4.23.16).
 
     Args:
-        reminder_type: "yes" or "no". Defaults to "yes" if omitted.
+        reminder_type: "yes" or "no".
+        operation_type: For recurring schedules — "modify_current", "modify_current_after", "modify_all"
+        current_time: Required when operation_type != "modify_all" — start time of the specific occurrence
     """
     if not calendar_id:
         return ScheduleCreateResult(success=False, error="calendar_id is required")
@@ -447,6 +451,10 @@ async def add_schedule_attendees(
     body: Dict[str, Any] = {"attendees": attendees}
     if reminder_type is not None:
         body["reminderType"] = reminder_type
+    if operation_type is not None:
+        body["operationType"] = operation_type
+    if current_time is not None:
+        body["currentTime"] = current_time
 
     data, http_err = await do_post(config, url, body, http_client)
     if http_err:
@@ -471,6 +479,8 @@ async def delete_schedule_attendees(
     attendees: List[str],
     *,
     reminder_type: Optional[str] = None,
+    operation_type: Optional[str] = None,
+    current_time: Optional[int] = None,
     user_token: str = "",
     user_id: str = "",
     http_client: Optional[httpx.AsyncClient] = None,
@@ -478,7 +488,9 @@ async def delete_schedule_attendees(
     """Delete attendees from a schedule (4.23.18).
 
     Args:
-        reminder_type: "yes" or "no". Defaults to "no" if omitted.
+        reminder_type: "yes" or "no".
+        operation_type: For recurring schedules — "modify_current", "modify_current_after", "modify_all"
+        current_time: Required when operation_type != "modify_all" — start time of the specific occurrence
     """
     if not calendar_id:
         return ScheduleCreateResult(success=False, error="calendar_id is required")
@@ -492,6 +504,10 @@ async def delete_schedule_attendees(
     body: Dict[str, Any] = {"attendees": attendees}
     if reminder_type is not None:
         body["reminderType"] = reminder_type
+    if operation_type is not None:
+        body["operationType"] = operation_type
+    if current_time is not None:
+        body["currentTime"] = current_time
 
     data, http_err = await do_post(config, url, body, http_client)
     if http_err:

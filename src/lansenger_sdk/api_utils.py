@@ -6,6 +6,7 @@ to avoid code duplication and ensure consistent behavior.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Dict, Optional
 
@@ -56,8 +57,8 @@ async def do_get(
         data = response.json()
     except httpx.HTTPError as e:
         return None, f"HTTP error: {e}"
-    except Exception as e:
-        return None, f"Request error: {e}"
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        return None, f"JSON decode error: {e}"
     finally:
         if owns_client:
             await http_client.aclose()
@@ -90,8 +91,8 @@ async def do_post(
         data = response.json()
     except httpx.HTTPError as e:
         return None, f"HTTP error: {e}"
-    except Exception as e:
-        return None, f"Request error: {e}"
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        return None, f"JSON decode error: {e}"
     finally:
         if owns_client:
             await http_client.aclose()
