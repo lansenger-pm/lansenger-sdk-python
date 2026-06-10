@@ -71,6 +71,15 @@ def build_authorize_url(
             "Set LANSENGER_PASSPORT_URL env var or pass passport_url in config."
         )
 
+    if not redirect_uri:
+        redirect_uri = config.redirect_uri
+    if not redirect_uri:
+        raise LansengerConfigError(
+            "redirect_uri is required for OAuth2 authorize flow. "
+            "Set LANSENGER_REDIRECT_URI env var, pass redirect_uri to config, "
+            "or pass it directly to build_authorize_url()."
+        )
+
     if state is None:
         state = uuid.uuid1().hex
 

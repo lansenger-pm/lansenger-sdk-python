@@ -18,7 +18,8 @@ class LansengerConfig:
     Resolution order:
     1. Direct params passed to LansengerConfig.create()
     2. LANSENGER_APP_ID / LANSENGER_APP_SECRET / LANSENGER_API_GATEWAY_URL
-       LANSENGER_PASSPORT_URL / LANSENGER_ENCODING_KEY / LANSENGER_CALLBACK_TOKEN
+       LANSENGER_PASSPORT_URL / LANSENGER_REDIRECT_URI /
+       LANSENGER_ENCODING_KEY / LANSENGER_CALLBACK_TOKEN
        env vars
     """
 
@@ -26,6 +27,7 @@ class LansengerConfig:
     app_secret: str
     api_gateway_url: str = DEFAULT_API_GATEWAY_URL
     passport_url: str = ""
+    redirect_uri: str = ""
     http_timeout: float = 30.0
     encoding_key: str = ""
     callback_token: str = ""
@@ -37,6 +39,7 @@ class LansengerConfig:
         app_secret: str | None = None,
         api_gateway_url: str | None = None,
         passport_url: str | None = None,
+        redirect_uri: str | None = None,
         http_timeout: float | None = None,
         encoding_key: str | None = None,
         callback_token: str | None = None,
@@ -52,6 +55,9 @@ class LansengerConfig:
         ).strip()
         resolved_passport = passport_url or os.environ.get(
             "LANSENGER_PASSPORT_URL", ""
+        ).strip()
+        resolved_redirect_uri = redirect_uri or os.environ.get(
+            "LANSENGER_REDIRECT_URI", ""
         ).strip()
         resolved_timeout = http_timeout if http_timeout is not None else 30.0
         resolved_encoding_key = encoding_key or os.environ.get(
@@ -73,6 +79,7 @@ class LansengerConfig:
             app_secret=resolved_app_secret,
             api_gateway_url=resolved_gateway,
             passport_url=resolved_passport,
+            redirect_uri=resolved_redirect_uri,
             http_timeout=resolved_timeout,
             encoding_key=resolved_encoding_key,
             callback_token=resolved_callback_token,

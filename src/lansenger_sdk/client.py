@@ -211,6 +211,7 @@ class LansengerClient:
             app_secret=creds["app_secret"],
             api_gateway_url=creds.get("api_gateway_url") or "https://open.e.lanxin.cn/open/apigw",
             passport_url=creds.get("passport_url", ""),
+            redirect_uri=creds.get("redirect_uri", ""),
             encoding_key=creds.get("encoding_key", ""),
             callback_token=creds.get("callback_token", ""),
         )
