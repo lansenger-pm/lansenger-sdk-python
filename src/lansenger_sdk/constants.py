@@ -65,9 +65,6 @@ API_ENDPOINTS = {
         "reminder_create": "/v1/messages/reminder/create",
     },
     "groups": {
-        "fetch": "/v2/groups/fetch",
-    },
-    "groups_v2": {
         "create": "/v2/groups/create",
         "info_fetch": "/v2/groups/{group_id}/info/fetch",
         "info_update": "/v2/groups/{group_id}/info/update",

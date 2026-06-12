@@ -33,13 +33,12 @@ def test_guess_media_type_audio():
     assert guess_media_type("note.wav") == MEDIA_TYPE_AUDIO
 
 
-def test_guess_media_type_unknown_falls_back_to_image():
-    # 4.5.1 endpoint only supports video(1)/image(2)/audio(3),
-    # unknown extensions fall back to MEDIA_TYPE_IMAGE
-    assert guess_media_type("report.pdf") == MEDIA_TYPE_IMAGE
-    assert guess_media_type("data.xlsx") == MEDIA_TYPE_IMAGE
-    assert guess_media_type("archive.zip") == MEDIA_TYPE_IMAGE
-    assert guess_media_type("unknown.xyz") == MEDIA_TYPE_IMAGE
+def test_guess_media_type_unknown_returns_none():
+    # Unknown extensions return None so callers can fall back to their own default
+    assert guess_media_type("report.pdf") is None
+    assert guess_media_type("data.xlsx") is None
+    assert guess_media_type("archive.zip") is None
+    assert guess_media_type("unknown.xyz") is None
 
 
 def test_api_endpoints_structure():
@@ -50,7 +49,7 @@ def test_api_endpoints_structure():
     assert "revoke" in API_ENDPOINTS["message"]
     assert "dynamic_update" in API_ENDPOINTS["message"]
     assert "groups" in API_ENDPOINTS
-    assert "fetch" in API_ENDPOINTS["groups"]
+    assert "groups_fetch" in API_ENDPOINTS["groups"]
     assert "staffs" in API_ENDPOINTS
     assert "fetch" in API_ENDPOINTS["staffs"]
     assert "detail_fetch" in API_ENDPOINTS["staffs"]
@@ -73,13 +72,13 @@ def test_org_endpoint_paths():
     assert API_ENDPOINTS["org"]["extra_field_ids"] == "/v1/org/{org_id}/extrafieldids/fetch"
 
 
-def test_groups_v2_endpoint_paths():
-    assert "groups_v2" in API_ENDPOINTS
-    assert API_ENDPOINTS["groups_v2"]["create"] == "/v2/groups/create"
-    assert API_ENDPOINTS["groups_v2"]["info_fetch"] == "/v2/groups/{group_id}/info/fetch"
-    assert API_ENDPOINTS["groups_v2"]["members_fetch"] == "/v2/groups/{group_id}/members/fetch"
-    assert API_ENDPOINTS["groups_v2"]["groups_fetch"] == "/v2/groups/fetch"
-    assert API_ENDPOINTS["groups_v2"]["is_in_group"] == "/v2/groups/{group_id}/members/is_in_group"
+def test_groups_endpoint_paths():
+    assert "groups" in API_ENDPOINTS
+    assert API_ENDPOINTS["groups"]["create"] == "/v2/groups/create"
+    assert API_ENDPOINTS["groups"]["info_fetch"] == "/v2/groups/{group_id}/info/fetch"
+    assert API_ENDPOINTS["groups"]["members_fetch"] == "/v2/groups/{group_id}/members/fetch"
+    assert API_ENDPOINTS["groups"]["groups_fetch"] == "/v2/groups/fetch"
+    assert API_ENDPOINTS["groups"]["is_in_group"] == "/v2/groups/{group_id}/members/is_in_group"
 
 
 def test_departments_endpoint_paths():

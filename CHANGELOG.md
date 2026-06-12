@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.10] - 2026-06-12
+
+### Changed
+
+- **constants**: Merged `groups_v2` endpoint category into `groups`, removing the redundant separate category. All group APIs now use the unified `"groups"` key in `API_ENDPOINTS`.
+
 ## [1.6.9] - 2026-06-10
 
 ### Fixed

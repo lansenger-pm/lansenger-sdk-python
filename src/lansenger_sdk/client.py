@@ -1080,7 +1080,7 @@ class LansengerClient:
         self._ensure_clients()
 
         token = await self._get_token()
-        url = build_api_url(self._config, "groups", "fetch", token)
+        url = build_api_url(self._config, "groups", "groups_fetch", token)
         url += f"&page_offset={page_offset}&page_size={page_size}"
 
         try:
