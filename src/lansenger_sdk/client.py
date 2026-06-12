@@ -1362,12 +1362,14 @@ class LansengerClient:
                     user_token=result.user_token,
                     refresh_token=result.refresh_token,
                     expires_in=result.expires_in,
+                    refresh_expires_in=result.refresh_expires_in or 0,
                     staff_id=result.staff_id or "",
                 )
             self._user_token_manager.set_tokens(
                 user_token=result.user_token,
                 refresh_token=result.refresh_token,
                 expires_in=result.expires_in,
+                refresh_expires_in=result.refresh_expires_in or 0,
                 staff_id=result.staff_id or "",
             )
 

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.11] - 2026-06-12
+
+### Fixed
+
+- **client**: `exchange_code()` now passes `refresh_expires_in` to both `save_user_token()` and `set_user_tokens()`, fixing a regression where the refreshToken expiry was never persisted to disk or tracked in memory after OAuth2 authorization.
+- **sync_client**: `from_store()` no longer produces a negative `expires_in` when the stored `user_token_expiry` is in the past. Uses `max(0, ...)` to clip negative values, preventing an incorrectly computed expiry timestamp.
+- **auth**: Added 300-second margin to refreshToken expiry check in `UserTokenManager.get_token()`, matching the existing UserToken margin and preventing race conditions at the exact expiry boundary.
+
 ## [1.6.10] - 2026-06-12
 
 ### Changed

@@ -187,7 +187,8 @@ class UserTokenManager:
                 )
 
             # Check if refreshToken has actually expired before calling the API.
-            if self._refresh_token_expiry > 0 and time.time() >= self._refresh_token_expiry:
+            # Add margin to avoid race at exact expiry boundary.
+            if self._refresh_token_expiry > 0 and time.time() >= self._refresh_token_expiry - _USER_TOKEN_REFRESH_MARGIN:
                 raise LansengerAuthError(
                     "RefreshToken has expired. "
                     "Re-run OAuth2 authorize flow: build_authorize_url → exchange_code."

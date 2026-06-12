@@ -184,12 +184,23 @@ class LansengerSyncClient:
                 callback_token=config.callback_token,
             )
             try:
+                raw_ut_expiry = user_token_data.get("user_token_expiry", 0)
+                if raw_ut_expiry:
+                    remaining_ut = max(0, int(raw_ut_expiry - time.time()))
+                    expires_in = remaining_ut if remaining_ut > 0 else 7200
+                else:
+                    expires_in = 7200
+                raw_rt_expiry = user_token_data.get("refresh_token_expiry", 0)
+                if raw_rt_expiry:
+                    refresh_expires_in = max(0, int(raw_rt_expiry - time.time()))
+                else:
+                    refresh_expires_in = 0
                 async_client.set_user_tokens(
                     user_token=user_token_data["user_token"],
                     refresh_token=user_token_data.get("refresh_token", ""),
-                    expires_in=int(user_token_data.get("user_token_expiry", 0) - time.time()) if user_token_data.get("user_token_expiry") else 7200,
+                    expires_in=expires_in,
                     staff_id=user_token_data.get("staff_id", ""),
-                    refresh_expires_in=int(user_token_data.get("refresh_token_expiry", 0) - time.time()) if user_token_data.get("refresh_token_expiry") else 0,
+                    refresh_expires_in=refresh_expires_in,
                 )
                 # Store the async client instance for token management
                 client._async_client_for_tokens = async_client
