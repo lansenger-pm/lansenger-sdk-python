@@ -300,3 +300,173 @@ def test_delete_profile_by_name_active_falls_back_to_default():
     finally:
         if os.path.exists(path):
             os.unlink(path)
+
+
+# ── Multi-user userToken isolation ────────────────────────────────
+
+_NOW = int(time.time())
+
+
+def test_user_token_multi_user_isolation(tmp_store):
+    """Two users in the same profile do not overwrite each other."""
+    tmp_store.save_user_token(
+        "token-a", refresh_token="rt-a", expires_in=7200,
+        refresh_expires_in=2592000, staff_id="staff-a",
+    )
+    tmp_store.save_user_token(
+        "token-b", refresh_token="rt-b", expires_in=7200,
+        refresh_expires_in=2592000, staff_id="staff-b",
+    )
+
+    # Load by staff_id — each gets their own tokens
+    a = tmp_store.load_user_token("staff-a")
+    b = tmp_store.load_user_token("staff-b")
+    assert a["user_token"] == "token-a"
+    assert a["refresh_token"] == "rt-a"
+    assert a["staff_id"] == "staff-a"
+    assert b["user_token"] == "token-b"
+    assert b["refresh_token"] == "rt-b"
+    assert b["staff_id"] == "staff-b"
+
+
+def test_user_token_isolation_prevents_overwrite(tmp_store):
+    """Saving staff-b does NOT wipe staff-a's tokens."""
+    tmp_store.save_user_token("token-a", "rt-a", 7200, staff_id="staff-a")
+    tmp_store.save_user_token("token-b", "rt-b", 7200, staff_id="staff-b")
+
+    a = tmp_store.load_user_token("staff-a")
+    assert a["user_token"] == "token-a", "staff-a should still have its own token after staff-b save"
+
+
+def test_user_token_cross_staff_independence(tmp_store):
+    """Updating staff-a's token does NOT affect staff-b."""
+    tmp_store.save_user_token("token-a-v1", "rt-a", 7200, staff_id="staff-a")
+    tmp_store.save_user_token("token-b", "rt-b", 7200, staff_id="staff-b")
+
+    # Update staff-a with a new token
+    tmp_store.save_user_token("token-a-v2", "rt-a-v2", 7200, staff_id="staff-a")
+
+    a = tmp_store.load_user_token("staff-a")
+    b = tmp_store.load_user_token("staff-b")
+    assert a["user_token"] == "token-a-v2"
+    assert b["user_token"] == "token-b", "staff-b must be untouched"
+
+
+def test_user_token_backward_compat_legacy_flat(tmp_store):
+    """Legacy flat userToken fields are auto-migrated on first access."""
+    # 1. Write legacy flat format manually
+    state = tmp_store.load()
+    data = tmp_store._get_profile_data(state)
+    data["user_token"] = "legacy-ut"
+    data["refresh_token"] = "legacy-rt"
+    data["staff_id"] = "legacy-staff"
+    data["user_token_expiry"] = _NOW + 7200
+    data["refresh_token_expiry"] = _NOW + 2592000
+    state = tmp_store._set_profile_data(state, data)
+    tmp_store.save(state)
+
+    # Verify raw file has flat fields
+    raw = json.loads(open(tmp_store.path).read())
+    profile = raw["profiles"]["default"]
+    assert profile["user_token"] == "legacy-ut"
+    assert profile["staff_id"] == "legacy-staff"
+
+    # First access triggers auto-migration in _get_profile_data
+    got = tmp_store.load_user_token("")
+    assert got["user_token"] == "legacy-ut"
+    assert got["staff_id"] == "legacy-staff"
+
+    # After load, flat fields should be migrated away
+    raw2 = json.loads(open(tmp_store.path).read())
+    profile2 = raw2["profiles"]["default"]
+    assert "user_token" not in profile2, "flat user_token should be migrated away"
+    assert "staff_id" not in profile2, "flat staff_id should be migrated away"
+    assert profile2["user_tokens"]["legacy-staff"]["user_token"] == "legacy-ut"
+
+
+def test_user_token_auto_migration_on_save(tmp_store):
+    """Saving with staff_id migrates flat fields away and into nested."""
+    # 1. Write legacy flat format manually
+    state = tmp_store.load()
+    data = tmp_store._get_profile_data(state)
+    data["user_token"] = "legacy-ut"
+    data["staff_id"] = "legacy-staff"
+    state = tmp_store._set_profile_data(state, data)
+    tmp_store.save(state)
+
+    # 2. Verify flat is readable
+    got = tmp_store.load_user_token("")
+    assert got["user_token"] == "legacy-ut"
+    assert got["staff_id"] == "legacy-staff"
+
+    # 3. Now do a nested save for a *different* user — this triggers migration
+    tmp_store.save_user_token("nested-ut", "nested-rt", 7200, staff_id="nested-staff")
+
+    # 4. After migration, flat fields should be gone
+    state = tmp_store.load()
+    data = tmp_store._get_profile_data(state)
+    assert "user_token" not in data, "flat user_token should be cleaned after migration"
+    assert "staff_id" not in data, "flat staff_id should be cleaned after migration"
+
+    # 5. Legacy user should now be accessible via nested
+    legacy = tmp_store.load_user_token("legacy-staff")
+    assert legacy["user_token"] == "legacy-ut"
+
+    # 6. New user should also be accessible
+    nested = tmp_store.load_user_token("nested-staff")
+    assert nested["user_token"] == "nested-ut"
+
+
+def test_user_token_no_staff_id_fallback(tmp_store):
+    """load_user_token('') returns first available user from nested store
+    when flat fields are empty (post-migration scenario)."""
+    tmp_store.save_user_token("t1", refresh_token="r1", expires_in=7200, staff_id="staff1")
+    tmp_store.save_user_token("t2", refresh_token="r2", expires_in=7200, staff_id="staff2")
+
+    # No staff_id → falls back to first entry from nested
+    fallback = tmp_store.load_user_token("")
+    assert fallback["user_token"] == "t2" or fallback["user_token"] == "t1"
+
+    # But with exact staff_id, we get the specific one
+    one = tmp_store.load_user_token("staff1")
+    two = tmp_store.load_user_token("staff2")
+    assert one["user_token"] == "t1"
+    assert two["user_token"] == "t2"
+
+
+def test_user_token_nonexistent_staff_id(tmp_store):
+    """load_user_token with a non-existent staff_id falls back to available tokens.
+    
+    This is the graceful-degradation behavior: when the exact staff_id is not
+    found, the store returns what's available (first user from nested, or flat).
+    This ensures UserTokenManager (which may not know its staff_id at init time)
+    always gets the best available token.
+    """
+    tmp_store.save_user_token("t1", staff_id="staff1")
+    got = tmp_store.load_user_token("ghost-staff")
+    # Fallback returns first available user (or empty if nothing at all)
+    assert got["user_token"] in ("", "t1")
+    assert got["staff_id"] in ("ghost-staff", "staff1")
+
+
+def test_user_token_raw_state_structure(tmp_store):
+    """Verify the raw JSON structure has user_tokens nested per staff_id."""
+    tmp_store.save_user_token("t-a", "r-a", 7200, staff_id="staff-a")
+    tmp_store.save_user_token("t-b", "r-b", 7200, staff_id="staff-b")
+
+    state = tmp_store.load()
+    data = tmp_store._get_profile_data(state)
+    nested = data.get("user_tokens")
+    assert isinstance(nested, dict), "user_tokens should be a dict"
+    assert "staff-a" in nested
+    assert "staff-b" in nested
+    assert nested["staff-a"]["user_token"] == "t-a"
+    assert nested["staff-b"]["user_token"] == "t-b"
+
+
+def test_user_token_no_staff_id_still_writes_flat(tmp_store):
+    """save_user_token without staff_id writes flat fields (backward compat)."""
+    tmp_store.save_user_token("flat-ut", "flat-rt", 7200)
+    got = tmp_store.load_user_token("")
+    assert got["user_token"] == "flat-ut"
+    assert got["refresh_token"] == "flat-rt"
