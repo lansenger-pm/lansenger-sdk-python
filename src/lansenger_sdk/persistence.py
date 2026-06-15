@@ -4,19 +4,29 @@ Stores app credentials, appToken, and userToken in a JSON file
 so they survive process restarts. Default path: ~/.lansenger/sdk_state.json
 
 Supports multiple named profiles, each with its own credentials and tokens.
+userTokens are stored per-staff_id so multiple users can coexist in
+the same profile without overwriting each other.
+
 The file format is:
 
 {
   "profiles": {
-    "default": { "app_id": "...", "app_secret": "...", "api_gateway_url": "...", ... },
-    "prod":    { "app_id": "...", ... },
-    "staging": { "app_id": "...", ... }
+    "default": {
+      "app_id": "...",
+      "app_secret": "...",
+      "api_gateway_url": "...",
+      "user_tokens": {
+        "staff-id-a": { "user_token": "...", "refresh_token": "...", ... },
+        "staff-id-b": { "user_token": "...", "refresh_token": "...", ... }
+      }
+    }
   },
   "active_profile": "default"
 }
 
-Legacy single-credential format (flat dict with app_id at top level) is
-auto-migrated to the "default" profile on first load.
+Legacy single-credential format (flat dict with app_id at top level) and
+legacy flat userToken fields (user_token / refresh_token / staff_id at
+profile level) are auto-migrated on first load.
 
 The file is created with 0600 permissions (owner-only read/write).
 """
@@ -41,7 +51,7 @@ DEFAULT_PROFILE = "default"
 _LEGACY_KEYS = {"app_id", "app_secret", "api_gateway_url", "passport_url",
                 "redirect_uri", "encoding_key", "callback_token",
                 "app_token", "app_token_expiry", "user_token", "refresh_token",
-                "user_token_expiry"}
+                "user_token_expiry", "staff_id"}
 
 
 class CredentialStore:
@@ -104,10 +114,41 @@ class CredentialStore:
             logger.warning("Failed to set file permissions on %s", self._path)
         logger.debug("Saved SDK state to %s", self._path)
 
+    def _migrate_user_tokens(self, data: Dict[str, Any]) -> bool:
+        """Migrate flat userToken fields into user_tokens[staff_id] nested structure.
+
+        Returns True if a migration was performed (caller must persist).
+        Modifies *data* in place.
+        """
+        staff_id = (data.get("staff_id") or "").strip()
+        user_token = (data.get("user_token") or "").strip()
+        if not staff_id or not user_token:
+            return False
+
+        nested = data.get("user_tokens")
+        if isinstance(nested, dict) and staff_id in nested:
+            return False  # already migrated
+
+        if not isinstance(nested, dict):
+            nested = {}
+            data["user_tokens"] = nested
+
+        entry = {}
+        for key in ("user_token", "refresh_token", "user_token_expiry", "refresh_token_expiry"):
+            if key in data:
+                entry[key] = data.pop(key)
+        data.pop("staff_id", None)
+        nested[staff_id] = entry
+        logger.debug("Migrated flat userToken for staff_id=%s to nested user_tokens", staff_id)
+        return True
+
     def _get_profile_data(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Get the data dict for the current profile."""
+        """Get the data dict for the current profile, migrating flat userTokens on access."""
         profiles = state.get("profiles", {})
-        return profiles.get(self._profile, {})
+        data = profiles.get(self._profile, {})
+        if self._migrate_user_tokens(data):
+            self.save(state)
+        return data
 
     def _set_profile_data(self, state: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
         """Set the data dict for the current profile and return updated state."""
@@ -201,17 +242,55 @@ class CredentialStore:
         state = self._set_profile_data(state, data)
         self.save(state)
 
-    def load_user_token(self) -> Dict[str, Any]:
-        """Load userToken and refreshToken for current profile."""
+    def load_user_token(self, staff_id: str = "") -> Dict[str, Any]:
+        """Load userToken and refreshToken for current profile.
+
+        If staff_id is provided, reads from the per-user nested store
+        ``data["user_tokens"][staff_id]``.  Otherwise falls back to the
+        legacy flat fields (``data["user_token"]``, …) for backward
+        compatibility.  Flat fields are auto-migrated to nested on load.
+        """
         state = self.load()
         data = self._get_profile_data(state)
-        return {
+        if staff_id:
+            nested = data.get("user_tokens")
+            if isinstance(nested, dict):
+                entry = nested.get(staff_id)
+                if isinstance(entry, dict):
+                    return {
+                        "user_token": entry.get("user_token", ""),
+                        "refresh_token": entry.get("refresh_token", ""),
+                        "user_token_expiry": entry.get("user_token_expiry", 0),
+                        "refresh_token_expiry": entry.get("refresh_token_expiry", 0),
+                        "staff_id": staff_id,
+                    }
+        # Fallback: legacy flat fields (backward compat with old store format
+        # before migration runs). If flat is empty, try the first entry from
+        # the nested store (post-migration, when no staff_id is specified).
+        flat = {
             "user_token": data.get("user_token", ""),
             "refresh_token": data.get("refresh_token", ""),
             "user_token_expiry": data.get("user_token_expiry", 0),
             "refresh_token_expiry": data.get("refresh_token_expiry", 0),
             "staff_id": data.get("staff_id", ""),
         }
+        if flat["user_token"] and flat["staff_id"]:
+            return flat
+
+        nested = data.get("user_tokens")
+        if isinstance(nested, dict) and nested:
+            first_sid = next(iter(nested))
+            first_entry = nested.get(first_sid, {})
+            if isinstance(first_entry, dict):
+                return {
+                    "user_token": first_entry.get("user_token", ""),
+                    "refresh_token": first_entry.get("refresh_token", ""),
+                    "user_token_expiry": first_entry.get("user_token_expiry", 0),
+                    "refresh_token_expiry": first_entry.get("refresh_token_expiry", 0),
+                    "staff_id": first_sid,
+                }
+
+        return flat
 
     def save_user_token(
         self,
@@ -222,17 +301,47 @@ class CredentialStore:
         refresh_expires_in: int = 0,
         staff_id: str = "",
     ) -> None:
-        """Save userToken and refreshToken for current profile."""
+        """Save userToken and refreshToken into per-user nested store.
+
+        Writes into ``data["user_tokens"][staff_id]`` so multiple users
+        can coexist in the same profile without overwriting each other.
+        Falls back to legacy flat fields when no staff_id is provided
+        (backward compatibility).
+        """
         state = self.load()
         data = self._get_profile_data(state)
-        data["user_token"] = user_token
-        data["refresh_token"] = refresh_token
-        if expires_in:
-            data["user_token_expiry"] = time.time() + expires_in - margin
-        if refresh_expires_in:
-            data["refresh_token_expiry"] = time.time() + refresh_expires_in
-        if staff_id:
-            data["staff_id"] = staff_id
+
+        if not staff_id:
+            # Legacy flat path — no staff_id to key on
+            data["user_token"] = user_token
+            data["refresh_token"] = refresh_token
+            if expires_in:
+                data["user_token_expiry"] = time.time() + expires_in - margin
+            if refresh_expires_in:
+                data["refresh_token_expiry"] = time.time() + refresh_expires_in
+            data.pop("staff_id", None)
+        else:
+            nested = data.get("user_tokens")
+            if not isinstance(nested, dict):
+                nested = {}
+                data["user_tokens"] = nested
+
+            entry = nested.get(staff_id, {})
+            entry["user_token"] = user_token
+            entry["refresh_token"] = refresh_token
+            if expires_in:
+                entry["user_token_expiry"] = time.time() + expires_in - margin
+            if refresh_expires_in:
+                entry["refresh_token_expiry"] = time.time() + refresh_expires_in
+            nested[staff_id] = entry
+
+            # Clean up legacy flat fields after first nested save
+            data.pop("user_token", None)
+            data.pop("refresh_token", None)
+            data.pop("user_token_expiry", None)
+            data.pop("refresh_token_expiry", None)
+            data.pop("staff_id", None)
+
         state = self._set_profile_data(state, data)
         self.save(state)
 

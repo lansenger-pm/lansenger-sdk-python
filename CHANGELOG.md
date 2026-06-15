@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.13] - 2026-06-16
+
+### Fixed
+
+- **persistence**: Fix multi-user userToken overwrite bug in `CredentialStore`. Previously `save_user_token()` wrote tokens as flat fields in the profile, so each new OAuth2 authorization for the same app overwrote the previous user's tokens. Tokens are now stored per-staff_id in `data["user_tokens"][staff_id]` so multiple users can coexist in the same profile. Legacy flat-format stores are auto-migrated on load.
+
 ## [1.6.12] - 2026-06-15
 
 ### Added

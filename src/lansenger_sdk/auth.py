@@ -137,7 +137,7 @@ class UserTokenManager:
         self._staff_id: Optional[str] = None
 
         if self._store:
-            cached = self._store.load_user_token()
+            cached = self._store.load_user_token(staff_id=self._staff_id or "")
             ut = cached.get("user_token", "")
             rt = cached.get("refresh_token", "")
             expiry = cached.get("user_token_expiry", 0)
