@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.12] - 2026-06-15
+
+### Added
+
+- **persistence**: `CredentialStore.delete_profile_by_name(name)` method to delete a specific profile by name. Automatically falls back to `"default"` if the deleted profile was the active one. Returns `True` on success, `False` if the profile does not exist.
+
 ## [1.6.11] - 2026-06-12
 
 ### Fixed

@@ -245,6 +245,26 @@ class CredentialStore:
             self.save(state)
             logger.debug("Cleared profile '%s'", self._profile)
 
+    def delete_profile_by_name(self, name: str) -> bool:
+        """Delete a profile by name from the store.
+
+        If the deleted profile is the active profile, automatically
+        falls back to ``"default"``.
+
+        Returns:
+            True if the profile was found and deleted, False otherwise.
+        """
+        state = self.load()
+        profiles = state.get("profiles", {})
+        if name not in profiles:
+            return False
+        del profiles[name]
+        if state.get("active_profile") == name:
+            state["active_profile"] = DEFAULT_PROFILE
+        self.save(state)
+        logger.debug("Deleted profile '%s'", name)
+        return True
+
     def clear(self) -> None:
         """Delete the entire state file."""
         if self._path.exists():
