@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.14] - 2026-06-16
+
+### Added
+
+- **tests**: Multi-user userToken isolation test suite covering: two users not overwriting each other, cross-staff independence, legacy flat format auto-migration, raw JSON structure verification, and backward-compatible no-staff_id fallback.
+
 ## [1.6.13] - 2026-06-16
 
 ### Fixed
