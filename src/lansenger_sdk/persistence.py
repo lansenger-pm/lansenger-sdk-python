@@ -117,8 +117,12 @@ class CredentialStore:
     def _migrate_user_tokens(self, data: Dict[str, Any]) -> bool:
         """Migrate flat userToken fields into user_tokens[staff_id] nested structure.
 
-        Returns True if a migration was performed (caller must persist).
+        Returns True if a migration or cleanup was performed (caller must persist).
         Modifies *data* in place.
+
+        If ``staff_id`` already exists in ``user_tokens``, flat fields are merged
+        into the existing entry (newer flat data wins), then flat is cleaned.
+        This handles the case where an old SDK rewrites flat after migration.
         """
         staff_id = (data.get("staff_id") or "").strip()
         user_token = (data.get("user_token") or "").strip()
@@ -126,21 +130,22 @@ class CredentialStore:
             return False
 
         nested = data.get("user_tokens")
-        if isinstance(nested, dict) and staff_id in nested:
-            return False  # already migrated
-
         if not isinstance(nested, dict):
             nested = {}
             data["user_tokens"] = nested
 
-        entry = {}
+        # Merge flat into nested — either create new or update existing entry
+        entry = nested.get(staff_id, {})
+        changed = False
         for key in ("user_token", "refresh_token", "user_token_expiry", "refresh_token_expiry"):
             if key in data:
                 entry[key] = data.pop(key)
+                changed = True
         data.pop("staff_id", None)
-        nested[staff_id] = entry
-        logger.debug("Migrated flat userToken for staff_id=%s to nested user_tokens", staff_id)
-        return True
+        if changed:
+            nested[staff_id] = entry
+            logger.debug("Migrated/merged flat userToken for staff_id=%s", staff_id)
+        return changed
 
     def _get_profile_data(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Get the data dict for the current profile, migrating flat userTokens on access."""

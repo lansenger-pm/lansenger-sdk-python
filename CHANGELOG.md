@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.15] - 2026-06-16
+
+### Fixed
+
+- **persistence**: `_migrate_user_tokens` now merges flat fields into existing nested entries instead of skipping them. Fixes stale flat fields left by old SDK after migration (Issue [#2](https://github.com/lansenger-pm/lansenger-sdk-python/issues/2)).
+
+### Added
+
+- **tests**: Tests for stale flat field migration cleanup and migration no-op scenarios.
+
 ## [1.6.14] - 2026-06-16
 
 ### Added

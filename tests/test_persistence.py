@@ -470,3 +470,50 @@ def test_user_token_no_staff_id_still_writes_flat(tmp_store):
     got = tmp_store.load_user_token("")
     assert got["user_token"] == "flat-ut"
     assert got["refresh_token"] == "flat-rt"
+
+
+def test_user_token_migration_cleans_stale_flat(tmp_store):
+    """Issue #2: flat fields written by old SDK after migration are cleaned.
+
+    1. SDK 1.6.14 writes nested user_tokens (no flat)
+    2. Old SDK writes flat user_token + staff_id
+    3. _migrate_user_tokens should merge flat into existing nested + clean flat
+    """
+    # 1. Normal nested save
+    tmp_store.save_user_token("nested-ut", "nested-rt", 7200, staff_id="staff-1")
+
+    # 2. Simulate old SDK writing flat fields on top of nested
+    state = tmp_store.load()
+    data = tmp_store._get_profile_data(state)
+    data["user_token"] = "old-sdk-ut"
+    data["refresh_token"] = "old-sdk-rt"
+    data["staff_id"] = "staff-1"
+    data["user_token_expiry"] = _NOW + 3600
+    data["refresh_token_expiry"] = _NOW + 86400
+    state = tmp_store._set_profile_data(state, data)
+    tmp_store.save(state)
+
+    # 3. Access triggers _migrate_user_tokens → should merge & clean
+    got = tmp_store.load_user_token("staff-1")
+    assert got["user_token"] == "old-sdk-ut", "flat value should override nested"
+    assert got["refresh_token"] == "old-sdk-rt"
+
+    # 4. Verify flat fields are gone from raw file
+    state2 = tmp_store.load()
+    data2 = tmp_store._get_profile_data(state2)
+    assert "user_token" not in data2, "flat user_token should be cleaned"
+    assert "staff_id" not in data2, "flat staff_id should be cleaned"
+
+    # 5. nested entry should have the merged (flat) value
+    nested = data2["user_tokens"]["staff-1"]
+    assert nested["user_token"] == "old-sdk-ut"
+
+
+def test_user_token_migration_noop_when_no_flat(tmp_store):
+    """_migrate_user_tokens returns False and does nothing when no flat fields."""
+    tmp_store.save_user_token("t-a", staff_id="staff-a")
+    state = tmp_store.load()
+    data = tmp_store._get_profile_data(state)
+    # Force _migrate_user_tokens to run — nothing should change
+    result = tmp_store._migrate_user_tokens(data)
+    assert result is False, "no flat fields → no migration needed"
