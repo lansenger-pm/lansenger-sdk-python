@@ -9,7 +9,6 @@ Uses asyncio.run() for each call. If an event loop is already running
 
 from __future__ import annotations
 
-import asyncio
 import concurrent.futures
 import logging
 import time
@@ -75,6 +74,7 @@ logger = logging.getLogger("lansenger_sdk.sync_client")
 
 def _run_async(coro):
     """Run an async coroutine from a synchronous context."""
+    import asyncio
     try:
         return asyncio.run(coro)
     except RuntimeError:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from urllib.parse import quote
@@ -129,6 +128,7 @@ class UserTokenManager:
         self._http_client = http_client
         self._app_token_manager = app_token_manager
         self._store = store
+        import asyncio
         self._lock = asyncio.Lock()
         self._user_token: Optional[str] = None
         self._refresh_token: Optional[str] = None

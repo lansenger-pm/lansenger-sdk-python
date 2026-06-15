@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.16] - 2026-06-16
+
+### Fixed
+
+- **startup**: lazy-import `asyncio` instead of top-level import in `auth.py` and `sync_client.py`. Fixes `WinError 10038` / `NameError: base_events` on Windows environments where loading `asyncio._overlapped` fails at import time.
+
 ## [1.6.15] - 2026-06-16
 
 ### Fixed
