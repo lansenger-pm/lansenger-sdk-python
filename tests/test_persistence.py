@@ -232,3 +232,71 @@ def test_async_client_from_store_with_encoding_key():
     assert client._store is not None
     if os.path.exists(path):
         os.unlink(path)
+
+
+# ── delete_profile_by_name ──────────────────────────────────────
+
+def test_delete_profile_by_name_deletes_and_returns_true():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+    try:
+        store = CredentialStore(path=path)
+        store.save_credentials("app1", "secret1")
+        assert store.delete_profile_by_name("default") is True
+        assert "default" not in store.list_profiles()
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+def test_delete_profile_by_name_nonexistent_returns_false():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+    try:
+        store = CredentialStore(path=path)
+        store.save_credentials("app1", "secret1")
+        assert store.delete_profile_by_name("ghost") is False
+        assert "default" in store.list_profiles()
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+def test_delete_profile_by_name_preserves_other_profiles():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+    try:
+        store_a = CredentialStore(path=path, profile="alpha")
+        store_b = CredentialStore(path=path, profile="beta")
+        store_a.save_credentials("appA", "secA")
+        store_b.save_credentials("appB", "secB")
+        profiles = store_a.list_profiles()
+        assert "alpha" in profiles
+        assert "beta" in profiles
+        assert store_a.delete_profile_by_name("alpha") is True
+        profiles = store_b.list_profiles()
+        assert "alpha" not in profiles
+        assert "beta" in profiles
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+def test_delete_profile_by_name_active_falls_back_to_default():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+    try:
+        store = CredentialStore(path=path)
+        store.set_active_profile("staging")
+        store_a = CredentialStore(path=path, profile="staging")
+        store_a.save_credentials("appX", "secX")
+        assert store.get_active_profile() == "staging"
+        assert store.delete_profile_by_name("staging") is True
+        assert store.get_active_profile() == "default"
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
