@@ -390,6 +390,15 @@ class CredentialStore:
         state = self.load()
         return list(state.get("profiles", {}).keys())
 
+    def list_user_tokens(self) -> List[str]:
+        """List all staff_ids that have user tokens stored in the current profile."""
+        state = self.load()
+        data = self._get_profile_data(state)
+        nested = data.get("user_tokens")
+        if isinstance(nested, dict):
+            return list(nested.keys())
+        return []
+
     def get_active_profile(self) -> str:
         """Get the active profile name."""
         state = self.load()

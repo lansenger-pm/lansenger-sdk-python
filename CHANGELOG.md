@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.17] - 2026-06-16
+
+### Added
+
+- **persistence**: `CredentialStore.list_user_tokens()` method to list all staff_ids with stored user tokens in the current profile.
+- **client**: `get_user_token(staff_id="")` now accepts optional `staff_id` parameter to retrieve token for a specific user. When `staff_id` is provided, loads from CredentialStore and supports auto-refresh. When empty, maintains backward compatibility with single-user mode.
+- **client**: `set_user_tokens(..., staff_id="")` now saves tokens to CredentialStore when `staff_id` is provided.
+- **tests**: Test suite for `list_user_tokens` (empty, single user, multiple users, profile isolation, legacy migration) and `get_user_token/staff_id` integration tests.
+
+### Changed
+
+- **sync_client**: `get_user_token(staff_id="")` and `set_user_tokens(..., staff_id="")` updated to support multi-user mode.
+
 ## [1.6.16] - 2026-06-16
 
 ### Fixed

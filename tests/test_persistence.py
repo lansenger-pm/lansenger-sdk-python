@@ -517,3 +517,144 @@ def test_user_token_migration_noop_when_no_flat(tmp_store):
     # Force _migrate_user_tokens to run — nothing should change
     result = tmp_store._migrate_user_tokens(data)
     assert result is False, "no flat fields → no migration needed"
+
+
+# ── list_user_tokens ──────────────────────────────────────────────
+
+def test_list_user_tokens_empty(tmp_store):
+    """list_user_tokens returns empty list when no users stored."""
+    users = tmp_store.list_user_tokens()
+    assert users == []
+
+
+def test_list_user_tokens_single_user(tmp_store):
+    """list_user_tokens returns single staff_id."""
+    tmp_store.save_user_token("token1", "rt1", 7200, staff_id="staff1")
+    users = tmp_store.list_user_tokens()
+    assert "staff1" in users
+
+
+def test_list_user_tokens_multiple_users(tmp_store):
+    """list_user_tokens returns all staff_ids."""
+    tmp_store.save_user_token("token1", "rt1", 7200, staff_id="staff1")
+    tmp_store.save_user_token("token2", "rt2", 7200, staff_id="staff2")
+    tmp_store.save_user_token("token3", "rt3", 7200, staff_id="staff3")
+    users = tmp_store.list_user_tokens()
+    assert len(users) == 3
+    assert "staff1" in users
+    assert "staff2" in users
+    assert "staff3" in users
+
+
+def test_list_user_tokens_legacy_flat_migrated(tmp_store):
+    """list_user_tokens includes legacy flat user after auto-migration."""
+    state = tmp_store.load()
+    data = tmp_store._get_profile_data(state)
+    data["user_token"] = "legacy-ut"
+    data["staff_id"] = "legacy-staff"
+    state = tmp_store._set_profile_data(state, data)
+    tmp_store.save(state)
+
+    tmp_store.load_user_token("")
+
+    users = tmp_store.list_user_tokens()
+    assert "legacy-staff" in users
+
+
+def test_list_user_tokens_profile_isolation(tmp_store):
+    """list_user_tokens only returns users from current profile."""
+    store_alpha = CredentialStore(path=tmp_store.path, profile="alpha")
+    store_beta = CredentialStore(path=tmp_store.path, profile="beta")
+
+    store_alpha.save_user_token("t1", "rt1", 7200, staff_id="staff-a")
+    store_beta.save_user_token("t2", "rt2", 7200, staff_id="staff-b")
+
+    alpha_users = store_alpha.list_user_tokens()
+    beta_users = store_beta.list_user_tokens()
+
+    assert "staff-a" in alpha_users
+    assert "staff-b" not in alpha_users
+    assert "staff-b" in beta_users
+    assert "staff-a" not in beta_users
+
+
+# ── client get_user_token with staff_id ──────────────────────────
+
+@pytest.mark.asyncio
+async def test_client_get_user_token_with_staff_id():
+    """Client can get user_token for specific staff_id."""
+    import tempfile
+    import os
+    from lansenger_sdk import LansengerClient
+
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+
+    try:
+        store = CredentialStore(path=path)
+        store.save_credentials("app123", "secret456")
+        store.save_user_token("token-a", "rt-a", 7200, staff_id="staff-a")
+        store.save_user_token("token-b", "rt-b", 7200, staff_id="staff-b")
+
+        client = LansengerClient.from_store(path=path)
+
+        token_a = await client.get_user_token(staff_id="staff-a")
+        token_b = await client.get_user_token(staff_id="staff-b")
+
+        assert token_a == "token-a"
+        assert token_b == "token-b"
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+@pytest.mark.asyncio
+async def test_client_get_user_token_no_staff_id_backward_compat():
+    """get_user_token() without staff_id returns first available token."""
+    import tempfile
+    import os
+    from lansenger_sdk import LansengerClient
+
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+
+    try:
+        store = CredentialStore(path=path)
+        store.save_credentials("app123", "secret456")
+        store.save_user_token("token1", "rt1", 7200, staff_id="staff1")
+
+        client = LansengerClient.from_store(path=path)
+
+        token = await client.get_user_token()
+        assert token == "token1"
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+@pytest.mark.asyncio
+async def test_client_set_user_tokens_with_staff_id():
+    """Client can set user_token for specific staff_id."""
+    import tempfile
+    import os
+    from lansenger_sdk import LansengerClient
+
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        path = f.name
+    os.unlink(path)
+
+    try:
+        store = CredentialStore(path=path)
+        store.save_credentials("app123", "secret456")
+
+        client = LansengerClient.from_store(path=path)
+        client.set_user_tokens("token-c", "rt-c", 7200, staff_id="staff-c")
+
+        loaded = store.load_user_token("staff-c")
+        assert loaded["user_token"] == "token-c"
+        assert loaded["refresh_token"] == "rt-c"
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)

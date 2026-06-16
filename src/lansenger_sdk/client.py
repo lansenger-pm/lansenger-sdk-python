@@ -25,12 +25,13 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+import time
 from urllib.parse import quote
 from typing import Any, Dict, List, Optional
 
 import httpx
 
-from .auth import TokenManager, UserTokenManager
+from .auth import TokenManager, UserTokenManager, _USER_TOKEN_REFRESH_MARGIN
 from .config import LansengerConfig
 from .constants import (
     APP_MEDIA_TYPE_FILE,
@@ -264,15 +265,85 @@ class LansengerClient:
         self._ensure_clients()
         return await self._token_manager.get_token()
 
-    async def get_user_token(self) -> str:
+    async def get_user_token(self, staff_id: str = "") -> str:
         """Get a valid userToken, auto-refreshing if expired.
+
+        When staff_id is provided, loads the token from the CredentialStore
+        for that specific user. When staff_id is empty, uses the token
+        registered with set_user_tokens() (single-user mode).
 
         Requires that tokens were registered via exchange_code() or
         set_user_tokens() first. Raises LansengerAuthError if
         refreshToken has expired (must re-authorize).
+
+        Args:
+            staff_id: Optional staff_id to get the token for a specific user.
+                When provided, reads from the per-user credential store.
         """
         self._ensure_clients()
-        return await self._user_token_manager.get_token()
+
+        if not staff_id:
+            return await self._user_token_manager.get_token()
+
+        if not self._store:
+            raise LansengerAuthError(
+                "CredentialStore is required for multi-user token management. "
+                "Provide store_path when creating the client."
+            )
+
+        cached = self._store.load_user_token(staff_id=staff_id)
+        user_token = cached.get("user_token", "")
+        refresh_token = cached.get("refresh_token", "")
+        expiry = cached.get("user_token_expiry", 0)
+
+        if user_token and expiry > time.time():
+            return user_token
+
+        if not refresh_token:
+            raise LansengerAuthError(
+                f"No userToken available for staff_id={staff_id} and no refreshToken for auto-refresh. "
+                "Run OAuth2 authorize flow: build_authorize_url → exchange_code."
+            )
+
+        app_token = await self._get_token()
+        url = build_api_url(self._config, "oauth2", "refresh_token_create", app_token)
+        url += f"&grant_type=refresh_token&refresh_token={quote(refresh_token)}"
+
+        try:
+            response = await self._http_client.get(url)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            raise LansengerNetworkError(f"userToken refresh failed: {e}") from e
+
+        err_code = data.get("errCode", -1)
+        if err_code != 0:
+            msg = data.get("errMsg", "Unknown refresh error")
+            raise LansengerAuthError(
+                f"userToken refresh error (errCode={err_code}): {msg}",
+                err_code=err_code,
+            )
+
+        token_data = data.get("data", {})
+        new_user_token = token_data.get("userToken")
+        expires_in = token_data.get("expiresIn", 7200)
+        new_refresh_token = token_data.get("refreshToken")
+        refresh_expires_in = token_data.get("refreshExpiresIn", 0)
+        new_staff_id = token_data.get("staffId") or staff_id
+
+        if not new_user_token:
+            raise LansengerAuthError("Refresh response missing userToken field")
+
+        self._store.save_user_token(
+            user_token=new_user_token,
+            refresh_token=new_refresh_token or "",
+            expires_in=expires_in,
+            margin=_USER_TOKEN_REFRESH_MARGIN,
+            refresh_expires_in=refresh_expires_in,
+            staff_id=new_staff_id,
+        )
+
+        return new_user_token
 
     def set_user_tokens(
         self,
@@ -286,8 +357,31 @@ class LansengerClient:
 
         Call after exchange_code() or any manual OAuth2 authorization
         to enable proactive refresh before expiry.
+
+        When staff_id is provided, saves the token to the CredentialStore
+        for that specific user (multi-user mode). When staff_id is empty,
+        uses single-user mode.
+
+        Args:
+            user_token: The user's userToken.
+            refresh_token: The user's refreshToken.
+            expires_in: Token expiry in seconds (default: 7200).
+            staff_id: Optional staff_id to associate with this token.
+                When provided, saves to the per-user credential store.
+            refresh_expires_in: Refresh token expiry in seconds.
         """
         self._ensure_clients()
+
+        if self._store:
+            self._store.save_user_token(
+                user_token=user_token,
+                refresh_token=refresh_token,
+                expires_in=expires_in,
+                margin=_USER_TOKEN_REFRESH_MARGIN,
+                refresh_expires_in=refresh_expires_in,
+                staff_id=staff_id,
+            )
+
         self._user_token_manager.set_tokens(
             user_token=user_token,
             refresh_token=refresh_token,

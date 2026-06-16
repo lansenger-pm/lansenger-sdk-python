@@ -675,13 +675,24 @@ class LansengerSyncClient:
             scope=scope,
         ))
 
-    def get_user_token(self) -> str:
+    def get_user_token(self, staff_id: str = "") -> str:
         """Get a valid userToken with auto-refresh (blocking).
 
+        When staff_id is provided, loads the token from the CredentialStore
+        for that specific user.
+
         Requires tokens registered via exchange_code or set_user_tokens first.
+
+        Args:
+            staff_id: Optional staff_id to get the token for a specific user.
         """
         if self._async_client_for_tokens:
-            return _run_async(self._async_client_for_tokens.get_user_token())
+            return _run_async(self._async_client_for_tokens.get_user_token(staff_id=staff_id))
+        elif staff_id:
+            raise LansengerAuthError(
+                "CredentialStore is required for multi-user token management. "
+                "Use LansengerSyncClient.from_store() to enable credential persistence."
+            )
         else:
             raise LansengerAuthError(
                 "No userToken available. Call exchange_code() or set_user_tokens() first."
@@ -695,7 +706,18 @@ class LansengerSyncClient:
         staff_id: str = "",
         refresh_expires_in: int = 0,
     ) -> None:
-        """Register userToken + refreshToken for auto-refresh."""
+        """Register userToken + refreshToken for auto-refresh.
+
+        When staff_id is provided, saves the token to the CredentialStore
+        for that specific user (multi-user mode).
+
+        Args:
+            user_token: The user's userToken.
+            refresh_token: The user's refreshToken.
+            expires_in: Token expiry in seconds (default: 7200).
+            staff_id: Optional staff_id to associate with this token.
+            refresh_expires_in: Refresh token expiry in seconds.
+        """
         if self._async_client_for_tokens is None:
             self._async_client_for_tokens = LansengerClient(
                 app_id=self._app_id,
