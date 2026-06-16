@@ -476,6 +476,72 @@ result = client.send_text(chat_id="staff123", content="Hello!")
 org = client.fetch_org_info(org_id="orgId")
 ```
 
+## Identity &amp; Permissions
+
+### Identity Capability Matrix
+
+The Lansenger platform has three identity types with different API access:
+
+| Command Domain | Personal Bot | Org App (Self-built) | Org App + Bot | Notes |
+|--------|:---:|:---:|:---:|------|
+| `message send-text/markdown/file/...` (bot DM) | **Y** | N | **Y** | Only bots can send bot DMs |
+| `message send-text --group` (group chat) | N* | N | **Y** | Personal bot API supports it but no join-group feature yet |
+| `message send-group-message` | N* | N | **Y** | Same as above |
+| `message send-account-message` (public account) | N | **Y** | **Y** | Requires public account capability |
+| `message send-user-message` (user-to-user) | N | **Y** | **Y** | Requires userToken + OAuth2 |
+| `message revoke` | **Y** | **Y** | **Y** | Revoke own messages |
+| `staff *` (contacts read-only) | N | **Y** | **Y** | `search` additionally requires userToken |
+| `department *` | N | **Y** | **Y** | Org-level apps only |
+| `calendar *` | N | **Y** | **Y** | With userToken = user identity; without = bot identity |
+| `todo *` | N | **Y** | **Y** | Org-level apps only |
+| `chat list/messages` | N | **Y** | **Y** | Org-level apps only |
+| `group *` (group management V2) | N | N | **Y** | Requires bot to be in group |
+| `media upload` | **Y** | **Y** | **Y** | General upload |
+| `media upload-app` | N | **Y** | **Y** | Self-built apps only (not ISV) |
+| `media download/path` | **Y** | **Y** | **Y** | General download |
+| `oauth *` | N | **Y** | **Y** | Org-level apps only |
+| `streaming *` | N | **Y** | **Y** | Org-level apps only |
+| `callback *` (event parsing) | N/A | N/A | N/A | Pure data operation, no identity required |
+
+> \* **N\*** = API capability exists, but join-group feature not yet available.
+
+> **Personal Bot** can only send/receive messages and upload/download files. Cannot access contacts, groups, calendars, or OAuth2.
+>
+> **Org App vs Org App + Bot**: Same appID/appSecret. The only difference is messaging channels — only bots can send bot DMs and group messages (because only bots can join groups). All other APIs (contacts, calendar, todo, chat, OAuth2, streaming) work identically for both. Currently only self-built apps support bot capability.
+
+### Developer Center Permissions
+
+Beyond identity type, specific API calls also depend on permission toggles in the Lansenger Developer Center. The organization may restrict developer access, requiring admin assistance.
+
+**Basic Permissions (enabled by default):**
+
+| Permission | Description |
+|------|------|
+| Get basic user info | Get personnel basic info for system/app login |
+| Send notification messages | Get org message channels to send messages to people/groups |
+
+**Advanced Permissions (disabled by default, must be manually enabled):**
+
+| Permission | Description |
+|------|------|
+| Contacts read-only | Read access to contacts |
+| Contacts edit | Edit access to contacts (create/update/delete staff) |
+| Sensitive info - Phone | Access user phone numbers |
+| Sensitive info - Email | Access user emails |
+| Sensitive info - ID number | Access user ID numbers |
+| Sensitive info - Employee ID | Access user employee IDs |
+| Map unique attribute to staff ID | Map phone/email/employee ID to staff ID |
+| App edit | Create and update apps |
+| Groups read-only | Read access to groups |
+| Groups edit | Edit access to groups |
+| Calendar read-only | Read access to calendar &amp; schedules |
+| Calendar edit | Edit access to calendar &amp; schedules |
+| Upload media | Upload media file permission |
+| Workbench template read | Read access to workbench templates |
+| Workbench template write | Write access to workbench templates |
+
+When encountering permission errors, first verify the identity type supports the operation, then prompt the user to enable the corresponding advanced permission in the Developer Center (contact org admin if unable to access).
+
 ## Project Structure
 
 ```

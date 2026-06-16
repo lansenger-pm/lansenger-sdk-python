@@ -474,6 +474,72 @@ result = client.send_text(chat_id="staff123", content="Hello!")
 org = client.fetch_org_info(org_id="orgId")
 ```
 
+## Identité &amp; Permissions
+
+### Matrice des capacités par identité
+
+La plateforme Lansenger propose trois types d'identité avec des accès API différents :
+
+| Domaine de commande | Robot personnel | App Org (auto-hébergée) | App Org + Robot | Notes |
+|--------|:---:|:---:|:---:|------|
+| `message send-text/markdown/file/...` (DM robot) | **Y** | N | **Y** | Seuls les robots peuvent envoyer des DM robot |
+| `message send-text --group` (chat de groupe) | N* | N | **Y** | L'API robot personnel le supporte mais pas encore de fonction rejoindre-groupe |
+| `message send-group-message` | N* | N | **Y** | Identique à ci-dessus |
+| `message send-account-message` (compte officiel) | N | **Y** | **Y** | Nécessite la capacité compte officiel |
+| `message send-user-message` (utilisateur-à-utilisateur) | N | **Y** | **Y** | Nécessite userToken + OAuth2 |
+| `message revoke` | **Y** | **Y** | **Y** | Révoquer ses propres messages |
+| `staff *` (contacts lecture seule) | N | **Y** | **Y** | `search` nécessite en plus userToken |
+| `department *` | N | **Y** | **Y** | Applications niveau organisation uniquement |
+| `calendar *` | N | **Y** | **Y** | Avec userToken = identité utilisateur ; sans = identité robot |
+| `todo *` | N | **Y** | **Y** | Applications niveau organisation uniquement |
+| `chat list/messages` | N | **Y** | **Y** | Applications niveau organisation uniquement |
+| `group *` (gestion de groupes V2) | N | N | **Y** | Nécessite que le robot soit dans le groupe |
+| `media upload` | **Y** | **Y** | **Y** | Upload général |
+| `media upload-app` | N | **Y** | **Y** | Applications auto-hébergées uniquement (pas ISV) |
+| `media download/path` | **Y** | **Y** | **Y** | Téléchargement général |
+| `oauth *` | N | **Y** | **Y** | Applications niveau organisation uniquement |
+| `streaming *` | N | **Y** | **Y** | Applications niveau organisation uniquement |
+| `callback *` (parsing d'événements) | N/A | N/A | N/A | Opération purement données, aucune identité requise |
+
+> \* **N\*** = La capacité API existe, mais la fonction rejoindre-groupe n'est pas encore disponible.
+
+> **Robot personnel** peut uniquement envoyer/recevoir des messages et uploader/télécharger des fichiers. Ne peut pas accéder aux contacts, groupes, calendriers ou OAuth2.
+>
+> **App Org vs App Org + Robot** : Même appID/appSecret. La seule différence réside dans les canaux de messagerie — seuls les robots peuvent envoyer des DM robot et des messages de groupe (car seuls les robots peuvent rejoindre des groupes). Toutes les autres API (contacts, calendrier, todo, chat, OAuth2, streaming) fonctionnent de manière identique pour les deux. Actuellement, seules les applications auto-hébergées supportent la capacité robot.
+
+### Permissions du Centre Développeur
+
+Au-delà du type d'identité, certains appels API dépendent également des permissions activées dans le Centre Développeur Lansenger. L'organisation peut restreindre l'accès développeur, nécessitant l'assistance d'un administrateur.
+
+**Permissions de base (activées par défaut) :**
+
+| Permission | Description |
+|------|------|
+| Obtenir les infos utilisateur de base | Obtenir les informations de base du personnel pour la connexion système/app |
+| Envoyer des messages de notification | Obtenir les canaux de messagerie de l'organisation pour envoyer des messages aux personnes/groupes |
+
+**Permissions avancées (désactivées par défaut, doivent être activées manuellement) :**
+
+| Permission | Description |
+|------|------|
+| Contacts lecture seule | Accès en lecture aux contacts |
+| Contacts édition | Accès en édition aux contacts (créer/modifier/supprimer du personnel) |
+| Infos sensibles - Téléphone | Accéder aux numéros de téléphone des utilisateurs |
+| Infos sensibles - Email | Accéder aux emails des utilisateurs |
+| Infos sensibles - N° d'identité | Accéder aux numéros d'identité des utilisateurs |
+| Infos sensibles - ID employé | Accéder aux IDs employé des utilisateurs |
+| Mapper attribut unique vers ID personnel | Mapper téléphone/email/ID employé vers ID personnel |
+| Édition d'app | Créer et mettre à jour des applications |
+| Groupes lecture seule | Accès en lecture aux groupes |
+| Groupes édition | Accès en édition aux groupes |
+| Calendrier lecture seule | Accès en lecture au calendrier &amp; schedules |
+| Calendrier édition | Accès en édition au calendrier &amp; schedules |
+| Upload média | Permission d'upload de fichiers média |
+| Modèle workbench lecture | Accès en lecture aux modèles workbench |
+| Modèle workbench écriture | Accès en écriture aux modèles workbench |
+
+En cas d'erreur de permission, vérifiez d'abord que le type d'identité supporte l'opération, puis invitez l'utilisateur à activer la permission avancée correspondante dans le Centre Développeur (contacter l'admin de l'organisation si l'accès est impossible).
+
 ## Structure du projet
 
 ```
