@@ -188,6 +188,18 @@ result = await client.send_group_message(
 result = await client.send_text(
     chat_id="group123", content="Important!", is_group=True, reminder_all=True,
 )
+
+# @提及特定機器人
+result = await client.send_text(
+    chat_id="group123", content="Bot check!", is_group=True,
+    reminder_bot_ids=["bot001", "bot002"],
+)
+
+# 回覆訊息（訊息引用）
+result = await client.send_text(
+    chat_id="group123", content="Got it!", is_group=True,
+    ref_msg_id="524288-xxxx",
+)
 ```
 
 #### 富卡片

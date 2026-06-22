@@ -188,6 +188,18 @@ result = await client.send_group_message(
 result = await client.send_text(
     chat_id="group123", content="Important!", is_group=True, reminder_all=True,
 )
+
+# @mention de bots spécifiques
+result = await client.send_text(
+    chat_id="group123", content="Bot check!", is_group=True,
+    reminder_bot_ids=["bot001", "bot002"],
+)
+
+# Répondre à un message (référence)
+result = await client.send_text(
+    chat_id="group123", content="Got it!", is_group=True,
+    ref_msg_id="524288-xxxx",
+)
 ```
 
 #### Cartes enrichies
