@@ -495,7 +495,7 @@ org = client.fetch_org_info(org_id="orgId")
 | 命令域 | 個人機械人 | 組織應用(自建) | 組織應用+機械人 | 備註 |
 |--------|:---:|:---:|:---:|------|
 | `message send-text/markdown/file/...` (機械人私聊) | **Y** | N | **Y** | 僅機械人可傳送機械人私聊 |
-| `message send-text --group` (群聊) | **Y** | N | **Y** | 個人機械人 API 支援但暫無加群功能 |
+| `message send-text --group` (群聊) | **Y** | N | **Y** | 個人機械人現已支援群聊 |
 | `message send-group-message` | **Y** | N | **Y** | 同上 |
 | `message send-account-message` (公眾號) | N | **Y** | **Y** | 需要公眾號能力 |
 | `message send-user-message` (人→人) | N | **Y** | **Y** | 需要 userToken + OAuth2 |

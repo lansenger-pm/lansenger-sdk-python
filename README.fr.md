@@ -495,7 +495,7 @@ La plateforme Lansenger propose trois types d'identité avec des accès API diff
 | Domaine de commande | Robot personnel | App Org (auto-hébergée) | App Org + Robot | Notes |
 |--------|:---:|:---:|:---:|------|
 | `message send-text/markdown/file/...` (DM robot) | **Y** | N | **Y** | Seuls les robots peuvent envoyer des DM robot |
-| `message send-text --group` (chat de groupe) | **Y** | N | **Y** | L'API robot personnel le supporte mais pas encore de fonction rejoindre-groupe |
+| `message send-text --group` (chat de groupe) | **Y** | N | **Y** | Le robot personnel prend désormais en charge la messagerie de groupe |
 | `message send-group-message` | **Y** | N | **Y** | Identique à ci-dessus |
 | `message send-account-message` (compte officiel) | N | **Y** | **Y** | Nécessite la capacité compte officiel |
 | `message send-user-message` (utilisateur-à-utilisateur) | N | **Y** | **Y** | Nécessite userToken + OAuth2 |

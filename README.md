@@ -497,7 +497,7 @@ The Lansenger platform has three identity types with different API access:
 | Command Domain | Personal Bot | Org App (Self-built) | Org App + Bot | Notes |
 |--------|:---:|:---:|:---:|------|
 | `message send-text/markdown/file/...` (bot DM) | **Y** | N | **Y** | Only bots can send bot DMs |
-| `message send-text --group` (group chat) | **Y** | N | **Y** | Personal bot API supports it but no join-group feature yet |
+| `message send-text --group` (group chat) | **Y** | N | **Y** | Personal bot now supports group messaging |
 | `message send-group-message` | **Y** | N | **Y** | Same as above |
 | `message send-account-message` (public account) | N | **Y** | **Y** | Requires public account capability |
 | `message send-user-message` (user-to-user) | N | **Y** | **Y** | Requires userToken + OAuth2 |
