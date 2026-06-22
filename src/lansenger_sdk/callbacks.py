@@ -212,6 +212,8 @@ class BotPrivateMessageData:
     entry_id: str = ""
     msg_type: str = ""
     msg_data: dict = field(default_factory=dict)
+    msg_id: str = ""
+    reference_msg: Optional[dict] = None
 
 
 @dataclass
@@ -228,6 +230,7 @@ class BotGroupMessageData:
     bot_id: str = ""
     is_at_me: bool = False
     is_at_all: bool = False
+    reference_msg: Optional[dict] = None
 
 
 # ── 11. Workbench visible config ───────────────────────────────────────
@@ -376,8 +379,8 @@ FIELD_MAPS: Dict[str, Dict[str, str]] = {
     "report_location": {},
     "user_logout": {"staffId": "staff_id", "deviceId": "device_id", "timestamp": "timestamp"},
     "data_scope": {"deptIds": "dept_ids", "timestamp": "timestamp"},
-    "bot_private_message": {"from": "from_id", "entryId": "entry_id", "msgType": "msg_type", "msgData": "msg_data"},
-    "bot_group_message": {"from": "from_id", "entryId": "entry_id", "msgType": "msg_type", "msgData": "msg_data", "groupId": "group_id", "fromType": "from_type", "groupName": "group_name", "botCreator": "bot_creator", "msgId": "msg_id", "botId": "bot_id", "isAtMe": "is_at_me", "isAtAll": "is_at_all"},
+    "bot_private_message": {"from": "from_id", "entryId": "entry_id", "msgType": "msg_type", "msgData": "msg_data", "msgId": "msg_id", "referenceMsg": "reference_msg"},
+    "bot_group_message": {"from": "from_id", "entryId": "entry_id", "msgType": "msg_type", "msgData": "msg_data", "groupId": "group_id", "fromType": "from_type", "groupName": "group_name", "botCreator": "bot_creator", "msgId": "msg_id", "botId": "bot_id", "isAtMe": "is_at_me", "isAtAll": "is_at_all", "referenceMsg": "reference_msg"},
     "wb_visible_config": {"entryId": "entry_id", "departmentIds": "department_ids", "staffIds": "staff_ids", "timestamp": "timestamp", "isTestModeOn": "is_test_mode_on"},
     "group_create_approve": {"applyRequestId": "apply_request_id", "groupId": "group_id", "timestamp": "timestamp"},
     "schedule_modify": {"primaryScheduleId": "primary_schedule_id", "scheduleId": "schedule_id", "summary": "summary", "description": "description", "operationType": "operation_type", "currentTime": "current_time", "repeatType": "repeat_type", "expireDateType": "expire_date_type", "allDay": "all_day", "rule": "rule", "ruleStartTime": "rule_start_time", "ruleEndTime": "rule_end_time", "startTime": "start_time", "endTime": "end_time", "operator": "operator", "attendees": "attendees", "timestamp": "timestamp"},

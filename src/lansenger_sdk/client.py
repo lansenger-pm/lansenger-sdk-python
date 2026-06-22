@@ -396,7 +396,7 @@ class LansengerClient:
     def _group_msg_url(self, token: str) -> str:
         return build_api_url(self._config, "smart_bot", "group_message", token)
 
-    async def _send_private(self, chat_id: str, msg_type: str, msg_data: dict) -> SendMessageResult:
+    async def _send_private(self, chat_id: str, msg_type: str, msg_data: dict, *, ref_msg_id: str = "") -> SendMessageResult:
         token = await self._get_token()
         url = self._private_msg_url(token)
         payload = {
@@ -404,6 +404,8 @@ class LansengerClient:
             "msgType": msg_type,
             "msgData": msg_data,
         }
+        if ref_msg_id:
+            payload["refMsgId"] = ref_msg_id
         try:
             response = await self._http_client.post(url, json=payload)
             response.raise_for_status()
@@ -418,7 +420,7 @@ class LansengerClient:
 
         return _parse_send_response(data, msg_type=msg_type)
 
-    async def _send_group(self, group_id: str, msg_type: str, msg_data: dict, *, user_token: str = "", sender_id: str = "") -> SendMessageResult:
+    async def _send_group(self, group_id: str, msg_type: str, msg_data: dict, *, user_token: str = "", sender_id: str = "", ref_msg_id: str = "") -> SendMessageResult:
         token = await self._get_token()
         url = self._group_msg_url(token)
         if user_token:
@@ -430,6 +432,8 @@ class LansengerClient:
         }
         if sender_id:
             payload["senderId"] = sender_id
+        if ref_msg_id:
+            payload["refMsgId"] = ref_msg_id
         try:
             response = await self._http_client.post(url, json=payload)
             response.raise_for_status()
@@ -451,9 +455,11 @@ class LansengerClient:
         cover_image_path: str = "",
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
+        ref_msg_id: str = "",
     ) -> SendMessageResult:
         """Send a plain text message (msgType=text).
 
@@ -476,9 +482,11 @@ class LansengerClient:
                 mediaIds will only contain the video mediaId.
             reminder_all: @mention all members in group chat.
             reminder_user_ids: @mention specific user IDs in group chat.
+            reminder_bot_ids: @mention specific bot IDs in group chat (prs5.7.0).
             is_group: True if chat_id is a group ID.
             user_token: For group messages — makes sender appear as human.
             sender_id: For group messages — explicit sender openId (if no user_token).
+            ref_msg_id: Reference message openId for reply (prs5.9.0).
         """
         self._ensure_clients()
 
@@ -488,8 +496,8 @@ class LansengerClient:
             return SendMessageResult(success=False, error="content or file_path is required")
 
         reminder: Optional[Dict[str, Any]] = None
-        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0):
-            reminder = {"all": reminder_all, "userIds": reminder_user_ids or []}
+        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0) or (reminder_bot_ids and len(reminder_bot_ids) > 0):
+            reminder = {"all": reminder_all, "userIds": reminder_user_ids or [], "botIds": reminder_bot_ids or []}
 
         text_data: Dict[str, Any] = {"content": content}
         if reminder:
@@ -519,8 +527,8 @@ class LansengerClient:
         msg_data = {"text": text_data}
 
         if is_group:
-            return await self._send_group(chat_id, "text", msg_data, user_token=user_token, sender_id=sender_id)
-        return await self._send_private(chat_id, "text", msg_data)
+            return await self._send_group(chat_id, "text", msg_data, user_token=user_token, sender_id=sender_id, ref_msg_id=ref_msg_id)
+        return await self._send_private(chat_id, "text", msg_data, ref_msg_id=ref_msg_id)
 
     async def send_markdown(
         self,
@@ -529,9 +537,11 @@ class LansengerClient:
         *,
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
+        ref_msg_id: str = "",
     ) -> SendMessageResult:
         """Send a Markdown-formatted message (msgType=formatText).
 
@@ -545,9 +555,11 @@ class LansengerClient:
             content: Markdown-formatted content.
             reminder_all: @mention all members in group chat.
             reminder_user_ids: @mention specific user IDs in group chat.
+            reminder_bot_ids: @mention specific bot IDs in group chat (prs5.7.0).
             is_group: True if chat_id is a group ID.
             user_token: For group messages — makes sender appear as human.
             sender_id: For group messages — explicit sender openId.
+            ref_msg_id: Reference message openId for reply (prs5.9.0).
         """
         if not chat_id:
             return SendMessageResult(success=False, error="chat_id is required")
@@ -555,8 +567,8 @@ class LansengerClient:
             return SendMessageResult(success=False, error="content is required")
 
         reminder: Optional[Dict[str, Any]] = None
-        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0):
-            reminder = {"all": reminder_all, "userIds": reminder_user_ids or []}
+        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0) or (reminder_bot_ids and len(reminder_bot_ids) > 0):
+            reminder = {"all": reminder_all, "userIds": reminder_user_ids or [], "botIds": reminder_bot_ids or []}
 
         fmt_data: Dict[str, Any] = {"formatType": 1, "text": content}
         if reminder:
@@ -565,9 +577,9 @@ class LansengerClient:
         msg_data = {"formatText": fmt_data}
 
         if is_group:
-            result = await self._send_group(chat_id, "formatText", msg_data, user_token=user_token, sender_id=sender_id)
+            result = await self._send_group(chat_id, "formatText", msg_data, user_token=user_token, sender_id=sender_id, ref_msg_id=ref_msg_id)
         else:
-            result = await self._send_private(chat_id, "formatText", msg_data)
+            result = await self._send_private(chat_id, "formatText", msg_data, ref_msg_id=ref_msg_id)
 
         if not result.success and reminder:
             logger.info("send_markdown with reminder failed, retrying without reminder")
@@ -1159,13 +1171,13 @@ class LansengerClient:
     async def query_groups(
         self,
         *,
-        page_offset: int = 1,
+        page_offset: int = 0,
         page_size: int = 100,
     ) -> QueryGroupsResult:
         """Query the bot's group ID list via GET /v2/groups/fetch.
 
         Args:
-            page_offset: Page number (default: 1).
+            page_offset: Page offset, starting from 0 (default: 0).
             page_size: Per-page count (max 100, default: 100).
 
         Returns:
@@ -1803,6 +1815,7 @@ class LansengerClient:
         user_token: str = "",
         entry_id: str = "",
         is_group: bool = False,
+        ref_msg_id: str = "",
     ) -> BotMessageResult:
         """Send a message via the bot channel (4.6.12).
 
@@ -1819,6 +1832,7 @@ class LansengerClient:
             user_token: Optional userToken.
             entry_id: Optional app entry selector.
             is_group: True to send to groups via group message endpoint.
+            ref_msg_id: Optional reference message openId for reply (prs5.9.0).
         """
         self._ensure_clients()
         if is_group:
@@ -1840,6 +1854,7 @@ class LansengerClient:
                     msg_data=msg_data,
                     user_token=user_token,
                     entry_id=entry_id,
+                    ref_msg_id=ref_msg_id,
                     http_client=self._http_client,
                 )
                 results.append(r)
@@ -1872,6 +1887,8 @@ class LansengerClient:
             payload["departmentIdList"] = department_ids
         if entry_id:
             payload["entryId"] = entry_id
+        if ref_msg_id:
+            payload["refMsgId"] = ref_msg_id
         try:
             response = await self._http_client.post(url, json=payload)
             response.raise_for_status()
@@ -2006,9 +2023,11 @@ class LansengerClient:
         sender_id: str = "",
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
         outlines: str = "",
         uuid: str = "",
         entry_id: str = "",
+        ref_msg_id: str = "",
     ) -> SendMessageResult:
         """Send a message in a group chat (4.6.2).
 
@@ -2031,9 +2050,11 @@ class LansengerClient:
             sender_id: Optional — explicit sender openId (used if no user_token).
             reminder_all: @mention all members (only text/formatText).
             reminder_user_ids: @mention specific users (only text/formatText).
+            reminder_bot_ids: @mention specific bots (only text/formatText, prs5.7.0).
             outlines: Optional group notification digest text.
             uuid: Optional deduplication key.
             entry_id: Optional app entry selector.
+            ref_msg_id: Optional reference message openId for reply (prs5.9.0).
         """
         if not msg_type:
             return SendMessageResult(success=False, error="msg_type is required")
@@ -2043,9 +2064,9 @@ class LansengerClient:
             return SendMessageResult(success=False, error="msg_data is required")
 
         reminder: Optional[Dict[str, Any]] = None
-        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0):
+        if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0) or (reminder_bot_ids and len(reminder_bot_ids) > 0):
             if msg_type in ("text", "formatText"):
-                reminder = {"all": reminder_all, "userIds": reminder_user_ids or []}
+                reminder = {"all": reminder_all, "userIds": reminder_user_ids or [], "botIds": reminder_bot_ids or []}
                 if msg_type == "text":
                     text_data = msg_data.get("text", {})
                     text_data["reminder"] = reminder
@@ -2070,6 +2091,7 @@ class LansengerClient:
             outlines=outlines,
             uuid=uuid,
             entry_id=entry_id,
+            ref_msg_id=ref_msg_id,
             http_client=self._http_client,
         )
 
@@ -2093,6 +2115,7 @@ class LansengerClient:
                 outlines=outlines,
                 uuid=uuid,
                 entry_id=entry_id,
+                ref_msg_id=ref_msg_id,
                 http_client=self._http_client,
             )
 

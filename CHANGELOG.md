@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.18] - 2026-06-17
+
+### Added
+
+- **callbacks**: `BotPrivateMessageData` now includes `msg_id` and `reference_msg` fields for private chat callbacks.
+- **callbacks**: `BotGroupMessageData` now includes `reference_msg` field for group chat callbacks.
+- **messaging**: `send_text`, `send_markdown`, `send_group_message` now support `reminder_bot_ids` parameter for @mentioning bots.
+- **messaging**: `send_text`, `send_markdown`, `send_bot_message`, `send_group_message` now support `ref_msg_id` parameter for replying to messages (prs5.9.0).
+
+### Fixed
+
+- **groups**: `query_groups` default `page_offset` changed from 1 to 0 to match V2 API specification (page_offset starts from 0).
+
 ## [1.6.17] - 2026-06-16
 
 ### Added

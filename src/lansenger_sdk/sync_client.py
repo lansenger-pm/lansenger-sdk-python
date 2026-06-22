@@ -253,9 +253,11 @@ class LansengerSyncClient:
         cover_image_path: str = "",
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
+        ref_msg_id: str = "",
     ) -> SendMessageResult:
         """Send a plain text message (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -267,9 +269,11 @@ class LansengerSyncClient:
             cover_image_path=cover_image_path,
             reminder_all=reminder_all,
             reminder_user_ids=reminder_user_ids,
+            reminder_bot_ids=reminder_bot_ids,
             is_group=is_group,
             user_token=user_token,
             sender_id=sender_id,
+            ref_msg_id=ref_msg_id,
         ))
 
     def send_markdown(
@@ -279,9 +283,11 @@ class LansengerSyncClient:
         *,
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
+        ref_msg_id: str = "",
     ) -> SendMessageResult:
         """Send a Markdown message (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -290,9 +296,11 @@ class LansengerSyncClient:
             content=content,
             reminder_all=reminder_all,
             reminder_user_ids=reminder_user_ids,
+            reminder_bot_ids=reminder_bot_ids,
             is_group=is_group,
             user_token=user_token,
             sender_id=sender_id,
+            ref_msg_id=ref_msg_id,
         ))
 
     def send_file(
@@ -540,7 +548,7 @@ class LansengerSyncClient:
     def query_groups(
         self,
         *,
-        page_offset: int = 1,
+        page_offset: int = 0,
         page_size: int = 100,
     ) -> QueryGroupsResult:
         """Query bot's groups (blocking)."""
@@ -855,6 +863,7 @@ class LansengerSyncClient:
         user_token: str = "",
         entry_id: str = "",
         is_group: bool = False,
+        ref_msg_id: str = "",
     ) -> BotMessageResult:
         return _run_async(self._ephemeral_call(
             "send_bot_message",
@@ -865,6 +874,7 @@ class LansengerSyncClient:
             user_token=user_token,
             entry_id=entry_id,
             is_group=is_group,
+            ref_msg_id=ref_msg_id,
         ))
 
     # ── Account message (4.6.1 公号通道) (sync wrapper) ──────────────
@@ -927,9 +937,11 @@ class LansengerSyncClient:
         sender_id: str = "",
         reminder_all: bool = False,
         reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
         outlines: str = "",
         uuid: str = "",
         entry_id: str = "",
+        ref_msg_id: str = "",
     ) -> SendMessageResult:
         return _run_async(self._ephemeral_call(
             "send_group_message",
@@ -940,9 +952,11 @@ class LansengerSyncClient:
             sender_id=sender_id,
             reminder_all=reminder_all,
             reminder_user_ids=reminder_user_ids,
+            reminder_bot_ids=reminder_bot_ids,
             outlines=outlines,
             uuid=uuid,
             entry_id=entry_id,
+            ref_msg_id=ref_msg_id,
         ))
 
     # ── Streaming messages (sync wrappers) ────────────────────────────

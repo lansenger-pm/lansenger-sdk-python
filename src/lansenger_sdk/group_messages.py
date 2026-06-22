@@ -47,6 +47,7 @@ async def send_group_message(
     outlines: str = "",
     uuid: str = "",
     entry_id: str = "",
+    ref_msg_id: str = "",
     http_client: Optional[httpx.AsyncClient] = None,
 ) -> SendMessageResult:
     """Send a message in a group chat (4.6.2).
@@ -62,6 +63,7 @@ async def send_group_message(
         outlines: Optional group notification digest text.
         uuid: Optional deduplication key.
         entry_id: Optional app entry selector.
+        ref_msg_id: Optional reference message openId for reply (prs5.9.0).
         http_client: Optional httpx client.
     """
     if not msg_type:
@@ -86,6 +88,8 @@ async def send_group_message(
         payload["uuid"] = uuid
     if entry_id:
         payload["entryId"] = entry_id
+    if ref_msg_id:
+        payload["refMsgId"] = ref_msg_id
 
     owns_client = http_client is None
     if owns_client:
