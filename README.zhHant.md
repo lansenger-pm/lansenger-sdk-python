@@ -495,8 +495,8 @@ org = client.fetch_org_info(org_id="orgId")
 | 命令域 | 個人機器人 | 組織應用(自建) | 組織應用+機器人 | 備註 |
 |--------|:---:|:---:|:---:|------|
 | `message send-text/markdown/file/...` (機器人私聊) | **Y** | N | **Y** | 僅機器人可傳送機器人私聊 |
-| `message send-text --group` (群聊) | N* | N | **Y** | 個人機器人 API 支援但暫無加群功能 |
-| `message send-group-message` | N* | N | **Y** | 同上 |
+| `message send-text --group` (群聊) | **Y** | N | **Y** | 個人機器人 API 支援 |
+| `message send-group-message` | **Y** | N | **Y** | 同上 |
 | `message send-account-message` (公眾號) | N | **Y** | **Y** | 需要公眾號能力 |
 | `message send-user-message` (人→人) | N | **Y** | **Y** | 需要 userToken + OAuth2 |
 | `message revoke` | **Y** | **Y** | **Y** | 撤回自己發出的訊息 |
@@ -513,9 +513,9 @@ org = client.fetch_org_info(org_id="orgId")
 | `streaming *` | N | **Y** | **Y** | 僅組織級應用 |
 | `callback *` (事件解析) | N/A | N/A | N/A | 純資料操作，無需身份 |
 
-> \* **N\*** = API 能力存在，但加群功能尚未就緒。
+> \* **N\*** = API 能力存在。
 
-> **個人機器人**只能收發訊息和上傳/下載檔案。無法存取通訊錄、群組、日曆或 OAuth2。
+> **個人機器人**只能收發訊息和上傳/下載檔案。無法存取通訊錄、日曆或 OAuth2。
 >
 > **組織應用 vs 組織應用+機器人**：相同的 appID/appSecret。唯一區別是訊息通道——只有機器人可以傳送機器人私聊和群聊訊息（因為只有機器人可以加入群）。所有其他 API（通訊錄、日曆、待辦、聊天、OAuth2、流式訊息）對於兩者完全相同。目前僅自建應用支援機器人能力。
 

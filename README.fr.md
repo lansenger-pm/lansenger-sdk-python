@@ -495,8 +495,8 @@ La plateforme Lansenger propose trois types d'identité avec des accès API diff
 | Domaine de commande | Robot personnel | App Org (auto-hébergée) | App Org + Robot | Notes |
 |--------|:---:|:---:|:---:|------|
 | `message send-text/markdown/file/...` (DM robot) | **Y** | N | **Y** | Seuls les robots peuvent envoyer des DM robot |
-| `message send-text --group` (chat de groupe) | N* | N | **Y** | L'API robot personnel le supporte mais pas encore de fonction rejoindre-groupe |
-| `message send-group-message` | N* | N | **Y** | Identique à ci-dessus |
+| `message send-text --group` (chat de groupe) | **Y** | N | **Y** | L'API robot personnel le supporte mais pas encore de fonction rejoindre-groupe |
+| `message send-group-message` | **Y** | N | **Y** | Identique à ci-dessus |
 | `message send-account-message` (compte officiel) | N | **Y** | **Y** | Nécessite la capacité compte officiel |
 | `message send-user-message` (utilisateur-à-utilisateur) | N | **Y** | **Y** | Nécessite userToken + OAuth2 |
 | `message revoke` | **Y** | **Y** | **Y** | Révoquer ses propres messages |
@@ -513,9 +513,9 @@ La plateforme Lansenger propose trois types d'identité avec des accès API diff
 | `streaming *` | N | **Y** | **Y** | Applications niveau organisation uniquement |
 | `callback *` (parsing d'événements) | N/A | N/A | N/A | Opération purement données, aucune identité requise |
 
-> \* **N\*** = La capacité API existe, mais la fonction rejoindre-groupe n'est pas encore disponible.
+> \* **N\*** = La capacité API existe.
 
-> **Robot personnel** peut uniquement envoyer/recevoir des messages et uploader/télécharger des fichiers. Ne peut pas accéder aux contacts, groupes, calendriers ou OAuth2.
+> **Robot personnel** peut uniquement envoyer/recevoir des messages et uploader/télécharger des fichiers. Ne peut pas accéder aux contacts, calendriers ou OAuth2.
 >
 > **App Org vs App Org + Robot** : Même appID/appSecret. La seule différence réside dans les canaux de messagerie — seuls les robots peuvent envoyer des DM robot et des messages de groupe (car seuls les robots peuvent rejoindre des groupes). Toutes les autres API (contacts, calendrier, todo, chat, OAuth2, streaming) fonctionnent de manière identique pour les deux. Actuellement, seules les applications auto-hébergées supportent la capacité robot.
 
