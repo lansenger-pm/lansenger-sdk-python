@@ -20,6 +20,10 @@ from .exceptions import LansengerAuthError
 from .models import (
     AccountMessageResult,
     AppCardParams,
+    ApproveCardParams,
+    ApproveCardUpdateParams,
+    BotCommandQueryResult,
+    BotCommandResult,
     BotMessageResult,
     CalendarPrimaryResult,
     ChatGroupInfo,
@@ -44,9 +48,13 @@ from .models import (
     MediaPathResult,
     OaCardParams,
     OrgInfoResult,
+    PersonalAppCreateResult,
+    PersonalAppInfoResult,
+    PersonalAppListResult,
     QueryGroupsResult,
     ScheduleAttendeeMetaResult,
     ScheduleAttendeesResult,
+    ScheduleAttendeesUpdateResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
@@ -104,6 +112,7 @@ class LansengerSyncClient:
         http_timeout: float = 30.0,
         encoding_key: str = "",
         callback_token: str = "",
+        app_token: str = "",
     ):
         self._app_id = app_id
         self._app_secret = app_secret
@@ -112,6 +121,7 @@ class LansengerSyncClient:
         self._http_timeout = http_timeout
         self._encoding_key = encoding_key
         self._callback_token = callback_token
+        self._app_token = app_token
         self._async_client_for_tokens: Optional[LansengerClient] = None
 
     @classmethod
@@ -126,6 +136,7 @@ class LansengerSyncClient:
             http_timeout=config.http_timeout,
             encoding_key=config.encoding_key,
             callback_token=config.callback_token,
+            app_token=config.app_token,
         )
 
     @classmethod
@@ -139,6 +150,7 @@ class LansengerSyncClient:
             http_timeout=config.http_timeout,
             encoding_key=config.encoding_key,
             callback_token=config.callback_token,
+            app_token=config.app_token,
         )
 
     @classmethod
@@ -182,6 +194,7 @@ class LansengerSyncClient:
                 http_timeout=config.http_timeout,
                 encoding_key=config.encoding_key,
                 callback_token=config.callback_token,
+                app_token=config.app_token,
             )
             try:
                 raw_ut_expiry = user_token_data.get("user_token_expiry", 0)
@@ -218,6 +231,7 @@ class LansengerSyncClient:
             http_timeout=self._http_timeout,
             encoding_key=self._encoding_key,
             callback_token=self._callback_token,
+            app_token=self._app_token,
         )
         try:
             method = getattr(client, method_name)
@@ -235,6 +249,7 @@ class LansengerSyncClient:
             http_timeout=self._http_timeout,
             encoding_key=self._encoding_key,
             callback_token=self._callback_token,
+            app_token=self._app_token,
         )
         try:
             method = getattr(client, method_name)
@@ -505,6 +520,83 @@ class LansengerSyncClient:
             kwargs={},
         ))
 
+    # ── ApproveCard (blocking) ────────────────────────────────────────
+
+    def send_approve_card(
+        self,
+        body_title: str,
+        body_content: str,
+        *,
+        chat_id: str = "",
+        head_title: str = "",
+        head_icon_link: str = "",
+        head_icon_id: str = "",
+        head_status_describe: str = "",
+        head_status_icon: int = 0,
+        head_status_icon_link: str = "",
+        head_status_colour: str = "",
+        body_format_type: int = 1,
+        fields: Optional[List[Dict[str, str]]] = None,
+        reminder_all: bool = False,
+        reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
+        card_link: str = "",
+        card_link_for_pc: str = "",
+        card_link_for_pad: str = "",
+        buttons: Optional[List[Dict[str, Any]]] = None,
+        expire_time: int = 0,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
+    ) -> SendMessageResult:
+        """Send an approveCard message (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "send_approve_card",
+            body_title=body_title, body_content=body_content,
+            chat_id=chat_id, head_title=head_title,
+            head_icon_link=head_icon_link, head_icon_id=head_icon_id,
+            head_status_describe=head_status_describe,
+            head_status_icon=head_status_icon,
+            head_status_icon_link=head_status_icon_link,
+            head_status_colour=head_status_colour,
+            body_format_type=body_format_type, fields=fields,
+            reminder_all=reminder_all, reminder_user_ids=reminder_user_ids,
+            reminder_bot_ids=reminder_bot_ids,
+            card_link=card_link, card_link_for_pc=card_link_for_pc,
+            card_link_for_pad=card_link_for_pad,
+            buttons=buttons, expire_time=expire_time,
+            is_group=is_group, user_token=user_token, sender_id=sender_id,
+        ))
+
+    def send_approve_card_with_params(self, params: ApproveCardParams) -> SendMessageResult:
+        """Send an approveCard using ApproveCardParams (blocking)."""
+        return _run_async(self._ephemeral_call_with_positional(
+            "send_approve_card_with_params",
+            args=[params],
+            kwargs={},
+        ))
+
+    def update_approve_card(
+        self,
+        msg_id: str,
+        *,
+        head_status_describe: str = "",
+        head_status_icon: int = 0,
+        head_status_icon_link: str = "",
+        head_status_colour: str = "",
+        buttons: Optional[List[Dict[str, Any]]] = None,
+    ) -> SendMessageResult:
+        """Update an approveCard status (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "update_approve_card",
+            msg_id=msg_id,
+            head_status_describe=head_status_describe,
+            head_status_icon=head_status_icon,
+            head_status_icon_link=head_status_icon_link,
+            head_status_colour=head_status_colour,
+            buttons=buttons,
+        ))
+
     def update_dynamic_card(
         self,
         msg_id: str,
@@ -570,6 +662,19 @@ class LansengerSyncClient:
             "upload_media",
             file_path=file_path,
             media_type=media_type,
+            user_token=user_token,
+        ))
+
+    def fetch_media_path(
+        self,
+        media_id: str,
+        *,
+        user_token: str = "",
+    ) -> MediaPathResult:
+        """Get the download URL path for a media file (blocking, 4.5.3)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_media_path",
+            media_id=media_id,
             user_token=user_token,
         ))
 
@@ -734,6 +839,7 @@ class LansengerSyncClient:
                 http_timeout=self._http_timeout,
                 encoding_key=self._encoding_key,
                 callback_token=self._callback_token,
+                app_token=self._app_token,
             )
         self._async_client_for_tokens.set_user_tokens(
             user_token=user_token,
@@ -1839,16 +1945,145 @@ class LansengerSyncClient:
             user_token=user_token,
             user_id=user_id,
         ))
-
-    def fetch_media_path(
-        self,
-        media_id: str,
-        *,
-        user_token: str = "",
-    ) -> MediaPathResult:
-        """Get the download URL path for a media file (blocking, 4.5.3)."""
         return _run_async(self._ephemeral_call(
-            "fetch_media_path",
-            media_id=media_id,
+            "update_schedule_attendees",
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            add_attendees=add_attendees,
+            delete_attendees=delete_attendees,
+            reminder_type=reminder_type,
+            operation_type=operation_type,
+            current_time=current_time,
+            user_token=user_token,
+            user_id=user_id,
+        ))
+
+    # ── Bot Commands (4.37, blocking wrappers) ─────────────────────────
+
+    def create_bot_commands(
+        self,
+        scope_type: int,
+        commands: list,
+        *,
+        chat_id: str = "",
+        chat_type: str = "",
+        staff_id: str = "",
+    ) -> BotCommandResult:
+        """Create bot slash commands (blocking, 4.37.1)."""
+        return _run_async(self._ephemeral_call(
+            "create_bot_commands",
+            scope_type=scope_type,
+            commands=commands,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            staff_id=staff_id,
+        ))
+
+    def fetch_bot_commands(
+        self,
+        scope_type: int,
+        *,
+        chat_id: str = "",
+        chat_type: str = "",
+        staff_id: str = "",
+    ) -> BotCommandQueryResult:
+        """Query bot slash commands (blocking, 4.37.2)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_bot_commands",
+            scope_type=scope_type,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            staff_id=staff_id,
+        ))
+
+    def delete_bot_commands(
+        self,
+        scope_type: int,
+        *,
+        chat_id: str = "",
+        chat_type: str = "",
+        staff_id: str = "",
+    ) -> BotCommandResult:
+        """Delete bot slash commands (blocking, 4.37.3)."""
+        return _run_async(self._ephemeral_call(
+            "delete_bot_commands",
+            scope_type=scope_type,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            staff_id=staff_id,
+        ))
+
+    # ── Personal Apps (4.38, blocking wrappers) ────────────────────────
+
+    def create_personal_app(
+        self,
+        *,
+        user_token: str,
+        name: str = "",
+        avatar_id: str = "",
+        description: str = "",
+    ) -> PersonalAppCreateResult:
+        """Create a personal app/bot (blocking, 4.38.1)."""
+        return _run_async(self._ephemeral_call(
+            "create_personal_app",
+            user_token=user_token,
+            name=name,
+            avatar_id=avatar_id,
+            description=description,
+        ))
+
+    def update_personal_app(
+        self,
+        app_id: str,
+        *,
+        user_token: str,
+        name: str,
+        avatar_id: str = "",
+        description: str = "",
+    ) -> PersonalAppInfoResult:
+        """Update a personal app/bot (blocking, 4.38.2)."""
+        return _run_async(self._ephemeral_call(
+            "update_personal_app",
+            app_id=app_id,
+            user_token=user_token,
+            name=name,
+            avatar_id=avatar_id,
+            description=description,
+        ))
+
+    def fetch_personal_app(
+        self,
+        app_id: str,
+        *,
+        user_token: str,
+    ) -> PersonalAppInfoResult:
+        """Fetch personal app info (blocking, 4.38.3)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_personal_app",
+            app_id=app_id,
+            user_token=user_token,
+        ))
+
+    def delete_personal_app(
+        self,
+        app_id: str,
+        *,
+        user_token: str,
+    ) -> PersonalAppInfoResult:
+        """Delete a personal app/bot (blocking, 4.38.4)."""
+        return _run_async(self._ephemeral_call(
+            "delete_personal_app",
+            app_id=app_id,
+            user_token=user_token,
+        ))
+
+    def fetch_personal_app_list(
+        self,
+        *,
+        user_token: str,
+    ) -> PersonalAppListResult:
+        """Fetch personal app list (blocking, 4.38.5)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_personal_app_list",
             user_token=user_token,
         ))

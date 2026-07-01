@@ -50,6 +50,9 @@ from .persistence import CredentialStore
 from .models import (
     AccountMessageResult,
     AppCardParams,
+    ApproveCardParams,
+    ApproveCardUpdateParams,
+    BotCommandResult,
     BotMessageResult,
     CalendarPrimaryResult,
     ChatGroupInfo,
@@ -73,8 +76,12 @@ from .models import (
     MediaPathResult,
     OaCardParams,
     OrgInfoResult,
+    PersonalAppCreateResult,
+    PersonalAppInfoResult,
+    PersonalAppListResult,
     QueryGroupsResult,
     ScheduleAttendeeMetaResult,
+    ScheduleAttendeesUpdateResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
@@ -148,6 +155,7 @@ class LansengerClient:
         store_path: Optional[str] = None,
         encoding_key: str = "",
         callback_token: str = "",
+        app_token: str = "",
     ):
         self._config = LansengerConfig(
             app_id=app_id,
@@ -157,6 +165,7 @@ class LansengerClient:
             http_timeout=http_timeout,
             encoding_key=encoding_key,
             callback_token=callback_token,
+            app_token=app_token,
         )
         self._http_client: Optional[httpx.AsyncClient] = None
         self._token_manager: Optional[TokenManager] = None
@@ -195,6 +204,7 @@ class LansengerClient:
             store_path=store_path,
             encoding_key=config.encoding_key,
             callback_token=config.callback_token,
+            app_token=config.app_token,
         )
 
     @classmethod
@@ -1061,6 +1071,250 @@ class LansengerClient:
             user_token=params.user_token,
             sender_id=params.sender_id,
         )
+
+    # ── Public API: ApproveCard (审批卡片) ───────────────────────────────
+
+    def _build_approve_card_data(self, params: ApproveCardParams) -> Dict[str, Any]:
+        """Build approveCard msgData from params."""
+        card: Dict[str, Any] = {}
+
+        # head
+        head: Dict[str, Any] = {}
+        if params.head_title:
+            head["title"] = params.head_title
+        if params.head_icon_link:
+            head["iconLink"] = params.head_icon_link
+        if params.head_icon_id:
+            head["iconId"] = params.head_icon_id
+        if any([params.head_status_describe, params.head_status_icon,
+                params.head_status_icon_link, params.head_status_colour]):
+            head_status: Dict[str, Any] = {}
+            if params.head_status_describe:
+                head_status["describe"] = params.head_status_describe
+            if params.head_status_icon:
+                head_status["statusIcon"] = params.head_status_icon
+            if params.head_status_icon_link:
+                head_status["iconLink"] = params.head_status_icon_link
+            if params.head_status_colour:
+                head_status["colour"] = params.head_status_colour
+            head["headStatus"] = head_status
+        if head:
+            card["head"] = head
+
+        # body
+        body: Dict[str, Any] = {}
+        if params.body_title:
+            body["title"] = params.body_title
+        if params.body_content:
+            body["content"] = {
+                "formatType": params.body_format_type,
+                "text": params.body_content,
+            }
+        if params.fields:
+            body["fields"] = params.fields
+        if body:
+            card["body"] = body
+
+        # reminder
+        reminder: Dict[str, Any] = {}
+        if params.reminder_all:
+            reminder["all"] = True
+        if params.reminder_user_ids:
+            reminder["userIds"] = params.reminder_user_ids
+        if params.reminder_bot_ids:
+            reminder["botIds"] = params.reminder_bot_ids
+        if reminder:
+            card["reminder"] = reminder
+
+        # cardLink
+        if params.card_link:
+            card_link: Dict[str, str] = {"cardLink": params.card_link}
+            if params.card_link_for_pc:
+                card_link["cardLinkForPc"] = params.card_link_for_pc
+            if params.card_link_for_pad:
+                card_link["cardLinkForPad"] = params.card_link_for_pad
+            card["cardLink"] = card_link
+
+        # buttons
+        if params.buttons:
+            card["buttons"] = params.buttons
+
+        # expireTime
+        if params.expire_time:
+            card["expireTime"] = params.expire_time
+
+        return {"approveCard": card}
+
+    async def send_approve_card(
+        self,
+        body_title: str,
+        body_content: str,
+        *,
+        chat_id: str = "",
+        head_title: str = "",
+        head_icon_link: str = "",
+        head_icon_id: str = "",
+        head_status_describe: str = "",
+        head_status_icon: int = 0,
+        head_status_icon_link: str = "",
+        head_status_colour: str = "",
+        body_format_type: int = 1,
+        fields: Optional[List[Dict[str, str]]] = None,
+        reminder_all: bool = False,
+        reminder_user_ids: Optional[List[str]] = None,
+        reminder_bot_ids: Optional[List[str]] = None,
+        card_link: str = "",
+        card_link_for_pc: str = "",
+        card_link_for_pad: str = "",
+        buttons: Optional[List[Dict[str, Any]]] = None,
+        expire_time: int = 0,
+        is_group: bool = False,
+        user_token: str = "",
+        sender_id: str = "",
+        is_bot_channel: bool = False,
+    ) -> SendMessageResult:
+        """Send an approveCard (审批卡片) message — 4.6.4.13.
+
+        Supports @mention/reminder, buttons with callbackInfo,
+        per-button permission scopes, and card expiry.
+
+        Args:
+            chat_id: Recipient user ID (private) or group ID (is_group=True).
+            body_title: Card body title (required).
+            body_content: Card body markdown content (required).
+            head_title: Card header title.
+            head_icon_link: Header icon URL.
+            head_icon_id: Header icon ID.
+            head_status_describe: Status description text.
+            head_status_icon: Status icon type (1=实心圆).
+            head_status_icon_link: Status icon URL.
+            head_status_colour: Status text/icon colour.
+            body_format_type: 0=INVALID, 1=MARK_DOWN (default 1).
+            fields: Form key-value pairs.
+            reminder_all: @mention all members (group only).
+            reminder_user_ids: @mention specific users (group only).
+            reminder_bot_ids: @mention specific bots (group only).
+            card_link: Overall card click link.
+            card_link_for_pc: PC click link.
+            card_link_for_pad: Pad click link.
+            buttons: Button list. Each dict: text, buttonTheme, state,
+                link, pcLink, padLink, callbackInfo,
+                permissionScope (permittedStaffs/prohibitedStaffs),
+                prohibitedState.
+            expire_time: Card expiry in seconds (max 30 days, 0=default 7d).
+            is_group: True if chat_id is a group ID.
+            user_token: For group messages — makes sender appear as human.
+            sender_id: For group messages — explicit sender openId.
+            is_bot_channel: True to use bot channel, False for smart_bot.
+        """
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not body_title:
+            return SendMessageResult(success=False, error="body_title is required for approveCard")
+        if not body_content:
+            return SendMessageResult(success=False, error="body_content is required for approveCard")
+
+        params = ApproveCardParams(
+            chat_id=chat_id, body_title=body_title, body_content=body_content,
+            head_title=head_title, head_icon_link=head_icon_link,
+            head_icon_id=head_icon_id, head_status_describe=head_status_describe,
+            head_status_icon=head_status_icon,
+            head_status_icon_link=head_status_icon_link,
+            head_status_colour=head_status_colour,
+            body_format_type=body_format_type, fields=fields,
+            reminder_all=reminder_all, reminder_user_ids=reminder_user_ids,
+            reminder_bot_ids=reminder_bot_ids,
+            card_link=card_link, card_link_for_pc=card_link_for_pc,
+            card_link_for_pad=card_link_for_pad,
+            buttons=buttons, expire_time=expire_time,
+            is_group=is_group, user_token=user_token, sender_id=sender_id,
+            is_bot_channel=is_bot_channel,
+        )
+        return await self.send_approve_card_with_params(params)
+
+    async def send_approve_card_with_params(
+        self,
+        params: ApproveCardParams,
+    ) -> SendMessageResult:
+        """Send an approveCard using an ApproveCardParams object."""
+        if not params.chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        if not params.body_title:
+            return SendMessageResult(success=False, error="body_title is required for approveCard")
+        if not params.body_content:
+            return SendMessageResult(success=False, error="body_content is required for approveCard")
+
+        msg_data = self._build_approve_card_data(params)
+
+        if params.is_group:
+            return await self._send_group(params.chat_id, "approveCard", msg_data,
+                                         user_token=params.user_token, sender_id=params.sender_id)
+
+        # Smart bot channel (also used for bot channel — same endpoint)
+        return await self._send_private(params.chat_id, "approveCard", msg_data)
+
+    async def update_approve_card(
+        self,
+        msg_id: str,
+        *,
+        head_status_describe: str = "",
+        head_status_icon: int = 0,
+        head_status_icon_link: str = "",
+        head_status_colour: str = "",
+        buttons: Optional[List[Dict[str, Any]]] = None,
+    ) -> SendMessageResult:
+        """Update an approveCard's status in-place — 4.6.4.12.
+
+        Uses POST /v1/messages/dynamic/update with msgType=approveCard.
+        The card body is wrapped in approveCardUpdateMsg.
+
+        Args:
+            msg_id: The message ID from the original send_approve_card response.
+            head_status_describe: Updated status description.
+            head_status_icon: Updated status icon (1=实心圆).
+            head_status_icon_link: Updated status icon URL.
+            head_status_colour: Updated status colour.
+            buttons: Updated button list (same structure as create).
+        """
+        self._ensure_clients()
+
+        if not msg_id:
+            return SendMessageResult(success=False, error="msg_id is required")
+
+        token = await self._get_token()
+        url = build_api_url(self._config, "message", "dynamic_update", token)
+
+        update_data: Dict[str, Any] = {}
+        if any([head_status_describe, head_status_icon,
+                head_status_icon_link, head_status_colour]):
+            head_status: Dict[str, Any] = {}
+            if head_status_describe:
+                head_status["describe"] = head_status_describe
+            if head_status_icon:
+                head_status["statusIcon"] = head_status_icon
+            if head_status_icon_link:
+                head_status["iconLink"] = head_status_icon_link
+            if head_status_colour:
+                head_status["colour"] = head_status_colour
+            update_data["headStatus"] = head_status
+
+        if buttons:
+            update_data["buttons"] = buttons
+
+        payload = {
+            "msgId": msg_id,
+            "msgType": "approveCard",
+            "msgData": {"approveCardUpdateMsg": update_data},
+        }
+
+        try:
+            response = await self._http_client.post(url, json=payload)
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as e:
+            return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
+
+        return _parse_send_response(data, operation="approve_card_update")
 
     # ── Public API: Dynamic card update ─────────────────────────────────
 
@@ -3187,6 +3441,45 @@ class LansengerClient:
             http_client=self._http_client,
         )
 
+    async def update_schedule_attendees(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        add_attendees: Optional[List[str]] = None,
+        delete_attendees: Optional[List[str]] = None,
+        reminder_type: Optional[str] = None,
+        operation_type: Optional[str] = None,
+        current_time: Optional[int] = None,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleAttendeesUpdateResult:
+        """Batch add and/or delete schedule attendees (4.23.19)."""
+        if not calendar_id:
+            return ScheduleAttendeesUpdateResult(success=False, error="calendar_id is required")
+        if not schedule_id:
+            return ScheduleAttendeesUpdateResult(success=False, error="schedule_id is required")
+        if not add_attendees and not delete_attendees:
+            return ScheduleAttendeesUpdateResult(success=False, error="at least one of add_attendees or delete_attendees is required")
+        self._ensure_clients()
+        from .calendars import update_schedule_attendees
+
+        app_token = await self._get_token()
+        return await update_schedule_attendees(
+            self._config,
+            app_token=app_token,
+            calendar_id=calendar_id,
+            schedule_id=schedule_id,
+            add_attendees=add_attendees,
+            delete_attendees=delete_attendees,
+            reminder_type=reminder_type,
+            operation_type=operation_type,
+            current_time=current_time,
+            user_token=user_token,
+            user_id=user_id,
+            http_client=self._http_client,
+        )
+
     async def send_reminder(
         self,
         msg_id: str,
@@ -3241,6 +3534,184 @@ class LansengerClient:
             self._config,
             app_token=app_token,
             media_id=media_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    # ── Bot Commands (4.37) ────────────────────────────────────────────
+
+    async def create_bot_commands(
+        self,
+        scope_type: int,
+        commands: List[Dict[str, Any]],
+        *,
+        chat_id: str = "",
+        chat_type: str = "",
+        staff_id: str = "",
+    ) -> BotCommandResult:
+        """Create bot slash commands (4.37.1)."""
+        self._ensure_clients()
+        from .bot_commands import create_bot_commands
+
+        app_token = await self._get_token()
+        return await create_bot_commands(
+            self._config,
+            app_token=app_token,
+            scope_type=scope_type,
+            commands=commands,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            staff_id=staff_id,
+            http_client=self._http_client,
+        )
+
+    async def fetch_bot_commands(
+        self,
+        scope_type: int,
+        *,
+        chat_id: str = "",
+        chat_type: str = "",
+        staff_id: str = "",
+    ) -> BotCommandQueryResult:
+        """Query bot slash commands (4.37.2)."""
+        self._ensure_clients()
+        from .bot_commands import fetch_bot_commands
+
+        app_token = await self._get_token()
+        return await fetch_bot_commands(
+            self._config,
+            app_token=app_token,
+            scope_type=scope_type,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            staff_id=staff_id,
+            http_client=self._http_client,
+        )
+
+    async def delete_bot_commands(
+        self,
+        scope_type: int,
+        *,
+        chat_id: str = "",
+        chat_type: str = "",
+        staff_id: str = "",
+    ) -> BotCommandResult:
+        """Delete bot slash commands (4.37.3)."""
+        self._ensure_clients()
+        from .bot_commands import delete_bot_commands
+
+        app_token = await self._get_token()
+        return await delete_bot_commands(
+            self._config,
+            app_token=app_token,
+            scope_type=scope_type,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            staff_id=staff_id,
+            http_client=self._http_client,
+        )
+
+    # ── Personal Apps (4.38) ───────────────────────────────────────────
+
+    async def create_personal_app(
+        self,
+        *,
+        user_token: str,
+        name: str = "",
+        avatar_id: str = "",
+        description: str = "",
+    ) -> PersonalAppCreateResult:
+        """Create a personal app/bot (4.38.1)."""
+        self._ensure_clients()
+        from .personal_apps import create_personal_app
+
+        app_token = await self._get_token()
+        return await create_personal_app(
+            self._config,
+            app_token=app_token,
+            user_token=user_token,
+            name=name,
+            avatar_id=avatar_id,
+            description=description,
+            http_client=self._http_client,
+        )
+
+    async def update_personal_app(
+        self,
+        app_id: str,
+        *,
+        user_token: str,
+        name: str,
+        avatar_id: str = "",
+        description: str = "",
+    ) -> PersonalAppInfoResult:
+        """Update a personal app/bot (4.38.2)."""
+        self._ensure_clients()
+        from .personal_apps import update_personal_app
+
+        app_token = await self._get_token()
+        return await update_personal_app(
+            self._config,
+            app_token=app_token,
+            app_id=app_id,
+            user_token=user_token,
+            name=name,
+            avatar_id=avatar_id,
+            description=description,
+            http_client=self._http_client,
+        )
+
+    async def fetch_personal_app(
+        self,
+        app_id: str,
+        *,
+        user_token: str,
+    ) -> PersonalAppInfoResult:
+        """Fetch personal app info (4.38.3)."""
+        self._ensure_clients()
+        from .personal_apps import fetch_personal_app
+
+        app_token = await self._get_token()
+        return await fetch_personal_app(
+            self._config,
+            app_token=app_token,
+            app_id=app_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def delete_personal_app(
+        self,
+        app_id: str,
+        *,
+        user_token: str,
+    ) -> PersonalAppInfoResult:
+        """Delete a personal app/bot (4.38.4)."""
+        self._ensure_clients()
+        from .personal_apps import delete_personal_app
+
+        app_token = await self._get_token()
+        return await delete_personal_app(
+            self._config,
+            app_token=app_token,
+            app_id=app_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_personal_app_list(
+        self,
+        *,
+        user_token: str,
+    ) -> PersonalAppListResult:
+        """Fetch personal app list (4.38.5)."""
+        self._ensure_clients()
+        from .personal_apps import fetch_personal_app_list
+
+        app_token = await self._get_token()
+        return await fetch_personal_app_list(
+            self._config,
+            app_token=app_token,
             user_token=user_token,
             http_client=self._http_client,
         )

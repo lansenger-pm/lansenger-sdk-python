@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.19] - 2026-07-01
+
+### Added
+
+- **config**: `LansengerConfig.app_token` and `LansengerConfig.user_token` fields for **external token mode** (set via `--app-token` / `--user-token` CLI flags or `LANSENGER_APP_TOKEN` / `LANSENGER_USER_TOKEN` env vars). When externally provided, `app_id`/`app_secret` are optional.
+- **auth**: `TokenManager` now supports **external mode** — `get_token()` returns the externally-provided token directly without expiry checks or auto-refresh.
+- **messaging**: `send_approve_card()` and `update_approve_card()` for approveCard (审批卡片) messages (4.6.4.12/13).
+- **models**: `ApproveCardParams` and `ApproveCardUpdateParams` dataclasses.
+- **calendars**: `update_schedule_attendees()` for batch add/delete of schedule attendees (4.23.19).
+- **bot_commands**: New module with `create_bot_commands()`, `fetch_bot_commands()`, `delete_bot_commands()` for managing bot slash commands (4.37).
+- **personal_apps**: New module with CRUD + list methods for managing personal apps/bots (4.38). All require `user_token`.
+- **models**: `ScheduleAttendeesUpdateResult`, `BotCommandResult`, `BotCommandQueryResult`, `PersonalAppCreateResult`, `PersonalAppInfoResult`, `PersonalAppListResult` dataclasses.
+- **cli**: `bot-command` (create/query/delete) and `personal-app` (create/update/info/delete/list) command groups.
+- **cli**: `calendar update-attendees` command for batch add/delete schedule attendees.
+- **tests**: Test suites for bot_commands, personal_apps, and update_schedule_attendees.
+
+### Changed
+
+- **docs**: READMEs updated to reflect that personal bots now support group chat.
+
+### Fixed
+
+- **auth**: `TokenManager` external mode prevents accidental auto-refresh of externally-provided tokens.
+- **config**: `LansengerConfig.create()` no longer requires `app_id`/`app_secret` when `app_token` is provided.
+
 ## [1.6.18] - 2026-06-17
 
 ### Added

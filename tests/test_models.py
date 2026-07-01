@@ -16,6 +16,12 @@ from lansenger_sdk.models import (
     StaffSearchResult,
     UserTokenResult,
     UserInfoResult,
+    ScheduleAttendeesUpdateResult,
+    BotCommandResult,
+    BotCommandQueryResult,
+    PersonalAppCreateResult,
+    PersonalAppInfoResult,
+    PersonalAppListResult,
 )
 
 
@@ -177,3 +183,53 @@ def test_user_info_result_success():
     assert d["staff_id"] == "s1"
     assert d["name"] == "Alice"
     assert d["org_name"] == "MyOrg"
+
+
+def test_schedule_attendees_update_result():
+    result = ScheduleAttendeesUpdateResult(
+        success=True, schedule_ids=["s1", "s2"], failed_attendees=["f1"],
+    )
+    d = result.to_dict()
+    assert d["success"] is True
+    assert d["schedule_ids"] == ["s1", "s2"]
+    assert d["failed_attendees"] == ["f1"]
+
+
+def test_bot_command_result():
+    result = BotCommandResult(success=True)
+    d = result.to_dict()
+    assert d["success"] is True
+
+    result2 = BotCommandResult(success=False, error="bad")
+    d2 = result2.to_dict()
+    assert d2["error"] == "bad"
+
+
+def test_bot_command_query_result():
+    result = BotCommandQueryResult(success=True, scope_type=7, chat_id="c1")
+    d = result.to_dict()
+    assert d["success"] is True
+    assert d["scope_type"] == 7
+    assert d["chat_id"] == "c1"
+
+
+def test_personal_app_create_result():
+    result = PersonalAppCreateResult(success=True, app_id="a1", secret="s1")
+    d = result.to_dict()
+    assert d["success"] is True
+    assert d["app_id"] == "a1"
+    assert d["secret"] == "s1"
+
+
+def test_personal_app_info_result():
+    result = PersonalAppInfoResult(success=True, name="MyApp", apigw_addr="https://gw")
+    d = result.to_dict()
+    assert d["success"] is True
+    assert d["name"] == "MyApp"
+
+
+def test_personal_app_list_result():
+    result = PersonalAppListResult(success=True, app_list=[])
+    d = result.to_dict()
+    assert d["success"] is True
+    assert d["app_list"] == []

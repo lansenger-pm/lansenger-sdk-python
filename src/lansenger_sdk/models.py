@@ -340,6 +340,55 @@ class DynamicCardUpdateParams:
 
 
 @dataclass
+class ApproveCardParams:
+    """ApproveCard (审批卡片) parameters — 4.6.4.13."""
+    chat_id: str = ""
+    body_title: str = ""  # required
+    body_content: str = ""  # required, markdown text
+    # head
+    head_title: str = ""
+    head_icon_link: str = ""
+    head_icon_id: str = ""
+    head_status_describe: str = ""
+    head_status_icon: int = 0  # 1=实心圆
+    head_status_icon_link: str = ""
+    head_status_colour: str = ""
+    # body
+    body_format_type: int = 1  # 1=MARK_DOWN
+    fields: Optional[List[Dict[str, str]]] = None  # [{"key","value"},...]
+    # reminder
+    reminder_all: bool = False
+    reminder_user_ids: Optional[List[str]] = None
+    reminder_bot_ids: Optional[List[str]] = None
+    # card link
+    card_link: str = ""
+    card_link_for_pc: str = ""
+    card_link_for_pad: str = ""
+    # buttons
+    buttons: Optional[List[Dict[str, Any]]] = None
+    # expire
+    expire_time: int = 0  # seconds, max 30 days; 0=default 7 days
+    # channel
+    is_group: bool = False
+    user_token: str = ""
+    sender_id: str = ""
+    is_bot_channel: bool = False  # True → bot channel, False → smart_bot channel
+
+
+@dataclass
+class ApproveCardUpdateParams:
+    """Dynamic update params for approveCard — 4.6.4.12."""
+    msg_id: str
+    # headStatus
+    head_status_describe: str = ""
+    head_status_icon: int = 0
+    head_status_icon_link: str = ""
+    head_status_colour: str = ""
+    # buttons
+    buttons: Optional[List[Dict[str, Any]]] = None
+
+
+@dataclass
 class UserTokenResult:
     success: bool
     user_token: Optional[str] = None
@@ -933,6 +982,129 @@ class ScheduleAttendeeMetaResult:
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {"success": self.success}
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class ScheduleAttendeesUpdateResult:
+    """4.23.19 — batch add/delete schedule attendees in one call."""
+    success: bool
+    schedule_ids: Optional[List[str]] = None
+    failed_attendees: Optional[List[str]] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        if self.schedule_ids is not None:
+            d["schedule_ids"] = self.schedule_ids
+        if self.failed_attendees is not None:
+            d["failed_attendees"] = self.failed_attendees
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BotCommandResult:
+    """4.37 — bot command create/delete result."""
+    success: bool
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BotCommandQueryResult:
+    """4.37.2 — query bot commands result."""
+    success: bool
+    scope_type: Optional[int] = None
+    chat_id: Optional[str] = None
+    chat_type: Optional[str] = None
+    staff_id: Optional[str] = None
+    commands: Optional[List[Dict[str, Any]]] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        for key in ("scope_type", "chat_id", "chat_type", "staff_id"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.commands is not None:
+            d["commands"] = self.commands
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class PersonalAppCreateResult:
+    """4.38.1 — create personal app result."""
+    success: bool
+    app_id: Optional[str] = None
+    secret: Optional[str] = None
+    apigw_addr: Optional[str] = None
+    passport_addr: Optional[str] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        for key in ("app_id", "secret", "apigw_addr", "passport_addr"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class PersonalAppInfoResult:
+    """4.38.3 — fetch personal app info result."""
+    success: bool
+    app_id: Optional[str] = None
+    name: Optional[str] = None
+    avatar_id: Optional[str] = None
+    description: Optional[str] = None
+    apigw_addr: Optional[str] = None
+    passport_addr: Optional[str] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        for key in ("app_id", "name", "avatar_id", "description",
+                      "apigw_addr", "passport_addr"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class PersonalAppListResult:
+    """4.38.5 — list personal apps result."""
+    success: bool
+    app_list: Optional[List[Dict[str, Any]]] = None
+    error: Optional[str] = None
+    raw_response: Optional[Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {"success": self.success}
+        if self.app_list is not None:
+            d["app_list"] = self.app_list
         if self.error is not None:
             d["error"] = self.error
         return d

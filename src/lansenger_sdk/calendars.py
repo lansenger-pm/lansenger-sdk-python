@@ -11,6 +11,7 @@ Only the verified/open endpoints are implemented:
 - 4.23.16 POST /v1/calendars/:cid/schedules/:sid/members/create — add attendees
 - 4.23.17 POST /v1/calendars/:cid/schedules/:sid/members/meta/update — update attendee metadata
 - 4.23.18 POST /v1/calendars/:cid/schedules/:sid/members/delete — delete attendees
+- 4.23.19 POST /v1/calendars/:cid/schedules/:sid/members/update — batch add/delete attendees
 
 Calendar/schedule endpoints require app_token and at least one of user_token or user_id.
 
@@ -26,10 +27,11 @@ from .config import LansengerConfig
 from .models import (
     CalendarPrimaryResult,
     ScheduleAttendeeMetaResult,
+    ScheduleAttendeesResult,
+    ScheduleAttendeesUpdateResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
-    ScheduleAttendeesResult,
     ScheduleUpdateResult,
 )
 from .url_helpers import build_api_url
@@ -578,3 +580,83 @@ async def update_schedule_attendee_meta(
         return ScheduleAttendeeMetaResult(success=False, error=api_err)
 
     return ScheduleAttendeeMetaResult(success=True, raw_response=data)
+
+
+async def update_schedule_attendees(
+    config: LansengerConfig,
+    app_token: str,
+    calendar_id: str,
+    schedule_id: str,
+    *,
+    add_attendees: Optional[List[str]] = None,
+    delete_attendees: Optional[List[str]] = None,
+    reminder_type: Optional[str] = None,
+    operation_type: Optional[str] = None,
+    current_time: Optional[int] = None,
+    user_token: str = "",
+    user_id: str = "",
+    http_client: Optional[httpx.AsyncClient] = None,
+) -> ScheduleAttendeesUpdateResult:
+    """Batch add and/or delete schedule attendees (4.23.19).
+
+    Allows adding and removing attendees in a single API call.
+
+    Args:
+        calendar_id: Calendar openId (required).
+        schedule_id: Schedule openId (required).
+        add_attendees: List of staff openIds to add.
+        delete_attendees: List of staff openIds to remove.
+        reminder_type: "yes" or "no".
+        operation_type: For recurring schedules — "modify_current",
+            "modify_current_after", "modify_all".
+        current_time: Required when operation_type != "modify_all" —
+            start time of the specific occurrence.
+    """
+    if not calendar_id:
+        return ScheduleAttendeesUpdateResult(success=False, error="calendar_id is required")
+    if not schedule_id:
+        return ScheduleAttendeesUpdateResult(success=False, error="schedule_id is required")
+    if not add_attendees and not delete_attendees:
+        return ScheduleAttendeesUpdateResult(success=False, error="at least one of add_attendees or delete_attendees is required")
+
+    url = build_api_url(
+        config, "calendars", "attendees_update", app_token,
+        user_token=user_token, user_id=user_id,
+        calendar_id=calendar_id, schedule_id=schedule_id,
+    )
+
+    body: Dict[str, Any] = {}
+    if add_attendees is not None:
+        body["addAttendees"] = add_attendees
+    if delete_attendees is not None:
+        body["deleteAttendees"] = delete_attendees
+    if reminder_type is not None:
+        body["reminderType"] = reminder_type
+    if operation_type is not None:
+        body["operationType"] = operation_type
+    if current_time is not None:
+        body["currentTime"] = current_time
+
+    data, http_err = await do_post(config, url, body, http_client)
+    if http_err:
+        return ScheduleAttendeesUpdateResult(success=False, error=http_err)
+    ok, api_err = parse_api_response(data)
+    if not ok:
+        return ScheduleAttendeesUpdateResult(success=False, error=api_err)
+
+    d = data.get("data", {})
+    schedule_ids = d.get("scheduleIds")
+    if isinstance(schedule_ids, list):
+        schedule_ids = [str(s) for s in schedule_ids]
+    else:
+        schedule_ids = None
+    attendees = d.get("attendees")
+    if isinstance(attendees, list):
+        attendees = [str(a) for a in attendees]
+
+    return ScheduleAttendeesUpdateResult(
+        success=True,
+        schedule_ids=schedule_ids,
+        failed_attendees=attendees,
+        raw_response=data,
+    )

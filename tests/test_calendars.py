@@ -13,9 +13,11 @@ from lansenger_sdk.calendars import (
     fetch_schedule_attendees,
     add_schedule_attendees,
     delete_schedule_attendees,
+    update_schedule_attendees,
 )
 from lansenger_sdk.models import (
     CalendarPrimaryResult,
+    ScheduleAttendeesUpdateResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
@@ -360,6 +362,62 @@ async def test_client_fetch_primary_calendar():
 async def test_client_create_schedule_validation():
     client = LansengerClient(app_id="test", app_secret="test")
     result = await client.create_schedule(calendar_id="", summary="s", start_time={}, end_time={}, attendees=[])
+    assert result.success is False
+    assert "calendar_id is required" in result.error
+    await client.close()
+
+
+# ── update_schedule_attendees (4.23.19) ──────────────────────────────
+
+@pytest.mark.asyncio
+async def test_update_schedule_attendees_no_calendar_id():
+    config = _make_config()
+    result = await update_schedule_attendees(config, app_token="tok", calendar_id="", schedule_id="s1")
+    assert result.success is False
+    assert "calendar_id is required" in result.error
+
+
+@pytest.mark.asyncio
+async def test_update_schedule_attendees_no_attendees():
+    config = _make_config()
+    result = await update_schedule_attendees(config, app_token="tok", calendar_id="c1", schedule_id="s1")
+    assert result.success is False
+    assert "add_attendees or delete_attendees" in result.error
+
+
+@pytest.mark.asyncio
+async def test_update_schedule_attendees_success():
+    config = _make_config()
+    mock_client = _mock_http_client({
+        "errCode": 0,
+        "data": {"scheduleIds": ["s1", "s2"], "attendees": ["failed1"]},
+    })
+    result = await update_schedule_attendees(
+        config, app_token="tok", calendar_id="c1", schedule_id="s1",
+        add_attendees=["a1", "a2"], delete_attendees=["a3"],
+        http_client=mock_client,
+    )
+    assert result.success is True
+    assert result.schedule_ids == ["s1", "s2"]
+    assert result.failed_attendees == ["failed1"]
+
+
+@pytest.mark.asyncio
+async def test_update_schedule_attendees_api_error():
+    config = _make_config()
+    mock_client = _mock_http_client({"errCode": 10005, "errMsg": "no permission"})
+    result = await update_schedule_attendees(
+        config, app_token="tok", calendar_id="c1", schedule_id="s1",
+        add_attendees=["a1"], http_client=mock_client,
+    )
+    assert result.success is False
+    assert "errCode=10005" in result.error
+
+
+@pytest.mark.asyncio
+async def test_client_update_schedule_attendees_validation():
+    client = LansengerClient(app_id="test", app_secret="test")
+    result = await client.update_schedule_attendees(calendar_id="", schedule_id="s1")
     assert result.success is False
     assert "calendar_id is required" in result.error
     await client.close()
