@@ -29,6 +29,11 @@ class TokenManager:
     app_id + app_secret. It has a 2-hour expiry (7200s) and
     is refreshed 5 minutes before expiry automatically.
 
+    If LansengerConfig.app_token is set, the TokenManager operates
+    in **external mode**: get_token() returns the provided token
+    directly without expiry checks or auto-refresh. The caller is
+    responsible for token validity and rotation.
+
     If a CredentialStore is provided, tokens are persisted to disk
     so they survive process restarts.
     """
@@ -45,6 +50,12 @@ class TokenManager:
         self._token_expiry: float = 0
         self._store = store
 
+        # External mode: app_token from config takes precedence over store cache
+        if self._config.app_token:
+            self._token = self._config.app_token
+            # No expiry — external mode skips all time-based checks
+            return
+
         if self._store:
             cached = self._store.load_app_token()
             if cached:
@@ -55,10 +66,18 @@ class TokenManager:
                 logger.debug("Restored cached appToken from %s", self._store.path)
 
     async def get_token(self) -> str:
-        """Get a valid app access token, refreshing if expired.
+        """Get a valid app access token.
 
-        Raises LansengerAuthError if token cannot be obtained.
+        In external mode (config.app_token is set), returns the
+        provided token directly with no expiry check or refresh.
+
+        Otherwise, returns a cached token or obtains a new one
+        via the API, refreshing before expiry.
         """
+        # External mode: pass-through, no refresh
+        if self._config.app_token:
+            return self._config.app_token
+
         if self._token and time.time() < self._token_expiry:
             return self._token
 

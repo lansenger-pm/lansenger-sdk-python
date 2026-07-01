@@ -64,3 +64,53 @@ def test_config_is_configured():
 
     empty_config = LansengerConfig(app_id="", app_secret="")
     assert empty_config.is_configured() is False
+
+
+def test_external_mode_with_app_token_only():
+    """External mode: app_token alone is sufficient, no app_id/app_secret needed."""
+    config = LansengerConfig.create(app_token="external_token_123")
+    assert config.app_token == "external_token_123"
+    assert config.is_external_mode() is True
+    assert config.is_configured() is False  # no app_id/app_secret
+    assert config.api_gateway_url == DEFAULT_API_GATEWAY_URL
+
+
+def test_external_mode_with_app_token_env_var():
+    """LANSENGER_APP_TOKEN env var triggers external mode."""
+    os.environ["LANSENGER_APP_TOKEN"] = "env_token"
+    try:
+        config = LansengerConfig.create()
+        assert config.app_token == "env_token"
+        assert config.is_external_mode() is True
+    finally:
+        os.environ.pop("LANSENGER_APP_TOKEN", None)
+
+
+def test_external_mode_optional_credentials():
+    """app_token + app_id/app_secret together: external mode is True, is_configured is also True."""
+    config = LansengerConfig.create(app_id="a", app_secret="s", app_token="tok")
+    assert config.is_external_mode() is True
+    assert config.is_configured() is True
+
+
+def test_user_token_field():
+    config = LansengerConfig.create(app_id="a", app_secret="s", user_token="user_tok_123")
+    assert config.user_token == "user_tok_123"
+
+
+def test_user_token_env_var():
+    os.environ["LANSENGER_USER_TOKEN"] = "env_user"
+    try:
+        config = LansengerConfig.create(app_id="a", app_secret="s")
+        assert config.user_token == "env_user"
+    finally:
+        os.environ.pop("LANSENGER_USER_TOKEN", None)
+
+
+def test_still_requires_credentials_without_app_token():
+    """Without app_token, missing app_id/app_secret still raises."""
+    os.environ.pop("LANSENGER_APP_ID", None)
+    os.environ.pop("LANSENGER_APP_SECRET", None)
+    os.environ.pop("LANSENGER_APP_TOKEN", None)
+    with pytest.raises(LansengerConfigError):
+        LansengerConfig.create()

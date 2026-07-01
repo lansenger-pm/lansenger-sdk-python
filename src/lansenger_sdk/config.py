@@ -19,7 +19,8 @@ class LansengerConfig:
     1. Direct params passed to LansengerConfig.create()
     2. LANSENGER_APP_ID / LANSENGER_APP_SECRET / LANSENGER_API_GATEWAY_URL
        LANSENGER_PASSPORT_URL / LANSENGER_REDIRECT_URI /
-       LANSENGER_ENCODING_KEY / LANSENGER_CALLBACK_TOKEN
+       LANSENGER_ENCODING_KEY / LANSENGER_CALLBACK_TOKEN /
+       LANSENGER_APP_TOKEN / LANSENGER_USER_TOKEN
        env vars
     """
 
@@ -31,6 +32,8 @@ class LansengerConfig:
     http_timeout: float = 30.0
     encoding_key: str = ""
     callback_token: str = ""
+    app_token: str = ""
+    user_token: str = ""
 
     @classmethod
     def create(
@@ -43,10 +46,13 @@ class LansengerConfig:
         http_timeout: float | None = None,
         encoding_key: str | None = None,
         callback_token: str | None = None,
+        app_token: str | None = None,
+        user_token: str | None = None,
     ) -> LansengerConfig:
         """Create config from params with env var fallback.
 
         Raises LansengerConfigError if credentials are missing.
+        When app_token is provided, app_id/app_secret are optional.
         """
         resolved_app_id = app_id or os.environ.get("LANSENGER_APP_ID", "").strip()
         resolved_app_secret = app_secret or os.environ.get("LANSENGER_APP_SECRET", "").strip()
@@ -66,12 +72,20 @@ class LansengerConfig:
         resolved_callback_token = callback_token or os.environ.get(
             "LANSENGER_CALLBACK_TOKEN", ""
         ).strip()
+        resolved_app_token = app_token or os.environ.get(
+            "LANSENGER_APP_TOKEN", ""
+        ).strip()
+        resolved_user_token = user_token or os.environ.get(
+            "LANSENGER_USER_TOKEN", ""
+        ).strip()
 
-        if not resolved_app_id or not resolved_app_secret:
+        # In external mode (app_token provided), app_id/app_secret are optional
+        if not resolved_app_token and (not resolved_app_id or not resolved_app_secret):
             raise LansengerConfigError(
                 "Lansenger credentials not configured. "
                 "Set LANSENGER_APP_ID and LANSENGER_APP_SECRET env vars, "
-                "or pass app_id/app_secret directly."
+                "or pass app_id/app_secret directly, "
+                "or provide LANSENGER_APP_TOKEN for external token mode."
             )
 
         return cls(
@@ -83,6 +97,8 @@ class LansengerConfig:
             http_timeout=resolved_timeout,
             encoding_key=resolved_encoding_key,
             callback_token=resolved_callback_token,
+            app_token=resolved_app_token,
+            user_token=resolved_user_token,
         )
 
     @classmethod
@@ -92,6 +108,10 @@ class LansengerConfig:
 
     def is_configured(self) -> bool:
         return bool(self.app_id and self.app_secret)
+
+    def is_external_mode(self) -> bool:
+        """Return True when app_token is provided externally (no auto-refresh)."""
+        return bool(self.app_token)
 
     def has_passport_url(self) -> bool:
         """Check if passport_url is configured (needed for OAuth2 flows)."""
