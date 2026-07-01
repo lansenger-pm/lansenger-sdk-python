@@ -33,8 +33,10 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Upload/download de médias** — fichiers, images, vidéos avec detection automatique du type, récupération du chemin média
 - **Gestion des messages** — révocation, mise à jour dynamique de carte
 - **Groups** — créer, infos, membres, liste, vérification de membership, mise à jour des paramètres & membres, dissoudre
-- **Calendrier & Schedule** — calendrier principal, CRUD de schedule + mise à jour, gestion des participants + métadonnées participants
+- **Calendrier & Schedule** — calendrier principal, CRUD de schedule + mise à jour, gestion des participants + métadonnées participants, update_schedule_attendees()
 - **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
+- **Commandes de bot** — créer/gérer les entrées de commande de bot
+- **Applications personnelles** — gérer les bots personnels
 - **Événements de callback** — 25 types d'événements, parsing structuré, décryptage AES (spec 4.10.1.4), vérification de signature SHA1
 
 ## Installation rapide

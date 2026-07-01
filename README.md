@@ -33,8 +33,10 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Media upload/download** — files, images, videos with auto type detection, media path fetch
 - **Message management** — revoke, dynamic card update
 - **Groups** — create, info, members, list, membership check, update settings & members, dismiss
-- **Calendar & schedule** — primary calendar, schedule CRUD + update, attendee management + attendee metadata
+- **Calendar & schedule** — primary calendar, schedule CRUD + update, attendee management + attendee metadata, update_schedule_attendees()
 - **Unified todo** — create, update, delete, query, executor management, status counts
+- **Bot slash commands** (4.37) — create/query/delete Command entries for bot interaction menus
+- **Personal apps** (4.38) — create/update/query/delete/list personal bots with user token
 - **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
 
 ## Quick Install
