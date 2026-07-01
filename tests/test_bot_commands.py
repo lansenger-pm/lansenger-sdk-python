@@ -42,7 +42,7 @@ async def test_create_bot_commands_no_commands():
 @pytest.mark.asyncio
 async def test_create_bot_commands_bad_scope():
     config = _make_config()
-    result = await create_bot_commands(config, app_token="tok", scope_type=0, commands=[{"command": "/test"}])
+    result = await create_bot_commands(config, app_token="tok", scope_type=0, commands=[{"command": "test"}])
     assert result.success is False
     assert "scope_type must be 1-7" in result.error
 
@@ -53,7 +53,7 @@ async def test_create_bot_commands_success():
     mock_client = _mock_http_client({"errCode": 0, "errMsg": "ok"})
     result = await create_bot_commands(
         config, app_token="tok", scope_type=7,
-        commands=[{"command": "/add", "description": "add something"}],
+        commands=[{"command": "add", "description": "add something"}],
         http_client=mock_client,
     )
     assert result.success is True
@@ -65,7 +65,7 @@ async def test_create_bot_commands_with_chat():
     mock_client = _mock_http_client({"errCode": 0, "errMsg": "ok"})
     result = await create_bot_commands(
         config, app_token="tok", scope_type=1,
-        commands=[{"command": "/add"}],
+        commands=[{"command": "add"}],
         chat_id="524288-xxx", chat_type="group", staff_id="524288-yyy",
         http_client=mock_client,
     )
@@ -78,7 +78,7 @@ async def test_create_bot_commands_api_error():
     mock_client = _mock_http_client({"errCode": 10000, "errMsg": "API service unavailable"})
     result = await create_bot_commands(
         config, app_token="tok", scope_type=7,
-        commands=[{"command": "/test"}],
+        commands=[{"command": "test"}],
         http_client=mock_client,
     )
     assert result.success is False
@@ -102,7 +102,7 @@ async def test_fetch_bot_commands_success():
         "errCode": 0,
         "data": {
             "scopeType": 7,
-            "commands": [{"command": "/add", "description": "desc"}],
+            "commands": [{"command": "add", "description": "desc"}],
         },
     })
     result = await fetch_bot_commands(config, app_token="tok", scope_type=7, http_client=mock_client)
@@ -158,7 +158,7 @@ def test_bot_command_models_to_dict():
 
     r3 = BotCommandQueryResult(
         success=True, scope_type=7,
-        commands=[{"command": "/add"}],
+        commands=[{"command": "add"}],
     ).to_dict()
     assert r3["success"] is True
     assert r3["scope_type"] == 7
