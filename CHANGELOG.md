@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.23] - 2026-07-09
+
+### Fixed
+
+- **callbacks**: `decrypt_callback_payload` now supports JSON-format decrypted data (in addition to the documented binary format). Some platforms return `{"random":"...","orgId":"...","appId":"...","events":[...]}` instead of the binary `random(16B)+eventsLen(4B)+orgId+appId+events` structure.
+
 ## [1.6.22] - 2026-07-09
 
 ### Fixed

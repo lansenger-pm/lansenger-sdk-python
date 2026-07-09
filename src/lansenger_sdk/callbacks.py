@@ -624,6 +624,25 @@ def decrypt_callback_payload(
     raw = _aes_decrypt(base64.b64decode(encrypted_data), aes_key, iv)
     raw = _pkcs7_unpad(raw)
 
+    # Try JSON format first: some platforms return a JSON object instead of binary structure
+    try:
+        text = raw.decode("utf-8")
+        parsed = json.loads(text)
+        if isinstance(parsed, dict) and "events" in parsed:
+            events_data = parsed["events"]
+            if not isinstance(events_data, list):
+                events_data = [events_data]
+            return {
+                "random": parsed.get("random", ""),
+                "orgId": parsed.get("orgId") or parsed.get("org_id", ""),
+                "appId": parsed.get("appId") or parsed.get("app_id", ""),
+                "events": events_data,
+                "length": parsed.get("length") or parsed.get("len", 0),
+            }
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        pass
+
+    # Binary format: random(16B) + eventsLen(4B big-endian) + orgId + appId + events JSON
     if len(raw) < 20:
         raise ValueError(f"Decrypted data too short: {len(raw)} bytes (need >= 20)")
 
