@@ -172,8 +172,14 @@ def test_parse_bot_group_message():
                 "botCreator": "524288-creator",
                 "msgId": "524288-msgid",
                 "botId": "524288-botid",
-                "isAtMe": True,
-                "isAtAll": False,
+                "referenceMsg": None,
+                "magic": "11",
+                "reminder": {
+                    "isAtMe": True,
+                    "isAtAll": False,
+                    "bots": [{"botId": "b1", "botName": "BotA"}],
+                    "staffs": [{"staffId": "s1", "staffName": "张三"}],
+                },
             },
             "appId": "app1",
             "orgId": "org1",
@@ -192,6 +198,11 @@ def test_parse_bot_group_message():
     assert data.bot_id == "524288-botid"
     assert data.is_at_me is True
     assert data.is_at_all is False
+    assert data.magic == "11"
+    assert len(data.bots) == 1
+    assert data.bots[0]["botName"] == "BotA"
+    assert len(data.staffs) == 1
+    assert data.staffs[0]["staffName"] == "张三"
 
 
 def test_parse_account_subscribe():

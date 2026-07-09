@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.22] - 2026-07-09
+
+### Fixed
+
+- **callbacks**: `bot_group_message` events now correctly extract `is_at_me`, `is_at_all`, `bots`, and `staffs` from the nested `reminder` object (was incorrectly reading from top-level, per OpenAPI 4.10.1.3 update).
+- **callbacks**: `bot_group_message` parsing now maps the `magic` field.
+- **callbacks**: `BotGroupMessageData` dataclass now includes `bots`, `staffs`, and `magic` fields.
+
 ## [1.6.19] - 2026-07-01
 
 ### Added
