@@ -24,6 +24,8 @@ from __future__ import annotations
 
 import logging
 import os
+
+logger = logging.getLogger("lansenger_sdk.client")
 import tempfile
 import time
 from urllib.parse import quote
@@ -104,8 +106,6 @@ from .models import (
     UserTokenResult,
 )
 
-logger = logging.getLogger("lansenger_sdk.client")
-
 
 def _parse_send_response(data: dict, msg_type: str = "", operation: str = "") -> SendMessageResult:
     """Parse a Lansenger API response into a SendMessageResult."""
@@ -149,7 +149,7 @@ class LansengerClient:
         self,
         app_id: str,
         app_secret: str,
-        api_gateway_url: str = "https://open.e.lanxin.cn/open/apigw",
+        api_gateway_url: str = "",
         passport_url: str = "",
         http_timeout: float = 30.0,
         store_path: Optional[str] = None,
@@ -228,7 +228,7 @@ class LansengerClient:
         config = LansengerConfig(
             app_id=creds["app_id"],
             app_secret=creds["app_secret"],
-            api_gateway_url=creds.get("api_gateway_url") or "https://open.e.lanxin.cn/open/apigw",
+            api_gateway_url=creds.get("api_gateway_url") or "",
             passport_url=creds.get("passport_url", ""),
             redirect_uri=creds.get("redirect_uri", ""),
             encoding_key=creds.get("encoding_key", ""),
@@ -409,6 +409,7 @@ class LansengerClient:
     async def _send_private(self, chat_id: str, msg_type: str, msg_data: dict, *, ref_msg_id: str = "") -> SendMessageResult:
         token = await self._get_token()
         url = self._private_msg_url(token)
+        logger.debug("Sending %s to %s", msg_type, chat_id)
         payload = {
             "userIdList": [chat_id],
             "msgType": msg_type,
@@ -433,6 +434,7 @@ class LansengerClient:
     async def _send_group(self, group_id: str, msg_type: str, msg_data: dict, *, user_token: str = "", sender_id: str = "", ref_msg_id: str = "") -> SendMessageResult:
         token = await self._get_token()
         url = self._group_msg_url(token)
+        logger.debug("Sending %s to group %s", msg_type, group_id)
         if user_token:
             url += f"&user_token={quote(user_token, safe='')}"
         payload: Dict[str, Any] = {

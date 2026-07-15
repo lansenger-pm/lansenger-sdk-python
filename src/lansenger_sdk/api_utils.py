@@ -86,10 +86,13 @@ async def do_post(
     if owns_client:
         http_client = httpx.AsyncClient(timeout=config.http_timeout)
     try:
+        logger.debug("POST %s", url)
         response = await http_client.post(url, json=body)
         response.raise_for_status()
         data = response.json()
+        logger.debug("POST %s → 200 OK", url)
     except httpx.HTTPError as e:
+        logger.debug("POST %s → HTTP error: %s", url, e)
         return None, f"HTTP error: {e}"
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         return None, f"JSON decode error: {e}"

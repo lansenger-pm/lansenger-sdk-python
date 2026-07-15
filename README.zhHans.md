@@ -443,7 +443,7 @@ AES 解密需安装 `pycryptodome` 或 `cryptography` 包（自动检测）。
 |----------|----------|-------------|---------|
 | `LANSENGER_APP_ID` | ✓ | 应用/机器人 ID | — |
 | `LANSENGER_APP_SECRET` | ✓ | 应用/机器人 Secret | — |
-| `LANSENGER_API_GATEWAY_URL` | ✗ | API 网关 URL | `https://open.e.lanxin.cn/open/apigw` |
+| `LANSENGER_API_GATEWAY_URL` | ✓ | API 网关 URL | — |
 | `LANSENGER_PASSPORT_URL` | ✗ | 通行证 URL（用于 OAuth2） | — |
 | `LANSENGER_REDIRECT_URI` | ✗ | OAuth2 回调地址 | `http://localhost:8765` |
 | `LANSENGER_ENCODING_KEY` | ✗ | 回调 AES 加密密钥（Base64） | — |

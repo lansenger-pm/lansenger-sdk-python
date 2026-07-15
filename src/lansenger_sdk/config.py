@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from .exceptions import LansengerConfigError
 
 
-DEFAULT_API_GATEWAY_URL = "https://open.e.lanxin.cn/open/apigw"
+DEFAULT_API_GATEWAY_URL = ""
 
 
 @dataclass

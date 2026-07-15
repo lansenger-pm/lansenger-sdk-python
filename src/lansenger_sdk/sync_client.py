@@ -107,7 +107,7 @@ class LansengerSyncClient:
         self,
         app_id: str,
         app_secret: str,
-        api_gateway_url: str = "https://open.e.lanxin.cn/open/apigw",
+        api_gateway_url: str = "",
         passport_url: str = "",
         http_timeout: float = 30.0,
         encoding_key: str = "",
@@ -175,7 +175,7 @@ class LansengerSyncClient:
         config = LansengerConfig(
             app_id=creds["app_id"],
             app_secret=creds["app_secret"],
-            api_gateway_url=creds.get("api_gateway_url") or "https://open.e.lanxin.cn/open/apigw",
+            api_gateway_url=creds.get("api_gateway_url") or "",
             passport_url=creds.get("passport_url", ""),
             redirect_uri=creds.get("redirect_uri", ""),
             encoding_key=creds.get("encoding_key", ""),
