@@ -125,8 +125,10 @@ async def create_schedule(
         return ScheduleCreateResult(success=False, error="start_time is required")
     if not end_time:
         return ScheduleCreateResult(success=False, error="end_time is required")
-    if not attendees:
-        return ScheduleCreateResult(success=False, error="attendees is required")
+    if not attendees and not user_id:
+        return ScheduleCreateResult(success=False, error="attendees is required (or provide user_id to auto-fill creator)")
+    if not attendees and user_id:
+        attendees = [{"staffId": user_id, "attendeeFlag": "required"}]
 
     url = build_api_url(config, "calendars", "schedule_create", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id)
 
