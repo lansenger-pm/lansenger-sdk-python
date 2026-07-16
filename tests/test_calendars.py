@@ -32,7 +32,7 @@ def _make_config():
     return LansengerConfig(
         app_id="test_app",
         app_secret="test_secret",
-        api_gateway_url="https://open.e.lanxin.cn/open/apigw",
+        api_gateway_url="https://test-gateway.example.com",
     )
 
 
@@ -133,6 +133,62 @@ async def test_create_schedule_no_attendees():
     )
     assert result.success is False
     assert "attendees is required" in result.error
+
+
+@pytest.mark.asyncio
+async def test_create_schedule_auto_fill_attendees_with_user_id():
+    """Empty attendees + user_id → auto-fills [{staffId: user_id, attendeeFlag: "required"}]."""
+    config = _make_config()
+    mock_client = _mock_http_client({"errCode": 0, "data": {"scheduleId": "sch_auto"}})
+    result = await create_schedule(
+        config, app_token="tok", calendar_id="cal1", summary="Meeting",
+        start_time={"date": "2024-01-01", "time": "10:00", "timeZone": "Asia/Shanghai"},
+        end_time={"date": "2024-01-01", "time": "11:00", "timeZone": "Asia/Shanghai"},
+        attendees=[],  # empty — triggers auto-fill
+        user_id="user456",
+        http_client=mock_client,
+    )
+    assert result.success is True
+    assert result.schedule_id == "sch_auto"
+    # Verify the auto-filled attendees were sent in the POST body
+    sent_body = mock_client.post.call_args.kwargs.get("json", {})
+    assert "attendees" in sent_body
+    assert sent_body["attendees"] == [{"staffId": "user456", "attendeeFlag": "required"}]
+
+
+@pytest.mark.asyncio
+async def test_create_schedule_preserves_provided_attendees_with_user_id():
+    """Explicit attendees + user_id → provided attendees are used as-is (no override)."""
+    config = _make_config()
+    mock_client = _mock_http_client({"errCode": 0, "data": {"scheduleId": "sch1"}})
+    custom_attendees = [{"staffId": "staff1", "attendeeFlag": "optional"}]
+    result = await create_schedule(
+        config, app_token="tok", calendar_id="cal1", summary="Meeting",
+        start_time={"date": "2024-01-01", "time": "10:00", "timeZone": "Asia/Shanghai"},
+        end_time={"date": "2024-01-01", "time": "11:00", "timeZone": "Asia/Shanghai"},
+        attendees=custom_attendees,  # explicitly provided — no auto-fill
+        user_id="user456",
+        http_client=mock_client,
+    )
+    assert result.success is True
+    assert result.schedule_id == "sch1"
+    # Verify the original attendees were sent, not auto-filled
+    sent_body = mock_client.post.call_args.kwargs.get("json", {})
+    assert "attendees" in sent_body
+    assert sent_body["attendees"] == custom_attendees
+
+
+@pytest.mark.asyncio
+async def test_create_schedule_no_attendees_no_user_id_error():
+    """Neither attendees nor user_id provided → returns clear error message."""
+    config = _make_config()
+    result = await create_schedule(
+        config, app_token="tok", calendar_id="cal1", summary="s",
+        start_time={"time": "10:00"}, end_time={"time": "11:00"},
+        attendees=[], user_id="",
+    )
+    assert result.success is False
+    assert "attendees is required (or provide user_id to auto-fill creator)" in result.error
 
 
 @pytest.mark.asyncio
