@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.25] - 2026-07-16
+
+### Added
+
+- **calendars**: `create_schedule` now auto-fills `attendees` with `[{staffId: user_id, attendeeFlag: "required"}]` when attendees is empty and `user_id` is provided. The API requires at least one attendee.
+
+### Changed
+
+- **config**: Removed hardcoded `DEFAULT_API_GATEWAY_URL` fallback. `api_gateway_url` must now be explicitly provided by the user — there is no default.
+
+### Added
+
+- **logging**: Debug logging added for HTTP POST requests (`api_utils`) and message sending (`client`). Loggers use `lansenger_sdk.*` namespace and default to WARNING level.
+
 ## [1.6.23] - 2026-07-09
 
 ### Fixed
