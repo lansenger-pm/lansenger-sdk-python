@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.26] - 2026-07-16
+
+### Fixed
+
+- **client**: `LansengerAuthError` was referenced but not imported, causing `NameError` in `get_user_token()` error paths. Added the missing import.
+
+### Added
+
+- **linting**: `ruff` linter config in `pyproject.toml` (F/E/W/B rules).
+- **tests**: Async client `get_user_token` error path tests (no store, no token, valid token).
+
 ## [1.6.25] - 2026-07-16
 
 ### Added
