@@ -44,7 +44,7 @@ from .constants import (
     guess_app_media_type,
     guess_media_type,
 )
-from .exceptions import LansengerAPIError, LansengerFileError, LansengerNetworkError
+from .exceptions import LansengerAPIError, LansengerAuthError, LansengerFileError, LansengerNetworkError
 from .oauth import exchange_code_for_user_token, refresh_user_token
 from .url_helpers import build_api_url
 from .media import download_media, upload_app_media, upload_media
