@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.27] - 2026-07-17
+
+### Added
+
+- **auth**: `UserTokenManager` now supports **external mode** — when `config.user_token` is set, `get_token()` returns the provided token directly without expiry checks or auto-refresh.
+- **client**: `LansengerClient` and `LansengerSyncClient` now accept `user_token` parameter for external mode.
+
+### Changed
+
+- **client**: `query_groups()` now delegates to `fetch_group_list()` internally (deprecated).
+
 ## [1.6.26] - 2026-07-16
 
 ### Fixed

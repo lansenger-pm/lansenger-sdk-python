@@ -132,6 +132,10 @@ class UserTokenManager:
     - Falls back to requiring re-authorization if refreshToken is expired
 
     Requires a TokenManager instance to obtain appToken for API calls.
+
+    In external mode (config.user_token is set), the manager returns the
+    provided userToken directly without expiry checks or auto-refresh.
+    The caller is responsible for token validity and rotation.
     """
 
     def __init__(
@@ -152,6 +156,12 @@ class UserTokenManager:
         self._user_token_expiry: float = 0
         self._refresh_token_expiry: float = 0
         self._staff_id: str | None = None
+
+        # External mode: user_token from config takes precedence over store cache
+        if self._config.user_token:
+            self._user_token = self._config.user_token
+            # No expiry — external mode skips all time-based checks
+            return
 
         if self._store:
             cached = self._store.load_user_token(staff_id=self._staff_id or "")
@@ -185,9 +195,19 @@ class UserTokenManager:
     async def get_token(self) -> str:
         """Get a valid userToken, refreshing if expired.
 
+        In external mode (config.user_token is set), returns the
+        provided token directly with no expiry check or refresh.
+
+        Otherwise, returns a cached token or refreshes via the API
+        using the stored refreshToken.
+
         Raises LansengerAuthError if token cannot be obtained
         (e.g. refreshToken expired — must re-authorize).
         """
+        # External mode: pass-through, no refresh
+        if self._config.user_token:
+            return self._config.user_token
+
         if self._user_token and time.time() < self._user_token_expiry:
             return self._user_token
 

@@ -107,6 +107,7 @@ class LansengerSyncClient:
         encoding_key: str = "",
         callback_token: str = "",
         app_token: str = "",
+        user_token: str = "",
     ):
         self._app_id = app_id
         self._app_secret = app_secret
@@ -116,6 +117,7 @@ class LansengerSyncClient:
         self._encoding_key = encoding_key
         self._callback_token = callback_token
         self._app_token = app_token
+        self._user_token = user_token
         self._async_client_for_tokens: LansengerClient | None = None
 
     @classmethod
@@ -131,6 +133,7 @@ class LansengerSyncClient:
             encoding_key=config.encoding_key,
             callback_token=config.callback_token,
             app_token=config.app_token,
+            user_token=config.user_token,
         )
 
     @classmethod
@@ -145,6 +148,7 @@ class LansengerSyncClient:
             encoding_key=config.encoding_key,
             callback_token=config.callback_token,
             app_token=config.app_token,
+            user_token=config.user_token,
         )
 
     @classmethod
@@ -223,6 +227,7 @@ class LansengerSyncClient:
             encoding_key=self._encoding_key,
             callback_token=self._callback_token,
             app_token=self._app_token,
+            user_token=self._user_token,
         )
         try:
             method = getattr(client, method_name)
@@ -241,6 +246,7 @@ class LansengerSyncClient:
             encoding_key=self._encoding_key,
             callback_token=self._callback_token,
             app_token=self._app_token,
+            user_token=self._user_token,
         )
         try:
             method = getattr(client, method_name)

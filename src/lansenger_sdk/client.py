@@ -153,6 +153,7 @@ class LansengerClient:
         encoding_key: str = "",
         callback_token: str = "",
         app_token: str = "",
+        user_token: str = "",
     ):
         self._config = LansengerConfig(
             app_id=app_id,
@@ -163,6 +164,7 @@ class LansengerClient:
             encoding_key=encoding_key,
             callback_token=callback_token,
             app_token=app_token,
+            user_token=user_token,
         )
         self._http_client: httpx.AsyncClient | None = None
         self._token_manager: TokenManager | None = None
@@ -187,6 +189,8 @@ class LansengerClient:
             store_path=store_path,
             encoding_key=config.encoding_key,
             callback_token=config.callback_token,
+            app_token=config.app_token,
+            user_token=config.user_token,
         )
 
     @classmethod
@@ -202,6 +206,7 @@ class LansengerClient:
             encoding_key=config.encoding_key,
             callback_token=config.callback_token,
             app_token=config.app_token,
+            user_token=config.user_token,
         )
 
     @classmethod
@@ -1425,6 +1430,9 @@ class LansengerClient:
     ) -> QueryGroupsResult:
         """Query the bot's group ID list via GET /v2/groups/fetch.
 
+        .. deprecated::
+            Use :func:`lansenger_sdk.groups.fetch_group_list` instead.
+
         Args:
             page_offset: Page offset, starting from 0 (default: 0).
             page_size: Per-page count (max 100, default: 100).
@@ -1432,32 +1440,19 @@ class LansengerClient:
         Returns:
             QueryGroupsResult with total_group_ids and group_ids.
         """
-        self._ensure_clients()
+        from .groups import fetch_group_list
 
         token = await self._get_token()
-        url = build_api_url(self._config, "groups", "groups_fetch", token)
-        url += f"&page_offset={page_offset}&page_size={page_size}"
-
-        try:
-            response = await self._http_client.get(url)
-            response.raise_for_status()
-            data = response.json()
-        except httpx.HTTPError as e:
-            return QueryGroupsResult(success=False, error=f"HTTP error: {e}")
-
-        err_code = data.get("errCode", -1)
-        if err_code != 0:
-            msg = data.get("errMsg", "Unknown error")
-            return QueryGroupsResult(
-                success=False, error=f"API error (errCode={err_code}): {msg}"
-            )
-
-        result_data = data.get("data", {})
+        result = await fetch_group_list(
+            self._config, token,
+            page_offset=page_offset, page_size=page_size,
+        )
         return QueryGroupsResult(
-            success=True,
-            total_group_ids=result_data.get("totalGroupIds", 0),
-            group_ids=result_data.get("groupIds", []),
-            raw_response=data,
+            success=result.success,
+            total_group_ids=result.total_group_ids,
+            group_ids=result.group_ids or [],
+            error=result.error,
+            raw_response=result.raw_response,
         )
 
     # ── Public API: Media operations ────────────────────────────────────
