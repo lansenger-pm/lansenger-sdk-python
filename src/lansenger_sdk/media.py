@@ -10,24 +10,16 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
-from typing import Optional
 
 import httpx
 
 from .auth import TokenManager
 from .config import LansengerConfig
 from .constants import (
-    APP_MEDIA_TYPE_AUDIO,
     APP_MEDIA_TYPE_FILE,
-    APP_MEDIA_TYPE_IMAGE,
-    APP_MEDIA_TYPE_VIDEO,
-    MEDIA_TYPE_AUDIO,
     MEDIA_TYPE_IMAGE,
-    MEDIA_TYPE_VIDEO,
-    guess_app_media_type,
-    guess_media_type,
 )
-from .exceptions import LansengerFileError, LansengerNetworkError
+from .exceptions import LansengerFileError
 from .models import DownloadMediaResult, MediaPathResult, UploadMediaResult
 from .url_helpers import build_api_url
 
@@ -108,10 +100,10 @@ async def upload_app_media(
     file_path: str,
     media_type: str = APP_MEDIA_TYPE_FILE,
     *,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-    duration: Optional[int] = None,
-    context: Optional[str] = None,
+    width: int | None = None,
+    height: int | None = None,
+    duration: int | None = None,
+    context: str | None = None,
 ) -> UploadMediaResult:
     """Upload a media file via app/bot endpoint (4.5.4).
 
@@ -219,7 +211,7 @@ async def download_media_to_file(
     token_manager: TokenManager,
     http_client: httpx.AsyncClient,
     media_id: str,
-    target_path: Optional[str] = None,
+    target_path: str | None = None,
     media_type: str = "file",
 ) -> str:
     """Download a media file and save it to a temp/local file.
@@ -273,7 +265,7 @@ async def fetch_media_path(
     media_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> MediaPathResult:
     """Get the download URL path for a media file (4.5.3).
 

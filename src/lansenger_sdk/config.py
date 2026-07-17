@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .exceptions import LansengerConfigError
-
 
 DEFAULT_API_GATEWAY_URL = ""
 

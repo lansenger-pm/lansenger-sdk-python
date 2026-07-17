@@ -16,11 +16,11 @@ import json
 import logging
 import struct
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Union
 
 logger = logging.getLogger("lansenger_sdk.callbacks")
 
-CALLBACK_EVENT_TYPES: Dict[str, str] = {
+CALLBACK_EVENT_TYPES: dict[str, str] = {
     "account_message": "public_account",
     "account_subscribe": "public_account",
     "account_unsubscribe": "public_account",
@@ -56,7 +56,7 @@ class CallbackEvent:
     event_id: int
     event_type: str
     category: str
-    data: Union[dict, "CallbackEventData"]
+    data: dict | CallbackEventData
     app_id: str
     org_id: str
 
@@ -184,7 +184,7 @@ class UaCertDeleteData:
 
 @dataclass
 class ReportLocationData:
-    location_info: Dict[str, str] = field(default_factory=dict)
+    location_info: dict[str, str] = field(default_factory=dict)
 
 
 # ── 8. User logout ────────────────────────────────────────────────────
@@ -200,7 +200,7 @@ class UserLogoutData:
 
 @dataclass
 class DataScopeData:
-    dept_ids: List[str] = field(default_factory=list)
+    dept_ids: list[str] = field(default_factory=list)
     timestamp: str = ""
 
 
@@ -213,7 +213,7 @@ class BotPrivateMessageData:
     msg_type: str = ""
     msg_data: dict = field(default_factory=dict)
     msg_id: str = ""
-    reference_msg: Optional[dict] = None
+    reference_msg: dict | None = None
 
 
 @dataclass
@@ -230,10 +230,10 @@ class BotGroupMessageData:
     bot_id: str = ""
     is_at_me: bool = False
     is_at_all: bool = False
-    bots: List[dict] = field(default_factory=list)
-    staffs: List[dict] = field(default_factory=list)
+    bots: list[dict] = field(default_factory=list)
+    staffs: list[dict] = field(default_factory=list)
     magic: str = ""
-    reference_msg: Optional[dict] = None
+    reference_msg: dict | None = None
 
 
 # ── 11. Workbench visible config ───────────────────────────────────────
@@ -241,8 +241,8 @@ class BotGroupMessageData:
 @dataclass
 class WbVisibleConfigData:
     entry_id: str = ""
-    department_ids: List[str] = field(default_factory=list)
-    staff_ids: List[str] = field(default_factory=list)
+    department_ids: list[str] = field(default_factory=list)
+    staff_ids: list[str] = field(default_factory=list)
     timestamp: str = ""
     is_test_mode_on: bool = False
 
@@ -275,7 +275,7 @@ class ScheduleModifyData:
     start_time: dict = field(default_factory=dict)
     end_time: dict = field(default_factory=dict)
     operator: str = ""
-    attendees: List[dict] = field(default_factory=list)
+    attendees: list[dict] = field(default_factory=list)
     timestamp: str = ""
 
 
@@ -337,7 +337,7 @@ CallbackEventData = Union[
 ]
 
 
-EVENT_DATA_PARSERS: Dict[str, Any] = {
+EVENT_DATA_PARSERS: dict[str, Any] = {
     "account_subscribe": AccountSubscribeData,
     "account_unsubscribe": AccountUnsubscribeData,
     "staff_info": StaffInfoData,
@@ -364,7 +364,7 @@ EVENT_DATA_PARSERS: Dict[str, Any] = {
     "tag_member": TagMemberData,
 }
 
-FIELD_MAPS: Dict[str, Dict[str, str]] = {
+FIELD_MAPS: dict[str, dict[str, str]] = {
     "account_subscribe": {"staffId": "staff_id", "createTime": "create_time"},
     "account_unsubscribe": {"staffId": "staff_id", "createTime": "create_time"},
     "staff_info": {"staffId": "staff_id", "name": "name", "mobile": "mobile", "state": "state", "sex": "sex", "email": "email", "employId": "employee_id", "employeeId": "employee_id", "avatarId": "avatar_id", "timestamp": "timestamp"},
@@ -392,13 +392,13 @@ FIELD_MAPS: Dict[str, Dict[str, str]] = {
 }
 
 
-def _parse_event_data(event_type: str, raw_data: dict) -> Union[dict, CallbackEventData]:
+def _parse_event_data(event_type: str, raw_data: dict) -> dict | CallbackEventData:
     parser_cls = EVENT_DATA_PARSERS.get(event_type)
     if not parser_cls:
         return raw_data
 
     field_map = FIELD_MAPS.get(event_type, {})
-    kwargs: Dict[str, Any] = {}
+    kwargs: dict[str, Any] = {}
 
     for api_key, python_key in field_map.items():
         value = raw_data.get(api_key)
@@ -484,13 +484,12 @@ def parse_callback_payload(
                 encrypted_data = data_encrypt
             else:
                 payload = payload_inner
-                if verify_signature:
-                    if not verify_callback_signature(
-                        timestamp, nonce, signature, encoding_key,
-                        data_encrypt=encrypted_data,
-                        callback_token=callback_token,
-                    ):
-                        raise ValueError("Callback signature verification failed")
+                if verify_signature and not verify_callback_signature(
+                    timestamp, nonce, signature, encoding_key,
+                    data_encrypt=encrypted_data,
+                    callback_token=callback_token,
+                ):
+                    raise ValueError("Callback signature verification failed")
                 return _parse_decrypted_payload(payload)
 
     if encoding_key:
@@ -688,16 +687,16 @@ def _aes_decrypt(data: bytes, key: bytes, iv: bytes) -> bytes:
     except ImportError:
         pass
     try:
-        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
         from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
         cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
         decryptor = cipher.decryptor()
         return decryptor.update(data) + decryptor.finalize()
-    except ImportError:
+    except ImportError as err:
         raise ImportError(
             "AES decryption requires either 'pycryptodome' or 'cryptography' package. "
             "Install one: pip install pycryptodome  OR  pip install cryptography"
-        )
+        ) from err
 
 
 def _pkcs7_unpad(data: bytes) -> bytes:
@@ -723,6 +722,6 @@ def _split_org_app_id(middle_str: str, known_app_id: str = "") -> tuple[str, str
     return middle_str, ""
 
 
-def get_callback_event_types() -> Dict[str, str]:
+def get_callback_event_types() -> dict[str, str]:
     """Return the mapping of callback event types to categories."""
     return CALLBACK_EVENT_TYPES

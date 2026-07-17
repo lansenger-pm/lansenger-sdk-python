@@ -10,26 +10,26 @@ All endpoints require app_token.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
-from .config import LansengerConfig
-from .models import BotCommandResult, BotCommandQueryResult
-from .url_helpers import build_api_url
 from .api_utils import do_post, parse_api_response
+from .config import LansengerConfig
+from .models import BotCommandQueryResult, BotCommandResult
+from .url_helpers import build_api_url
 
 
 async def create_bot_commands(
     config: LansengerConfig,
     app_token: str,
     scope_type: int,
-    commands: List[Dict[str, Any]],
+    commands: list[dict[str, Any]],
     *,
     chat_id: str = "",
     chat_type: str = "",
     staff_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> BotCommandResult:
     """Create bot commands (4.37.1).
 
@@ -50,7 +50,7 @@ async def create_bot_commands(
 
     url = build_api_url(config, "bot_commands", "create", app_token)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "scopeType": scope_type,
         "commands": commands,
     }
@@ -79,7 +79,7 @@ async def fetch_bot_commands(
     chat_id: str = "",
     chat_type: str = "",
     staff_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> BotCommandQueryResult:
     """Query bot commands (4.37.2).
 
@@ -94,7 +94,7 @@ async def fetch_bot_commands(
 
     url = build_api_url(config, "bot_commands", "fetch", app_token)
 
-    body: Dict[str, Any] = {"scopeType": scope_type}
+    body: dict[str, Any] = {"scopeType": scope_type}
     if chat_id:
         body["chatId"] = chat_id
     if chat_type:
@@ -111,10 +111,7 @@ async def fetch_bot_commands(
 
     d = data.get("data", {})
     commands = d.get("commands")
-    if isinstance(commands, list):
-        commands = commands
-    else:
-        commands = None
+    commands = commands if isinstance(commands, list) else None
 
     return BotCommandQueryResult(
         success=True,
@@ -135,7 +132,7 @@ async def delete_bot_commands(
     chat_id: str = "",
     chat_type: str = "",
     staff_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> BotCommandResult:
     """Delete bot commands (4.37.3).
 
@@ -152,7 +149,7 @@ async def delete_bot_commands(
 
     url = build_api_url(config, "bot_commands", "delete", app_token)
 
-    body: Dict[str, Any] = {"scopeType": scope_type}
+    body: dict[str, Any] = {"scopeType": scope_type}
     if chat_id:
         body["chatId"] = chat_id
     if chat_type:

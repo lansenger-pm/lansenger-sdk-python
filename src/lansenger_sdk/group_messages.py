@@ -24,13 +24,13 @@ Key fields:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
 from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .models import SendMessageResult
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.group_messages")
 
@@ -48,7 +48,7 @@ async def send_group_message(
     uuid: str = "",
     entry_id: str = "",
     ref_msg_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> SendMessageResult:
     """Send a message in a group chat (4.6.2).
 
@@ -75,7 +75,7 @@ async def send_group_message(
 
     url = build_api_url(config, "smart_bot", "group_message", app_token, user_token=user_token)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "groupId": group_id,
         "msgType": msg_type,
         "msgData": msg_data,

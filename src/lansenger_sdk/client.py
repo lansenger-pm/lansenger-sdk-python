@@ -22,18 +22,17 @@ This constraint shapes the API:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
-
-logger = logging.getLogger("lansenger_sdk.client")
 import tempfile
 import time
+from typing import Any
 from urllib.parse import quote
-from typing import Any, Dict, List, Optional
 
 import httpx
 
-from .auth import TokenManager, UserTokenManager, _USER_TOKEN_REFRESH_MARGIN
+from .auth import _USER_TOKEN_REFRESH_MARGIN, TokenManager, UserTokenManager
 from .config import LansengerConfig
 from .constants import (
     APP_MEDIA_TYPE_FILE,
@@ -44,24 +43,17 @@ from .constants import (
     guess_app_media_type,
     guess_media_type,
 )
-from .exceptions import LansengerAPIError, LansengerAuthError, LansengerFileError, LansengerNetworkError
-from .oauth import exchange_code_for_user_token, refresh_user_token
-from .url_helpers import build_api_url
+from .exceptions import LansengerAuthError, LansengerNetworkError
 from .media import download_media, upload_app_media, upload_media
-from .persistence import CredentialStore
 from .models import (
     AccountMessageResult,
     AppCardParams,
     ApproveCardParams,
-    ApproveCardUpdateParams,
     BotCommandResult,
     BotMessageResult,
     CalendarPrimaryResult,
-    ChatGroupInfo,
     ChatListResult,
-    ChatMessageInfo,
     ChatMessagesResult,
-    ChatStaffInfo,
     CreateGroupResult,
     DepartmentAncestorsResult,
     DepartmentChildrenResult,
@@ -101,10 +93,15 @@ from .models import (
     TodoTaskStatusCountResult,
     UpdateGroupMembersResult,
     UpdateGroupResult,
-    UserMessageResult,
     UserInfoResult,
+    UserMessageResult,
     UserTokenResult,
 )
+from .oauth import exchange_code_for_user_token, refresh_user_token
+from .persistence import CredentialStore
+from .url_helpers import build_api_url
+
+logger = logging.getLogger("lansenger_sdk.client")
 
 
 def _parse_send_response(data: dict, msg_type: str = "", operation: str = "") -> SendMessageResult:
@@ -152,7 +149,7 @@ class LansengerClient:
         api_gateway_url: str = "",
         passport_url: str = "",
         http_timeout: float = 30.0,
-        store_path: Optional[str] = None,
+        store_path: str | None = None,
         encoding_key: str = "",
         callback_token: str = "",
         app_token: str = "",
@@ -167,14 +164,14 @@ class LansengerClient:
             callback_token=callback_token,
             app_token=app_token,
         )
-        self._http_client: Optional[httpx.AsyncClient] = None
-        self._token_manager: Optional[TokenManager] = None
-        self._user_token_manager: Optional[UserTokenManager] = None
+        self._http_client: httpx.AsyncClient | None = None
+        self._token_manager: TokenManager | None = None
+        self._user_token_manager: UserTokenManager | None = None
         self._owns_http_client = True
-        self._store: Optional[CredentialStore] = CredentialStore(store_path) if store_path else None
+        self._store: CredentialStore | None = CredentialStore(store_path) if store_path else None
 
     @classmethod
-    def from_env(cls, store_path: Optional[str] = None) -> LansengerClient:
+    def from_env(cls, store_path: str | None = None) -> LansengerClient:
         """Create client from environment variables.
 
         If store_path is provided, credentials and tokens are persisted
@@ -193,7 +190,7 @@ class LansengerClient:
         )
 
     @classmethod
-    def from_config(cls, config: LansengerConfig, store_path: Optional[str] = None) -> LansengerClient:
+    def from_config(cls, config: LansengerConfig, store_path: str | None = None) -> LansengerClient:
         """Create client from a LansengerConfig instance."""
         return cls(
             app_id=config.app_id,
@@ -208,7 +205,7 @@ class LansengerClient:
         )
 
     @classmethod
-    def from_store(cls, profile: str = "default", path: Optional[str] = None) -> LansengerClient:
+    def from_store(cls, profile: str = "default", path: str | None = None) -> LansengerClient:
         """Create client from a CredentialStore profile.
 
         Args:
@@ -437,7 +434,7 @@ class LansengerClient:
         logger.debug("Sending %s to group %s", msg_type, group_id)
         if user_token:
             url += f"&user_token={quote(user_token, safe='')}"
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "groupId": group_id,
             "msgType": msg_type,
             "msgData": msg_data,
@@ -463,11 +460,11 @@ class LansengerClient:
         content: str,
         *,
         file_path: str = "",
-        media_type: Optional[str] = None,
+        media_type: str | None = None,
         cover_image_path: str = "",
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
@@ -507,11 +504,11 @@ class LansengerClient:
         if not content and not file_path:
             return SendMessageResult(success=False, error="content or file_path is required")
 
-        reminder: Optional[Dict[str, Any]] = None
+        reminder: dict[str, Any] | None = None
         if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0) or (reminder_bot_ids and len(reminder_bot_ids) > 0):
             reminder = {"all": reminder_all, "userIds": reminder_user_ids or [], "botIds": reminder_bot_ids or []}
 
-        text_data: Dict[str, Any] = {"content": content}
+        text_data: dict[str, Any] = {"content": content}
         if reminder:
             text_data["reminder"] = reminder
 
@@ -548,8 +545,8 @@ class LansengerClient:
         content: str,
         *,
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
@@ -578,11 +575,11 @@ class LansengerClient:
         if not content:
             return SendMessageResult(success=False, error="content is required")
 
-        reminder: Optional[Dict[str, Any]] = None
+        reminder: dict[str, Any] | None = None
         if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0) or (reminder_bot_ids and len(reminder_bot_ids) > 0):
             reminder = {"all": reminder_all, "userIds": reminder_user_ids or [], "botIds": reminder_bot_ids or []}
 
-        fmt_data: Dict[str, Any] = {"formatType": 1, "text": content}
+        fmt_data: dict[str, Any] = {"formatType": 1, "text": content}
         if reminder:
             fmt_data["reminder"] = reminder
 
@@ -609,7 +606,7 @@ class LansengerClient:
         file_path: str,
         *,
         caption: str = "",
-        media_type: Optional[str] = None,
+        media_type: str | None = None,
         cover_image_path: str = "",
         is_group: bool = False,
         user_token: str = "",
@@ -666,7 +663,7 @@ class LansengerClient:
             if cover_upload.success and cover_upload.media_id:
                 media_ids.append(cover_upload.media_id)
 
-        text_data: Dict[str, Any] = {
+        text_data: dict[str, Any] = {
             "content": caption,
             "mediaType": APP_TO_MSG_MEDIA_TYPE.get(mt, MEDIA_TYPE_FILE),
             "mediaIds": media_ids,
@@ -727,16 +724,12 @@ class LansengerClient:
 
         try:
             result = await self.send_file(chat_id, temp_path, caption=caption, media_type=APP_MEDIA_TYPE_IMAGE, is_group=is_group, user_token=user_token, sender_id=sender_id)
-            try:
+            with contextlib.suppress(OSError):
                 os.remove(temp_path)
-            except OSError:
-                pass
             return result
         except Exception as e:
-            try:
+            with contextlib.suppress(OSError):
                 os.remove(temp_path)
-            except OSError:
-                pass
             return SendMessageResult(success=False, error=str(e))
 
     async def send_link_card(
@@ -820,7 +813,7 @@ class LansengerClient:
     async def send_app_articles(
         self,
         chat_id: str,
-        articles: List[Dict[str, str]],
+        articles: list[dict[str, str]],
         *,
         is_group: bool = False,
         user_token: str = "",
@@ -864,13 +857,13 @@ class LansengerClient:
         body_sub_title: str = "",
         body_content: str = "",
         signature: str = "",
-        fields: Optional[List[Dict[str, str]]] = None,
-        links: Optional[List[Dict[str, str]]] = None,
+        fields: list[dict[str, str]] | None = None,
+        links: list[dict[str, str]] | None = None,
         card_link: str = "",
         pc_card_link: str = "",
         pad_card_link: str = "",
         is_dynamic: bool = False,
-        head_status_info: Optional[Dict[str, str]] = None,
+        head_status_info: dict[str, str] | None = None,
         staff_id: str = "",
         head_icon_url: str = "",
         is_group: bool = False,
@@ -916,7 +909,7 @@ class LansengerClient:
         if not body_title:
             return SendMessageResult(success=False, error="body_title is required for appCard")
 
-        app_card_data: Dict[str, Any] = {
+        app_card_data: dict[str, Any] = {
             "bodyTitle": body_title,
         }
         if head_title:
@@ -993,11 +986,11 @@ class LansengerClient:
         head: str = "",
         sub_title: str = "",
         staff_id: str = "",
-        fields: Optional[List[Dict[str, str]]] = None,
+        fields: list[dict[str, str]] | None = None,
         link: str = "",
         pc_link: str = "",
         pad_link: str = "",
-        card_action: Optional[Dict[str, Any]] = None,
+        card_action: dict[str, Any] | None = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
@@ -1026,7 +1019,7 @@ class LansengerClient:
         if not title:
             return SendMessageResult(success=False, error="title is required for oaCard")
 
-        oa_card_data: Dict[str, Any] = {
+        oa_card_data: dict[str, Any] = {
             "title": title,
         }
         if head:
@@ -1076,12 +1069,12 @@ class LansengerClient:
 
     # ── Public API: ApproveCard (审批卡片) ───────────────────────────────
 
-    def _build_approve_card_data(self, params: ApproveCardParams) -> Dict[str, Any]:
+    def _build_approve_card_data(self, params: ApproveCardParams) -> dict[str, Any]:
         """Build approveCard msgData from params."""
-        card: Dict[str, Any] = {}
+        card: dict[str, Any] = {}
 
         # head
-        head: Dict[str, Any] = {}
+        head: dict[str, Any] = {}
         if params.head_title:
             head["title"] = params.head_title
         if params.head_icon_link:
@@ -1090,7 +1083,7 @@ class LansengerClient:
             head["iconId"] = params.head_icon_id
         if any([params.head_status_describe, params.head_status_icon,
                 params.head_status_icon_link, params.head_status_colour]):
-            head_status: Dict[str, Any] = {}
+            head_status: dict[str, Any] = {}
             if params.head_status_describe:
                 head_status["describe"] = params.head_status_describe
             if params.head_status_icon:
@@ -1104,7 +1097,7 @@ class LansengerClient:
             card["head"] = head
 
         # body
-        body: Dict[str, Any] = {}
+        body: dict[str, Any] = {}
         if params.body_title:
             body["title"] = params.body_title
         if params.body_content:
@@ -1118,7 +1111,7 @@ class LansengerClient:
             card["body"] = body
 
         # reminder
-        reminder: Dict[str, Any] = {}
+        reminder: dict[str, Any] = {}
         if params.reminder_all:
             reminder["all"] = True
         if params.reminder_user_ids:
@@ -1130,7 +1123,7 @@ class LansengerClient:
 
         # cardLink
         if params.card_link:
-            card_link: Dict[str, str] = {"cardLink": params.card_link}
+            card_link: dict[str, str] = {"cardLink": params.card_link}
             if params.card_link_for_pc:
                 card_link["cardLinkForPc"] = params.card_link_for_pc
             if params.card_link_for_pad:
@@ -1161,14 +1154,14 @@ class LansengerClient:
         head_status_icon_link: str = "",
         head_status_colour: str = "",
         body_format_type: int = 1,
-        fields: Optional[List[Dict[str, str]]] = None,
+        fields: list[dict[str, str]] | None = None,
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         card_link: str = "",
         card_link_for_pc: str = "",
         card_link_for_pad: str = "",
-        buttons: Optional[List[Dict[str, Any]]] = None,
+        buttons: list[dict[str, Any]] | None = None,
         expire_time: int = 0,
         is_group: bool = False,
         user_token: str = "",
@@ -1263,7 +1256,7 @@ class LansengerClient:
         head_status_icon: int = 0,
         head_status_icon_link: str = "",
         head_status_colour: str = "",
-        buttons: Optional[List[Dict[str, Any]]] = None,
+        buttons: list[dict[str, Any]] | None = None,
     ) -> SendMessageResult:
         """Update an approveCard's status in-place — 4.6.4.12.
 
@@ -1286,10 +1279,10 @@ class LansengerClient:
         token = await self._get_token()
         url = build_api_url(self._config, "message", "dynamic_update", token)
 
-        update_data: Dict[str, Any] = {}
+        update_data: dict[str, Any] = {}
         if any([head_status_describe, head_status_icon,
                 head_status_icon_link, head_status_colour]):
-            head_status: Dict[str, Any] = {}
+            head_status: dict[str, Any] = {}
             if head_status_describe:
                 head_status["describe"] = head_status_describe
             if head_status_icon:
@@ -1324,8 +1317,8 @@ class LansengerClient:
         self,
         msg_id: str,
         *,
-        head_status_info: Optional[Dict[str, str]] = None,
-        links: Optional[List[Dict[str, str]]] = None,
+        head_status_info: dict[str, str] | None = None,
+        links: list[dict[str, str]] | None = None,
         is_last_update: bool = False,
     ) -> SendMessageResult:
         """Update a dynamic appCard's status in-place.
@@ -1347,7 +1340,7 @@ class LansengerClient:
         token = await self._get_token()
         url = build_api_url(self._config, "message", "dynamic_update", token)
 
-        app_card_update: Dict[str, Any] = {"isLastUpdate": is_last_update}
+        app_card_update: dict[str, Any] = {"isLastUpdate": is_last_update}
         if head_status_info:
             app_card_update["headStatusInfo"] = head_status_info
         if links:
@@ -1384,7 +1377,7 @@ class LansengerClient:
 
     async def revoke_message(
         self,
-        message_ids: List[str],
+        message_ids: list[str],
         *,
         chat_type: str = "bot",
         sender_id: str = "",
@@ -1408,7 +1401,7 @@ class LansengerClient:
         token = await self._get_token()
         url = build_api_url(self._config, "message", "revoke", token)
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "chatType": chat_type,
             "messageIds": message_ids,
         }
@@ -1473,7 +1466,7 @@ class LansengerClient:
         self,
         file_path: str,
         *,
-        media_type: Optional[int] = None,
+        media_type: int | None = None,
         user_token: str = "",
     ) -> SendMessageResult:
         """Upload a media file via core service endpoint (4.5.1).
@@ -1500,10 +1493,10 @@ class LansengerClient:
         self,
         file_path: str,
         *,
-        media_type: Optional[str] = None,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        duration: Optional[int] = None,
+        media_type: str | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        duration: int | None = None,
     ) -> SendMessageResult:
         """Upload a media file via app/bot endpoint (4.5.4).
 
@@ -1519,8 +1512,8 @@ class LansengerClient:
             duration: Optional duration in seconds (for video/audio).
         """
         self._ensure_clients()
+        from .constants import APP_MEDIA_TYPE_FILE, guess_app_media_type
         from .media import upload_app_media
-        from .constants import guess_app_media_type, APP_MEDIA_TYPE_FILE
 
         mt = media_type or guess_app_media_type(file_path) or APP_MEDIA_TYPE_FILE
         result = await upload_app_media(
@@ -1554,7 +1547,7 @@ class LansengerClient:
         self,
         media_id: str,
         *,
-        target_path: Optional[str] = None,
+        target_path: str | None = None,
         media_type: str = "file",
     ) -> str:
         """Download media and save to a file.
@@ -2020,9 +2013,9 @@ class LansengerClient:
         user_token: str = "",
         user_id: str = "",
         recursive: bool = True,
-        sector_ids: Optional[List[str]] = None,
-        page: Optional[int] = None,
-        page_size: Optional[int] = None,
+        sector_ids: list[str] | None = None,
+        page: int | None = None,
+        page_size: int | None = None,
     ) -> StaffSearchResult:
         """Search staff by keyword with optional department scope.
 
@@ -2065,8 +2058,8 @@ class LansengerClient:
         self,
         msg_type: str,
         msg_data: dict,
-        chat_ids: Optional[List[str]] = None,
-        department_ids: Optional[List[str]] = None,
+        chat_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
         *,
         user_token: str = "",
         entry_id: str = "",
@@ -2133,7 +2126,7 @@ class LansengerClient:
             return BotMessageResult(success=False, error="msg_data is required")
         token = await self._get_token()
         url = build_api_url(self._config, "bot", "message_create", token, user_token=user_token)
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "msgType": msg_type,
             "msgData": msg_data,
         }
@@ -2170,8 +2163,8 @@ class LansengerClient:
         self,
         msg_type: str,
         msg_data: dict,
-        chat_ids: Optional[List[str]] = None,
-        department_ids: Optional[List[str]] = None,
+        chat_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
         *,
         account_id: str = "",
         entry_id: str = "",
@@ -2226,7 +2219,7 @@ class LansengerClient:
         msg_data: dict,
         *,
         user_token: str = "",
-        common: Optional[Dict[str, Any]] = None,
+        common: dict[str, Any] | None = None,
         uuid: str = "",
     ) -> UserMessageResult:
         """Send a private chat message impersonating a user (4.6.3).
@@ -2278,8 +2271,8 @@ class LansengerClient:
         user_token: str = "",
         sender_id: str = "",
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         outlines: str = "",
         uuid: str = "",
         entry_id: str = "",
@@ -2319,7 +2312,7 @@ class LansengerClient:
         if not msg_data:
             return SendMessageResult(success=False, error="msg_data is required")
 
-        reminder: Optional[Dict[str, Any]] = None
+        reminder: dict[str, Any] | None = None
         if reminder_all or (reminder_user_ids and len(reminder_user_ids) > 0) or (reminder_bot_ids and len(reminder_bot_ids) > 0):
             if msg_type in ("text", "formatText"):
                 reminder = {"all": reminder_all, "userIds": reminder_user_ids or [], "botIds": reminder_bot_ids or []}
@@ -2431,8 +2424,8 @@ class LansengerClient:
         owner_id: str = "",
         description: str = "",
         avatar_id: str = "",
-        staff_id_list: Optional[List[str]] = None,
-        department_id_list: Optional[List[str]] = None,
+        staff_id_list: list[str] | None = None,
+        department_id_list: list[str] | None = None,
         user_token: str = "",
         apply_request_id: str = "",
         apply_notes: str = "",
@@ -2559,16 +2552,16 @@ class LansengerClient:
         description: str = "",
         avatar_id: str = "",
         owner_id: str = "",
-        assistant: Optional[List[str]] = None,
-        demote_assistant: Optional[List[str]] = None,
-        manage_mode: Optional[int] = None,
-        location_share: Optional[bool] = None,
-        needs_confirm: Optional[bool] = None,
-        is_public: Optional[bool] = None,
-        max_members: Optional[int] = None,
-        max_history_msg_count: Optional[int] = None,
-        remind_all: Optional[bool] = None,
-        send_msg_status: Optional[bool] = None,
+        assistant: list[str] | None = None,
+        demote_assistant: list[str] | None = None,
+        manage_mode: int | None = None,
+        location_share: bool | None = None,
+        needs_confirm: bool | None = None,
+        is_public: bool | None = None,
+        max_members: int | None = None,
+        max_history_msg_count: int | None = None,
+        remind_all: bool | None = None,
+        send_msg_status: bool | None = None,
         user_token: str = "",
     ) -> UpdateGroupResult:
         """Update a group's basic information (4.28.2).
@@ -2617,9 +2610,9 @@ class LansengerClient:
         self,
         group_id: str,
         *,
-        add_user_list: Optional[List[str]] = None,
-        del_user_list: Optional[List[str]] = None,
-        add_department_id_list: Optional[List[str]] = None,
+        add_user_list: list[str] | None = None,
+        del_user_list: list[str] | None = None,
+        add_department_id_list: list[str] | None = None,
         user_token: str = "",
     ) -> UpdateGroupMembersResult:
         """Update group members — add/remove (4.28.5).
@@ -2750,7 +2743,7 @@ class LansengerClient:
         title: str,
         link: str,
         pc_link: str,
-        executor_ids: List[str],
+        executor_ids: list[str],
         org_id: str,
         type: int = 1,
         *,
@@ -2885,9 +2878,9 @@ class LansengerClient:
         self,
         org_id: str,
         *,
-        app_ids: Optional[List[str]] = None,
+        app_ids: list[str] | None = None,
         staff_id: str = "",
-        status_list: Optional[List[str]] = None,
+        status_list: list[str] | None = None,
         user_token: str = "",
     ) -> TodoTaskListResult:
         """Fetch todo task list (4.33.5)."""
@@ -2968,7 +2961,7 @@ class LansengerClient:
         org_id: str,
         *,
         app_id: str = "",
-        status_list: Optional[List[str]] = None,
+        status_list: list[str] | None = None,
         user_token: str = "",
     ) -> TodoTaskStatusCountResult:
         """Fetch todo task status counts (4.33.9)."""
@@ -2993,7 +2986,7 @@ class LansengerClient:
 
     async def update_executor_status(
         self,
-        executor_status_list: List[Dict[str, str]],
+        executor_status_list: list[dict[str, str]],
         org_id: str,
         *,
         todotask_id: str = "",
@@ -3020,7 +3013,7 @@ class LansengerClient:
 
     async def add_executors(
         self,
-        executor_ids: List[str],
+        executor_ids: list[str],
         org_id: str,
         *,
         todotask_id: str = "",
@@ -3047,7 +3040,7 @@ class LansengerClient:
 
     async def delete_executors(
         self,
-        executor_ids: List[str],
+        executor_ids: list[str],
         org_id: str,
         *,
         todotask_id: str = "",
@@ -3078,7 +3071,7 @@ class LansengerClient:
         org_id: str,
         *,
         staff_id: str = "",
-        status_list: Optional[List[str]] = None,
+        status_list: list[str] | None = None,
         user_token: str = "",
     ) -> TodoTaskExecutorListResult:
         """Fetch executor list for a todo task (4.33.13)."""
@@ -3128,7 +3121,7 @@ class LansengerClient:
         summary: str,
         start_time: dict,
         end_time: dict,
-        attendees: List[Dict[str, str]],
+        attendees: list[dict[str, str]],
         *,
         description: str = "",
         all_day: str = "no",
@@ -3232,8 +3225,8 @@ class LansengerClient:
     async def fetch_schedule_list(
         self,
         calendar_id: str,
-        start_time: Optional[int] = None,
-        end_time: Optional[int] = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
         *,
         user_token: str = "",
         user_id: str = "",
@@ -3293,7 +3286,7 @@ class LansengerClient:
         self,
         calendar_id: str,
         schedule_id: str,
-        attendees: List[str],
+        attendees: list[str],
         *,
         reminder_type: str = "yes",
         user_token: str = "",
@@ -3326,7 +3319,7 @@ class LansengerClient:
         self,
         calendar_id: str,
         schedule_id: str,
-        attendees: List[str],
+        attendees: list[str],
         *,
         reminder_type: str = "no",
         user_token: str = "",
@@ -3360,18 +3353,18 @@ class LansengerClient:
         calendar_id: str,
         schedule_id: str,
         *,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
+        summary: str | None = None,
+        description: str | None = None,
         operation_type: str = "modify_all",
-        current_time: Optional[int] = None,
-        reminder_type: Optional[str] = None,
-        repeat_type: Optional[str] = None,
-        rule: Optional[str] = None,
-        expire_date_type: Optional[str] = None,
-        all_day: Optional[str] = None,
-        attendee_permissions: Optional[str] = None,
-        start_time: Optional[Dict[str, Any]] = None,
-        end_time: Optional[Dict[str, Any]] = None,
+        current_time: int | None = None,
+        reminder_type: str | None = None,
+        repeat_type: str | None = None,
+        rule: str | None = None,
+        expire_date_type: str | None = None,
+        all_day: str | None = None,
+        attendee_permissions: str | None = None,
+        start_time: dict[str, Any] | None = None,
+        end_time: dict[str, Any] | None = None,
         user_token: str = "",
         user_id: str = "",
     ) -> ScheduleUpdateResult:
@@ -3411,11 +3404,11 @@ class LansengerClient:
         calendar_id: str,
         schedule_id: str,
         *,
-        rsvp_status: Optional[str] = None,
-        color: Optional[str] = None,
-        permissions: Optional[str] = None,
-        busy_free_state: Optional[str] = None,
-        remind_times: Optional[List[int]] = None,
+        rsvp_status: str | None = None,
+        color: str | None = None,
+        permissions: str | None = None,
+        busy_free_state: str | None = None,
+        remind_times: list[int] | None = None,
         user_token: str = "",
         user_id: str = "",
     ) -> ScheduleAttendeeMetaResult:
@@ -3448,11 +3441,11 @@ class LansengerClient:
         calendar_id: str,
         schedule_id: str,
         *,
-        add_attendees: Optional[List[str]] = None,
-        delete_attendees: Optional[List[str]] = None,
-        reminder_type: Optional[str] = None,
-        operation_type: Optional[str] = None,
-        current_time: Optional[int] = None,
+        add_attendees: list[str] | None = None,
+        delete_attendees: list[str] | None = None,
+        reminder_type: str | None = None,
+        operation_type: str | None = None,
+        current_time: int | None = None,
         user_token: str = "",
         user_id: str = "",
     ) -> ScheduleAttendeesUpdateResult:
@@ -3485,8 +3478,8 @@ class LansengerClient:
     async def send_reminder(
         self,
         msg_id: str,
-        reminder_types: List[int],
-        user_id_list: List[str],
+        reminder_types: list[int],
+        user_id_list: list[str],
     ) -> SendMessageResult:
         """Send an urgent reminder for a previously sent message (4.6.14).
 
@@ -3545,7 +3538,7 @@ class LansengerClient:
     async def create_bot_commands(
         self,
         scope_type: int,
-        commands: List[Dict[str, Any]],
+        commands: list[dict[str, Any]],
         *,
         chat_id: str = "",
         chat_type: str = "",

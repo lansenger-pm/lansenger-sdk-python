@@ -12,7 +12,7 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .client import LansengerClient
 from .config import LansengerConfig
@@ -21,16 +21,12 @@ from .models import (
     AccountMessageResult,
     AppCardParams,
     ApproveCardParams,
-    ApproveCardUpdateParams,
     BotCommandQueryResult,
     BotCommandResult,
     BotMessageResult,
     CalendarPrimaryResult,
-    ChatGroupInfo,
     ChatListResult,
-    ChatMessageInfo,
     ChatMessagesResult,
-    ChatStaffInfo,
     CreateGroupResult,
     DepartmentAncestorsResult,
     DepartmentChildrenResult,
@@ -39,7 +35,6 @@ from .models import (
     DownloadMediaResult,
     DynamicCardUpdateParams,
     ExtraFieldIdsResult,
-    GroupCreateInfo,
     GroupInfoResult,
     GroupListResult,
     GroupMemberResult,
@@ -54,7 +49,6 @@ from .models import (
     QueryGroupsResult,
     ScheduleAttendeeMetaResult,
     ScheduleAttendeesResult,
-    ScheduleAttendeesUpdateResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
@@ -72,8 +66,8 @@ from .models import (
     TodoTaskStatusCountResult,
     UpdateGroupMembersResult,
     UpdateGroupResult,
-    UserMessageResult,
     UserInfoResult,
+    UserMessageResult,
     UserTokenResult,
 )
 
@@ -122,7 +116,7 @@ class LansengerSyncClient:
         self._encoding_key = encoding_key
         self._callback_token = callback_token
         self._app_token = app_token
-        self._async_client_for_tokens: Optional[LansengerClient] = None
+        self._async_client_for_tokens: LansengerClient | None = None
 
     @classmethod
     def from_env(cls) -> LansengerSyncClient:
@@ -154,7 +148,7 @@ class LansengerSyncClient:
         )
 
     @classmethod
-    def from_store(cls, profile: str = "default", path: Optional[str] = None) -> LansengerSyncClient:
+    def from_store(cls, profile: str = "default", path: str | None = None) -> LansengerSyncClient:
         """Create client from a CredentialStore profile.
 
         Args:
@@ -163,8 +157,8 @@ class LansengerSyncClient:
 
         Raises LansengerConfigError if the profile has no credentials.
         """
-        from .persistence import CredentialStore
         from .exceptions import LansengerConfigError
+        from .persistence import CredentialStore
         store = CredentialStore(path=path, profile=profile)
         creds = store.load_credentials()
         if not creds.get("app_id") or not creds.get("app_secret"):
@@ -204,10 +198,7 @@ class LansengerSyncClient:
                 else:
                     expires_in = 7200
                 raw_rt_expiry = user_token_data.get("refresh_token_expiry", 0)
-                if raw_rt_expiry:
-                    refresh_expires_in = max(0, int(raw_rt_expiry - time.time()))
-                else:
-                    refresh_expires_in = 0
+                refresh_expires_in = max(0, int(raw_rt_expiry - time.time())) if raw_rt_expiry else 0
                 async_client.set_user_tokens(
                     user_token=user_token_data["user_token"],
                     refresh_token=user_token_data.get("refresh_token", ""),
@@ -264,11 +255,11 @@ class LansengerSyncClient:
         content: str,
         *,
         file_path: str = "",
-        media_type: Optional[str] = None,
+        media_type: str | None = None,
         cover_image_path: str = "",
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
@@ -297,8 +288,8 @@ class LansengerSyncClient:
         content: str,
         *,
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
@@ -324,7 +315,7 @@ class LansengerSyncClient:
         file_path: str,
         *,
         caption: str = "",
-        media_type: Optional[str] = None,
+        media_type: str | None = None,
         cover_image_path: str = "",
         is_group: bool = False,
         user_token: str = "",
@@ -408,7 +399,7 @@ class LansengerSyncClient:
     def send_app_articles(
         self,
         chat_id: str,
-        articles: List[Dict[str, str]],
+        articles: list[dict[str, str]],
         *,
         is_group: bool = False,
         user_token: str = "",
@@ -433,13 +424,13 @@ class LansengerSyncClient:
         body_sub_title: str = "",
         body_content: str = "",
         signature: str = "",
-        fields: Optional[List[Dict[str, str]]] = None,
-        links: Optional[List[Dict[str, str]]] = None,
+        fields: list[dict[str, str]] | None = None,
+        links: list[dict[str, str]] | None = None,
         card_link: str = "",
         pc_card_link: str = "",
         pad_card_link: str = "",
         is_dynamic: bool = False,
-        head_status_info: Optional[Dict[str, str]] = None,
+        head_status_info: dict[str, str] | None = None,
         staff_id: str = "",
         head_icon_url: str = "",
         is_group: bool = False,
@@ -485,11 +476,11 @@ class LansengerSyncClient:
         head: str = "",
         sub_title: str = "",
         staff_id: str = "",
-        fields: Optional[List[Dict[str, str]]] = None,
+        fields: list[dict[str, str]] | None = None,
         link: str = "",
         pc_link: str = "",
         pad_link: str = "",
-        card_action: Optional[Dict[str, Any]] = None,
+        card_action: dict[str, Any] | None = None,
         is_group: bool = False,
         user_token: str = "",
         sender_id: str = "",
@@ -536,14 +527,14 @@ class LansengerSyncClient:
         head_status_icon_link: str = "",
         head_status_colour: str = "",
         body_format_type: int = 1,
-        fields: Optional[List[Dict[str, str]]] = None,
+        fields: list[dict[str, str]] | None = None,
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         card_link: str = "",
         card_link_for_pc: str = "",
         card_link_for_pad: str = "",
-        buttons: Optional[List[Dict[str, Any]]] = None,
+        buttons: list[dict[str, Any]] | None = None,
         expire_time: int = 0,
         is_group: bool = False,
         user_token: str = "",
@@ -584,7 +575,7 @@ class LansengerSyncClient:
         head_status_icon: int = 0,
         head_status_icon_link: str = "",
         head_status_colour: str = "",
-        buttons: Optional[List[Dict[str, Any]]] = None,
+        buttons: list[dict[str, Any]] | None = None,
     ) -> SendMessageResult:
         """Update an approveCard status (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -601,8 +592,8 @@ class LansengerSyncClient:
         self,
         msg_id: str,
         *,
-        head_status_info: Optional[Dict[str, str]] = None,
-        links: Optional[List[Dict[str, str]]] = None,
+        head_status_info: dict[str, str] | None = None,
+        links: list[dict[str, str]] | None = None,
         is_last_update: bool = False,
     ) -> SendMessageResult:
         """Update a dynamic appCard status (blocking)."""
@@ -624,7 +615,7 @@ class LansengerSyncClient:
 
     def revoke_message(
         self,
-        message_ids: List[str],
+        message_ids: list[str],
         *,
         chat_type: str = "bot",
         sender_id: str = "",
@@ -654,7 +645,7 @@ class LansengerSyncClient:
         self,
         file_path: str,
         *,
-        media_type: Optional[int] = None,
+        media_type: int | None = None,
         user_token: str = "",
     ) -> SendMessageResult:
         """Upload a media file via core service endpoint (blocking, 4.5.1)."""
@@ -682,10 +673,10 @@ class LansengerSyncClient:
         self,
         file_path: str,
         *,
-        media_type: Optional[str] = None,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        duration: Optional[int] = None,
+        media_type: str | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        duration: int | None = None,
     ) -> SendMessageResult:
         """Upload a media file via app/bot endpoint (blocking, 4.5.4)."""
         return _run_async(self._ephemeral_call(
@@ -708,7 +699,7 @@ class LansengerSyncClient:
         self,
         media_id: str,
         *,
-        target_path: Optional[str] = None,
+        target_path: str | None = None,
         media_type: str = "file",
     ) -> str:
         """Download media to a file (blocking)."""
@@ -1042,8 +1033,8 @@ class LansengerSyncClient:
         user_token: str = "",
         sender_id: str = "",
         reminder_all: bool = False,
-        reminder_user_ids: Optional[List[str]] = None,
-        reminder_bot_ids: Optional[List[str]] = None,
+        reminder_user_ids: list[str] | None = None,
+        reminder_bot_ids: list[str] | None = None,
         outlines: str = "",
         uuid: str = "",
         entry_id: str = "",
@@ -1620,8 +1611,8 @@ class LansengerSyncClient:
     def fetch_schedule_list(
         self,
         calendar_id: str,
-        start_time: Optional[int] = None,
-        end_time: Optional[int] = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
         *,
         user_token: str = "",
         user_id: str = "",
@@ -1867,8 +1858,8 @@ class LansengerSyncClient:
     def send_reminder(
         self,
         msg_id: str,
-        reminder_types: List[int],
-        user_id_list: List[str],
+        reminder_types: list[int],
+        user_id_list: list[str],
     ) -> SendMessageResult:
         """Send an urgent reminder for a message (blocking, 4.6.14)."""
         return _run_async(self._ephemeral_call(
@@ -1883,18 +1874,18 @@ class LansengerSyncClient:
         calendar_id: str,
         schedule_id: str,
         *,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
+        summary: str | None = None,
+        description: str | None = None,
         operation_type: str = "modify_all",
-        current_time: Optional[int] = None,
-        reminder_type: Optional[str] = None,
-        repeat_type: Optional[str] = None,
-        rule: Optional[str] = None,
-        expire_date_type: Optional[str] = None,
-        all_day: Optional[str] = None,
-        attendee_permissions: Optional[str] = None,
-        start_time: Optional[Dict[str, Any]] = None,
-        end_time: Optional[Dict[str, Any]] = None,
+        current_time: int | None = None,
+        reminder_type: str | None = None,
+        repeat_type: str | None = None,
+        rule: str | None = None,
+        expire_date_type: str | None = None,
+        all_day: str | None = None,
+        attendee_permissions: str | None = None,
+        start_time: dict[str, Any] | None = None,
+        end_time: dict[str, Any] | None = None,
         user_token: str = "",
         user_id: str = "",
     ) -> ScheduleUpdateResult:
@@ -1924,11 +1915,11 @@ class LansengerSyncClient:
         calendar_id: str,
         schedule_id: str,
         *,
-        rsvp_status: Optional[str] = None,
-        color: Optional[str] = None,
-        permissions: Optional[str] = None,
-        busy_free_state: Optional[str] = None,
-        remind_times: Optional[List[int]] = None,
+        rsvp_status: str | None = None,
+        color: str | None = None,
+        permissions: str | None = None,
+        busy_free_state: str | None = None,
+        remind_times: list[int] | None = None,
         user_token: str = "",
         user_id: str = "",
     ) -> ScheduleAttendeeMetaResult:

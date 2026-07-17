@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -17,7 +17,7 @@ from .config import LansengerConfig
 logger = logging.getLogger("lansenger_sdk.api_utils")
 
 
-def parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
+def parse_api_response(data: dict) -> tuple[bool, str | None]:
     """Parse API response and check for errors.
 
     Args:
@@ -36,8 +36,8 @@ def parse_api_response(data: dict) -> tuple[bool, Optional[str]]:
 async def do_get(
     config: LansengerConfig,
     url: str,
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
+    http_client: httpx.AsyncClient | None = None,
+) -> tuple[dict | None, str | None]:
     """Execute a GET request to the Lansenger API.
 
     Args:
@@ -68,9 +68,9 @@ async def do_get(
 async def do_post(
     config: LansengerConfig,
     url: str,
-    body: Dict[str, Any],
-    http_client: Optional[httpx.AsyncClient] = None,
-) -> tuple[Optional[dict], Optional[str]]:
+    body: dict[str, Any],
+    http_client: httpx.AsyncClient | None = None,
+) -> tuple[dict | None, str | None]:
     """Execute a POST request to the Lansenger API.
 
     Args:

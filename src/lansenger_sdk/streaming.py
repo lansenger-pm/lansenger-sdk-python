@@ -10,12 +10,12 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
-from .config import LansengerConfig
-from .url_helpers import build_api_url
-from .models import StreamMessageResult
 from .api_utils import do_post, parse_api_response
+from .config import LansengerConfig
+from .models import StreamMessageResult
+from .url_helpers import build_api_url
 
 
 async def create_stream_message(
@@ -25,7 +25,7 @@ async def create_stream_message(
     receiver_type: str,
     stream_id: str,
     *,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> StreamMessageResult:
     """Create a streaming (SSE) message for an AI-agent conversation.
 
@@ -46,7 +46,7 @@ async def create_stream_message(
 
     url = build_api_url(config, "sse", "msg_create", app_token)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "receiverId": receiver_id,
         "receiverType": receiver_type,
         "streamId": stream_id,
@@ -73,7 +73,7 @@ async def fetch_stream_message(
     app_token: str,
     msg_id: str,
     *,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> StreamMessageResult:
     """Fetch a streaming (SSE) message by its message ID.
 
@@ -88,7 +88,7 @@ async def fetch_stream_message(
 
     url = build_api_url(config, "sse", "msg_fetch", app_token)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "msgId": msg_id,
     }
 

@@ -14,12 +14,11 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import quote
 
-from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .api_utils import do_get, do_post, parse_api_response
+from .config import LansengerConfig
 from .models import (
     CreateGroupResult,
     GroupInfoResult,
@@ -29,6 +28,7 @@ from .models import (
     UpdateGroupMembersResult,
     UpdateGroupResult,
 )
+from .url_helpers import build_api_url
 
 
 async def create_group(
@@ -40,14 +40,14 @@ async def create_group(
     owner_id: str = "",
     description: str = "",
     avatar_id: str = "",
-    staff_id_list: Optional[List[str]] = None,
-    department_id_list: Optional[List[str]] = None,
+    staff_id_list: list[str] | None = None,
+    department_id_list: list[str] | None = None,
     user_token: str = "",
     apply_request_id: str = "",
     apply_notes: str = "",
     apply_global_unique_id: str = "",
     apply_session_unique_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> CreateGroupResult:
     """Create a new group in an organization.
 
@@ -75,7 +75,7 @@ async def create_group(
 
     url = build_api_url(config, "groups", "create", app_token, user_token=user_token)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "name": name,
         "orgId": org_id,
     }
@@ -123,7 +123,7 @@ async def fetch_group_info(
     group_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> GroupInfoResult:
     """Fetch a group's detailed information.
 
@@ -178,7 +178,7 @@ async def fetch_group_members(
     user_token: str = "",
     page_offset: int = 0,
     page_size: int = 100,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> GroupMemberResult:
     """Fetch a group's member list (paginated).
 
@@ -221,7 +221,7 @@ async def fetch_group_list(
     user_token: str = "",
     page_offset: int = 0,
     page_size: int = 100,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> GroupListResult:
     """Fetch the list of group IDs the authenticated user/bot belongs to (paginated).
 
@@ -260,7 +260,7 @@ async def check_is_in_group(
     *,
     user_token: str = "",
     staff_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> IsInGroupResult:
     """Check whether a staff member is in a group.
 
@@ -304,18 +304,18 @@ async def update_group_info(
     description: str = "",
     avatar_id: str = "",
     owner_id: str = "",
-    assistant: Optional[List[str]] = None,
-    demote_assistant: Optional[List[str]] = None,
-    manage_mode: Optional[int] = None,
-    location_share: Optional[bool] = None,
-    needs_confirm: Optional[bool] = None,
-    is_public: Optional[bool] = None,
-    max_members: Optional[int] = None,
-    max_history_msg_count: Optional[int] = None,
-    remind_all: Optional[bool] = None,
-    send_msg_status: Optional[bool] = None,
+    assistant: list[str] | None = None,
+    demote_assistant: list[str] | None = None,
+    manage_mode: int | None = None,
+    location_share: bool | None = None,
+    needs_confirm: bool | None = None,
+    is_public: bool | None = None,
+    max_members: int | None = None,
+    max_history_msg_count: int | None = None,
+    remind_all: bool | None = None,
+    send_msg_status: bool | None = None,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> UpdateGroupResult:
     """Update a group's basic information (4.28.2).
 
@@ -348,7 +348,7 @@ async def update_group_info(
 
     url = build_api_url(config, "groups", "info_update", app_token, user_token=user_token, group_id=group_id)
 
-    body: Dict[str, Any] = {}
+    body: dict[str, Any] = {}
     if name:
         body["name"] = name
     if description:
@@ -397,11 +397,11 @@ async def update_group_members(
     app_token: str,
     group_id: str,
     *,
-    add_user_list: Optional[List[str]] = None,
-    del_user_list: Optional[List[str]] = None,
-    add_department_id_list: Optional[List[str]] = None,
+    add_user_list: list[str] | None = None,
+    del_user_list: list[str] | None = None,
+    add_department_id_list: list[str] | None = None,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> UpdateGroupMembersResult:
     """Update group members — add/remove users/departments (4.28.5).
 
@@ -425,7 +425,7 @@ async def update_group_members(
 
     url = build_api_url(config, "groups", "members_update", app_token, user_token=user_token, group_id=group_id)
 
-    body: Dict[str, Any] = {}
+    body: dict[str, Any] = {}
     if add_user_list:
         body["addUserList"] = add_user_list
     if del_user_list:
@@ -459,7 +459,7 @@ async def dismiss_group(
     group_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> UpdateGroupResult:
     """Dismiss/delete a group (4.28.6).
 

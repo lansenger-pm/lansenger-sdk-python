@@ -43,8 +43,22 @@ lansenger_sdk = ["py.typed"]
 dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
+    "ruff>=0.15.22",
 ]
 
 [project.urls]
 Homepage = "https://github.com/lansenger-pm/lansenger-skills-official"
 Repository = "https://github.com/lansenger-pm/lansenger-skills-official"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# Focus on catching real bugs: undefined names, syntax errors, common pitfalls
+select = ["F", "E", "W", "B"]
+ignore = [
+    "E501", # line too long
+    "F401", # unused import (__init__.py re-exports trigger too many)
+    "F821", # undefined name in type annotations (safe with `from __future__ import annotations`)
+    "F841", # unused variable (often intentional)
+]

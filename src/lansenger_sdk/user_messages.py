@@ -20,13 +20,13 @@ Key fields:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
 from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .models import UserMessageResult
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.user_messages")
 
@@ -39,9 +39,9 @@ async def send_user_message(
     msg_type: str,
     msg_data: dict,
     *,
-    common: Optional[dict] = None,
+    common: dict | None = None,
     uuid: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> UserMessageResult:
     """Send a private chat message impersonating a user (4.6.3).
 
@@ -69,11 +69,11 @@ async def send_user_message(
 
     url = build_api_url(config, "user_message", "create", app_token, user_token=user_token)
 
-    final_msg_data: Dict[str, Any] = dict(msg_data)
+    final_msg_data: dict[str, Any] = dict(msg_data)
     if common:
         final_msg_data["common"] = common
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "receiverId": receiver_id,
         "msgType": msg_type,
         "msgData": final_msg_data,

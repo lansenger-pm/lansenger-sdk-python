@@ -5,14 +5,12 @@ from __future__ import annotations
 import logging
 import time
 from urllib.parse import quote
-from typing import Optional
 
 import httpx
 
 from .config import LansengerConfig
 from .constants import API_ENDPOINTS
 from .exceptions import LansengerAuthError, LansengerNetworkError
-from .models import UserTokenResult
 from .persistence import CredentialStore
 from .url_helpers import build_api_url
 
@@ -42,11 +40,11 @@ class TokenManager:
         self,
         config: LansengerConfig,
         http_client: httpx.AsyncClient,
-        store: Optional[CredentialStore] = None,
+        store: CredentialStore | None = None,
     ):
         self._config = config
         self._http_client = http_client
-        self._token: Optional[str] = None
+        self._token: str | None = None
         self._token_expiry: float = 0
         self._store = store
 
@@ -141,7 +139,7 @@ class UserTokenManager:
         config: LansengerConfig,
         http_client: httpx.AsyncClient,
         app_token_manager: TokenManager,
-        store: Optional[CredentialStore] = None,
+        store: CredentialStore | None = None,
     ):
         self._config = config
         self._http_client = http_client
@@ -149,11 +147,11 @@ class UserTokenManager:
         self._store = store
         import asyncio
         self._lock = asyncio.Lock()
-        self._user_token: Optional[str] = None
-        self._refresh_token: Optional[str] = None
+        self._user_token: str | None = None
+        self._refresh_token: str | None = None
         self._user_token_expiry: float = 0
         self._refresh_token_expiry: float = 0
-        self._staff_id: Optional[str] = None
+        self._staff_id: str | None = None
 
         if self._store:
             cached = self._store.load_user_token(staff_id=self._staff_id or "")
@@ -175,7 +173,7 @@ class UserTokenManager:
             if rt and refresh_expiry > time.time():
                 self._refresh_token = rt
                 self._refresh_token_expiry = refresh_expiry
-                logger.debug("Restored cached refreshToken (valid until %s)", 
+                logger.debug("Restored cached refreshToken (valid until %s)",
                              time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(refresh_expiry)))
 
             # Load staff_id from cache
@@ -294,12 +292,12 @@ class UserTokenManager:
         logger.debug("Registered userToken (expires_in=%ds)", expires_in)
 
     @property
-    def staff_id(self) -> Optional[str]:
+    def staff_id(self) -> str | None:
         """Return staffId associated with the current userToken."""
         return self._staff_id
 
     @property
-    def refresh_token(self) -> Optional[str]:
+    def refresh_token(self) -> str | None:
         """Return the current refreshToken (for diagnostics only)."""
         return self._refresh_token
 

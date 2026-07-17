@@ -22,6 +22,60 @@ Quick start:
     auth_url = client.build_authorize_url(redirect_uri="https://myapp.com/callback")
 """
 
+from .account_messages import (
+    send_account_message,
+)
+from .auth import TokenManager, UserTokenManager
+from .calendars import (
+    add_schedule_attendees,
+    create_schedule,
+    delete_schedule,
+    delete_schedule_attendees,
+    fetch_primary_calendar,
+    fetch_schedule,
+    fetch_schedule_attendees,
+    fetch_schedule_list,
+    update_schedule,
+    update_schedule_attendee_meta,
+)
+from .callbacks import (
+    CALLBACK_EVENT_TYPES,
+    AccountSubscribeData,
+    AccountUnsubscribeData,
+    AppInstallData,
+    AppUninstallData,
+    BotGroupMessageData,
+    BotPrivateMessageData,
+    CallbackEvent,
+    CallbackEventData,
+    DataScopeData,
+    DeptCreateData,
+    DeptDeleteData,
+    DeptModifyData,
+    GroupCreateApproveData,
+    ReportLocationData,
+    ScheduleDeleteData,
+    ScheduleModifyData,
+    StaffCreateData,
+    StaffDeleteData,
+    StaffInfoData,
+    StaffModifyData,
+    TagMemberData,
+    TelephoneTrackCallerData,
+    TelephoneTrackData,
+    UaCertCreateData,
+    UaCertDeleteData,
+    UserLogoutData,
+    WbVisibleConfigData,
+    decrypt_callback_payload,
+    get_callback_event_types,
+    parse_callback_payload,
+    verify_callback_signature,
+)
+from .chats import (
+    fetch_chat_list,
+    fetch_chat_messages,
+)
 from .client import LansengerClient
 from .config import LansengerConfig
 from .constants import (
@@ -35,8 +89,22 @@ from .constants import (
     MEDIA_TYPE_VIDEO,
     OAUTH2_SCOPE_BASIC_USER_INFO,
     OAUTH2_SCOPES,
-    guess_media_type,
     guess_app_media_type,
+    guess_media_type,
+)
+from .contacts import (
+    fetch_department_ancestors,
+    fetch_org_extra_field_ids,
+    fetch_org_info,
+    fetch_staff_basic_info,
+    fetch_staff_detail,
+    fetch_staff_id_mapping,
+    search_staff,
+)
+from .departments import (
+    fetch_department_children,
+    fetch_department_detail,
+    fetch_department_staffs,
 )
 from .exceptions import (
     LansengerAPIError,
@@ -46,16 +114,34 @@ from .exceptions import (
     LansengerFileError,
     LansengerNetworkError,
 )
+from .group_messages import (
+    send_group_message,
+)
+from .groups import (
+    check_is_in_group,
+    create_group,
+    dismiss_group,
+    fetch_group_info,
+    fetch_group_list,
+    fetch_group_members,
+    update_group_info,
+    update_group_members,
+)
+from .media import (
+    fetch_media_path,
+    upload_app_media,
+)
 from .models import (
     AccountMessageResult,
     AppCardParams,
     BotMessageResult,
-    CreateGroupResult,
+    CalendarPrimaryResult,
     ChatGroupInfo,
     ChatListResult,
     ChatMessageInfo,
     ChatMessagesResult,
     ChatStaffInfo,
+    CreateGroupResult,
     DepartmentAncestorsResult,
     DepartmentChildrenResult,
     DepartmentDetailResult,
@@ -73,14 +159,18 @@ from .models import (
     OaCardParams,
     OrgInfoResult,
     QueryGroupsResult,
+    ScheduleAttendeeMetaResult,
+    ScheduleAttendeesResult,
+    ScheduleCreateResult,
+    ScheduleInfoResult,
+    ScheduleListResult,
+    ScheduleUpdateResult,
     SendMessageResult,
     StaffBasicInfoResult,
     StaffDetailResult,
     StaffIdMappingResult,
     StaffSearchResult,
     StreamMessageResult,
-    ScheduleAttendeeMetaResult,
-    ScheduleUpdateResult,
     TodoTaskCreateResult,
     TodoTaskExecutorListResult,
     TodoTaskInfoResult,
@@ -88,15 +178,10 @@ from .models import (
     TodoTaskStatusCountResult,
     UpdateGroupMembersResult,
     UpdateGroupResult,
-    UserMessageResult,
     UploadMediaResult,
-    CalendarPrimaryResult,
-    ScheduleAttendeesResult,
-    ScheduleCreateResult,
-    ScheduleInfoResult,
-    ScheduleListResult,
-    UserTokenResult,
     UserInfoResult,
+    UserMessageResult,
+    UserTokenResult,
 )
 from .oauth import (
     build_authorize_url,
@@ -105,128 +190,43 @@ from .oauth import (
     refresh_user_token,
     validate_callback_state,
 )
-from .users import fetch_user_info
-from .contacts import (
-    fetch_staff_basic_info,
-    fetch_staff_detail,
-    fetch_department_ancestors,
-    fetch_staff_id_mapping,
-    fetch_org_extra_field_ids,
-    search_staff,
-    fetch_org_info,
-)
-from .groups import (
-    create_group,
-    fetch_group_info,
-    fetch_group_members,
-    fetch_group_list,
-    check_is_in_group,
-    update_group_info,
-    update_group_members,
-    dismiss_group,
-)
-from .departments import (
-    fetch_department_detail,
-    fetch_department_children,
-    fetch_department_staffs,
+from .persistence import CredentialStore
+from .reminders import (
+    REMINDER_TYPE_NONE,
+    REMINDER_TYPE_PHONE,
+    REMINDER_TYPE_POPUP,
+    REMINDER_TYPE_SMS,
+    send_reminder,
 )
 from .streaming import (
     create_stream_message,
     fetch_stream_message,
 )
-from .reminders import (
-    send_reminder,
-    REMINDER_TYPE_NONE,
-    REMINDER_TYPE_POPUP,
-    REMINDER_TYPE_SMS,
-    REMINDER_TYPE_PHONE,
-)
-from .media import (
-    fetch_media_path,
-    upload_app_media,
-)
-from .account_messages import (
-    send_account_message,
+from .sync_client import LansengerSyncClient
+from .todos import (
+    TODO_TODO_STATUS_DONE,
+    TODO_TODO_STATUS_PENDING_DO,
+    TODO_TODO_STATUS_PENDING_READ,
+    TODO_TODO_STATUS_READ,
+    TODO_TYPE_APPROVAL,
+    TODO_TYPE_NOTIFICATION,
+    add_executors,
+    create_todo_task,
+    delete_executors,
+    delete_todo_task,
+    fetch_executor_list,
+    fetch_todo_task_by_id,
+    fetch_todo_task_by_source_id,
+    fetch_todo_task_list,
+    fetch_todo_task_status_counts,
+    update_executor_status,
+    update_todo_task,
+    update_todo_task_status,
 )
 from .user_messages import (
     send_user_message,
 )
-from .chats import (
-    fetch_chat_list,
-    fetch_chat_messages,
-)
-from .group_messages import (
-    send_group_message,
-)
-from .todos import (
-    create_todo_task,
-    update_todo_task,
-    update_todo_task_status,
-    delete_todo_task,
-    fetch_todo_task_list,
-    fetch_todo_task_by_source_id,
-    fetch_todo_task_by_id,
-    fetch_todo_task_status_counts,
-    update_executor_status,
-    add_executors,
-    delete_executors,
-    fetch_executor_list,
-    TODO_TODO_STATUS_PENDING_READ,
-    TODO_TODO_STATUS_READ,
-    TODO_TODO_STATUS_PENDING_DO,
-    TODO_TODO_STATUS_DONE,
-    TODO_TYPE_NOTIFICATION,
-    TODO_TYPE_APPROVAL,
-)
-from .calendars import (
-    fetch_primary_calendar,
-    create_schedule,
-    fetch_schedule,
-    update_schedule,
-    delete_schedule,
-    fetch_schedule_list,
-    fetch_schedule_attendees,
-    add_schedule_attendees,
-    delete_schedule_attendees,
-    update_schedule_attendee_meta,
-)
-from .callbacks import (
-    parse_callback_payload,
-    verify_callback_signature,
-    decrypt_callback_payload,
-    get_callback_event_types,
-    CallbackEvent,
-    CallbackEventData,
-    CALLBACK_EVENT_TYPES,
-    AccountSubscribeData,
-    AccountUnsubscribeData,
-    StaffInfoData,
-    StaffModifyData,
-    StaffCreateData,
-    StaffDeleteData,
-    TelephoneTrackData,
-    TelephoneTrackCallerData,
-    DeptCreateData,
-    DeptModifyData,
-    DeptDeleteData,
-    AppInstallData,
-    AppUninstallData,
-    UaCertCreateData,
-    UaCertDeleteData,
-    ReportLocationData,
-    UserLogoutData,
-    DataScopeData,
-    BotPrivateMessageData,
-    BotGroupMessageData,
-    WbVisibleConfigData,
-    GroupCreateApproveData,
-    ScheduleModifyData,
-    ScheduleDeleteData,
-    TagMemberData,
-)
-from .persistence import CredentialStore
-from .auth import TokenManager, UserTokenManager
-from .sync_client import LansengerSyncClient
+from .users import fetch_user_info
 
 __all__ = [
     "LansengerClient",

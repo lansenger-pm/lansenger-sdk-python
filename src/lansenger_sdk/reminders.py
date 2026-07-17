@@ -14,7 +14,7 @@ userIdList must be recipients of the original message. Max 100 people.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -34,10 +34,10 @@ async def send_reminder(
     config: LansengerConfig,
     app_token: str,
     msg_id: str,
-    reminder_types: List[int],
-    user_id_list: List[str],
+    reminder_types: list[int],
+    user_id_list: list[str],
     *,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> SendMessageResult:
     """Send an urgent reminder for a previously sent message (4.6.14).
 
@@ -58,7 +58,7 @@ async def send_reminder(
 
     url = build_api_url(config, "message", "reminder_create", app_token)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "msgId": msg_id,
         "reminderTypes": reminder_types,
         "userIdList": user_id_list,

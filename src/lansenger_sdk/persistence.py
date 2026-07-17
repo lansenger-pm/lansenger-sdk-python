@@ -39,7 +39,7 @@ import os
 import stat
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("lansenger_sdk.persistence")
 
@@ -61,7 +61,7 @@ class CredentialStore:
     app_id, app_secret, api_gateway_url, passport_url, and tokens.
     """
 
-    def __init__(self, path: Optional[str] = None, profile: str = DEFAULT_PROFILE):
+    def __init__(self, path: str | None = None, profile: str = DEFAULT_PROFILE):
         if path:
             self._path = Path(path)
         else:
@@ -76,7 +76,7 @@ class CredentialStore:
     def profile(self) -> str:
         return self._profile
 
-    def _migrate_legacy(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    def _migrate_legacy(self, state: dict[str, Any]) -> dict[str, Any]:
         """Migrate flat dict format to multi-profile format."""
         if "profiles" in state:
             return state
@@ -91,7 +91,7 @@ class CredentialStore:
         self.save(new_state)
         return new_state
 
-    def load(self) -> Dict[str, Any]:
+    def load(self) -> dict[str, Any]:
         """Load state from file. Returns empty dict if file doesn't exist."""
         if not self._path.exists():
             return {}
@@ -104,7 +104,7 @@ class CredentialStore:
             logger.warning("Failed to load SDK state from %s: %s", self._path, e)
             return {}
 
-    def save(self, state: Dict[str, Any]) -> None:
+    def save(self, state: dict[str, Any]) -> None:
         """Save state to file with 0600 permissions."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -114,7 +114,7 @@ class CredentialStore:
             logger.warning("Failed to set file permissions on %s", self._path)
         logger.debug("Saved SDK state to %s", self._path)
 
-    def _migrate_user_tokens(self, data: Dict[str, Any]) -> bool:
+    def _migrate_user_tokens(self, data: dict[str, Any]) -> bool:
         """Migrate flat userToken fields into user_tokens[staff_id] nested structure.
 
         Returns True if a migration or cleanup was performed (caller must persist).
@@ -147,7 +147,7 @@ class CredentialStore:
             logger.debug("Migrated/merged flat userToken for staff_id=%s", staff_id)
         return changed
 
-    def _get_profile_data(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_profile_data(self, state: dict[str, Any]) -> dict[str, Any]:
         """Get the data dict for the current profile, migrating flat userTokens on access."""
         profiles = state.get("profiles", {})
         data = profiles.get(self._profile, {})
@@ -155,7 +155,7 @@ class CredentialStore:
             self.save(state)
         return data
 
-    def _set_profile_data(self, state: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    def _set_profile_data(self, state: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
         """Set the data dict for the current profile and return updated state."""
         if "profiles" not in state:
             state["profiles"] = {}
@@ -164,7 +164,7 @@ class CredentialStore:
             state["active_profile"] = DEFAULT_PROFILE
         return state
 
-    def load_credentials(self) -> Dict[str, str]:
+    def load_credentials(self) -> dict[str, str]:
         """Load app_id, app_secret, api_gateway_url, passport_url, redirect_uri, encoding_key, callback_token for current profile."""
         state = self.load()
         data = self._get_profile_data(state)
@@ -224,7 +224,7 @@ class CredentialStore:
         state = self._set_profile_data(state, data)
         self.save(state)
 
-    def load_app_token(self) -> Optional[str]:
+    def load_app_token(self) -> str | None:
         """Load cached appToken for current profile if not expired."""
         state = self.load()
         data = self._get_profile_data(state)
@@ -247,7 +247,7 @@ class CredentialStore:
         state = self._set_profile_data(state, data)
         self.save(state)
 
-    def load_user_token(self, staff_id: str = "") -> Dict[str, Any]:
+    def load_user_token(self, staff_id: str = "") -> dict[str, Any]:
         """Load userToken and refreshToken for current profile.
 
         If staff_id is provided, reads from the per-user nested store
@@ -385,12 +385,12 @@ class CredentialStore:
             self._path.unlink()
             logger.debug("Cleared SDK state file %s", self._path)
 
-    def list_profiles(self) -> List[str]:
+    def list_profiles(self) -> list[str]:
         """List all profile names in the store."""
         state = self.load()
         return list(state.get("profiles", {}).keys())
 
-    def list_user_tokens(self) -> List[str]:
+    def list_user_tokens(self) -> list[str]:
         """List all staff_ids that have user tokens stored in the current profile."""
         state = self.load()
         data = self._get_profile_data(state)

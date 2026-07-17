@@ -18,13 +18,13 @@ Key fields:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
 from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .models import AccountMessageResult
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.account_messages")
 
@@ -35,13 +35,13 @@ async def send_account_message(
     msg_type: str,
     msg_data: dict,
     *,
-    chat_ids: Optional[List[str]] = None,
-    department_ids: Optional[List[str]] = None,
+    chat_ids: list[str] | None = None,
+    department_ids: list[str] | None = None,
     account_id: str = "",
     entry_id: str = "",
     attach: str = "",
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> AccountMessageResult:
     """Send a message via the public account channel (4.6.1).
 
@@ -69,7 +69,7 @@ async def send_account_message(
 
     url = build_api_url(config, "account_message", "create", app_token, user_token=user_token)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "userIdList": chat_ids or [],
         "departmentIdList": department_ids or [],
         "msgType": msg_type,

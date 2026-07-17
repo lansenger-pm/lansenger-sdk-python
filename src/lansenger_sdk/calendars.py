@@ -21,8 +21,9 @@ Note: 4.23.1-8 (calendar CRUD, subscribe, unsubscribe, member list) are marked
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+from .api_utils import do_get, do_post, parse_api_response
 from .config import LansengerConfig
 from .models import (
     CalendarPrimaryResult,
@@ -35,7 +36,6 @@ from .models import (
     ScheduleUpdateResult,
 )
 from .url_helpers import build_api_url
-from .api_utils import do_get, do_post, parse_api_response
 
 
 async def fetch_primary_calendar(
@@ -44,7 +44,7 @@ async def fetch_primary_calendar(
     *,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> CalendarPrimaryResult:
     """Get the primary calendar (4.23.9).
 
@@ -88,18 +88,18 @@ async def create_schedule(
     summary: str,
     start_time: dict,
     end_time: dict,
-    attendees: List[Dict[str, str]],
+    attendees: list[dict[str, str]],
     *,
     description: str = "",
-    all_day: Optional[str] = None,
-    repeat_type: Optional[str] = None,
+    all_day: str | None = None,
+    repeat_type: str | None = None,
     rule: str = "",
-    expire_date_type: Optional[str] = None,
-    reminder_type: Optional[str] = None,
-    attendee_permissions: Optional[str] = None,
+    expire_date_type: str | None = None,
+    reminder_type: str | None = None,
+    attendee_permissions: str | None = None,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleCreateResult:
     """Create a schedule/event (4.23.10).
 
@@ -132,7 +132,7 @@ async def create_schedule(
 
     url = build_api_url(config, "calendars", "schedule_create", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "summary": summary,
         "startTime": start_time,
         "endTime": end_time,
@@ -176,7 +176,7 @@ async def fetch_schedule(
     *,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleInfoResult:
     """Query a schedule (4.23.11)."""
     if not calendar_id:
@@ -219,7 +219,7 @@ async def delete_schedule(
     current_time: int = 0,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleCreateResult:
     """Delete a schedule (4.23.13)."""
     if not calendar_id:
@@ -229,7 +229,7 @@ async def delete_schedule(
 
     url = build_api_url(config, "calendars", "schedule_delete", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "reminderType": reminder_type,
     }
     if operation_type != "delete_all":
@@ -257,21 +257,21 @@ async def update_schedule(
     calendar_id: str,
     schedule_id: str,
     *,
-    summary: Optional[str] = None,
-    description: Optional[str] = None,
+    summary: str | None = None,
+    description: str | None = None,
     operation_type: str = "modify_all",
-    current_time: Optional[int] = None,
-    reminder_type: Optional[str] = None,
-    repeat_type: Optional[str] = None,
-    rule: Optional[str] = None,
-    expire_date_type: Optional[str] = None,
-    all_day: Optional[str] = None,
-    attendee_permissions: Optional[str] = None,
-    start_time: Optional[Dict[str, Any]] = None,
-    end_time: Optional[Dict[str, Any]] = None,
+    current_time: int | None = None,
+    reminder_type: str | None = None,
+    repeat_type: str | None = None,
+    rule: str | None = None,
+    expire_date_type: str | None = None,
+    all_day: str | None = None,
+    attendee_permissions: str | None = None,
+    start_time: dict[str, Any] | None = None,
+    end_time: dict[str, Any] | None = None,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleUpdateResult:
     """Update a schedule (4.23.12).
 
@@ -302,7 +302,7 @@ async def update_schedule(
 
     url = build_api_url(config, "calendars", "schedule_update", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
-    body: Dict[str, Any] = {}
+    body: dict[str, Any] = {}
     if summary is not None:
         body["summary"] = summary
     if description is not None:
@@ -350,12 +350,12 @@ async def fetch_schedule_list(
     config: LansengerConfig,
     app_token: str,
     calendar_id: str,
-    start_time: Optional[int] = None,
-    end_time: Optional[int] = None,
+    start_time: int | None = None,
+    end_time: int | None = None,
     *,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleListResult:
     """Get schedule list for a calendar in a time range (4.23.14).
 
@@ -368,7 +368,7 @@ async def fetch_schedule_list(
 
     url = build_api_url(config, "calendars", "schedule_list", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id)
 
-    body: Dict[str, Any] = {"startTime": start_time, "endTime": end_time}
+    body: dict[str, Any] = {"startTime": start_time, "endTime": end_time}
 
     data, http_err = await do_post(config, url, body, http_client)
     if http_err:
@@ -395,7 +395,7 @@ async def fetch_schedule_attendees(
     page_size: int = 500,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleAttendeesResult:
     """Get schedule attendee list (4.23.15)."""
     if not calendar_id:
@@ -427,14 +427,14 @@ async def add_schedule_attendees(
     app_token: str,
     calendar_id: str,
     schedule_id: str,
-    attendees: List[str],
+    attendees: list[str],
     *,
-    reminder_type: Optional[str] = None,
-    operation_type: Optional[str] = None,
-    current_time: Optional[int] = None,
+    reminder_type: str | None = None,
+    operation_type: str | None = None,
+    current_time: int | None = None,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleCreateResult:
     """Add attendees to a schedule (4.23.16).
 
@@ -452,7 +452,7 @@ async def add_schedule_attendees(
 
     url = build_api_url(config, "calendars", "attendees_create", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
-    body: Dict[str, Any] = {"attendees": attendees}
+    body: dict[str, Any] = {"attendees": attendees}
     if reminder_type is not None:
         body["reminderType"] = reminder_type
     if operation_type is not None:
@@ -480,14 +480,14 @@ async def delete_schedule_attendees(
     app_token: str,
     calendar_id: str,
     schedule_id: str,
-    attendees: List[str],
+    attendees: list[str],
     *,
-    reminder_type: Optional[str] = None,
-    operation_type: Optional[str] = None,
-    current_time: Optional[int] = None,
+    reminder_type: str | None = None,
+    operation_type: str | None = None,
+    current_time: int | None = None,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleCreateResult:
     """Delete attendees from a schedule (4.23.18).
 
@@ -505,7 +505,7 @@ async def delete_schedule_attendees(
 
     url = build_api_url(config, "calendars", "attendees_delete", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
-    body: Dict[str, Any] = {"attendees": attendees}
+    body: dict[str, Any] = {"attendees": attendees}
     if reminder_type is not None:
         body["reminderType"] = reminder_type
     if operation_type is not None:
@@ -529,14 +529,14 @@ async def update_schedule_attendee_meta(
     calendar_id: str,
     schedule_id: str,
     *,
-    rsvp_status: Optional[str] = None,
-    color: Optional[str] = None,
-    permissions: Optional[str] = None,
-    busy_free_state: Optional[str] = None,
-    remind_times: Optional[List[int]] = None,
+    rsvp_status: str | None = None,
+    color: str | None = None,
+    permissions: str | None = None,
+    busy_free_state: str | None = None,
+    remind_times: list[int] | None = None,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleAttendeeMetaResult:
     """Update schedule attendee metadata (4.23.17).
 
@@ -559,7 +559,7 @@ async def update_schedule_attendee_meta(
 
     url = build_api_url(config, "calendars", "attendees_meta_update", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id, schedule_id=schedule_id)
 
-    body: Dict[str, Any] = {}
+    body: dict[str, Any] = {}
     if rsvp_status is not None:
         body["rsvpStatus"] = rsvp_status
     if color is not None:
@@ -590,14 +590,14 @@ async def update_schedule_attendees(
     calendar_id: str,
     schedule_id: str,
     *,
-    add_attendees: Optional[List[str]] = None,
-    delete_attendees: Optional[List[str]] = None,
-    reminder_type: Optional[str] = None,
-    operation_type: Optional[str] = None,
-    current_time: Optional[int] = None,
+    add_attendees: list[str] | None = None,
+    delete_attendees: list[str] | None = None,
+    reminder_type: str | None = None,
+    operation_type: str | None = None,
+    current_time: int | None = None,
     user_token: str = "",
     user_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ScheduleAttendeesUpdateResult:
     """Batch add and/or delete schedule attendees (4.23.19).
 
@@ -627,7 +627,7 @@ async def update_schedule_attendees(
         calendar_id=calendar_id, schedule_id=schedule_id,
     )
 
-    body: Dict[str, Any] = {}
+    body: dict[str, Any] = {}
     if add_attendees is not None:
         body["addAttendees"] = add_attendees
     if delete_attendees is not None:
@@ -648,10 +648,7 @@ async def update_schedule_attendees(
 
     d = data.get("data", {})
     schedule_ids = d.get("scheduleIds")
-    if isinstance(schedule_ids, list):
-        schedule_ids = [str(s) for s in schedule_ids]
-    else:
-        schedule_ids = None
+    schedule_ids = [str(s) for s in schedule_ids] if isinstance(schedule_ids, list) else None
     attendees = d.get("attendees")
     if isinstance(attendees, list):
         attendees = [str(a) for a in attendees]

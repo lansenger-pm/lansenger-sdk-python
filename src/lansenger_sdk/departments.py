@@ -12,17 +12,16 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
-from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .api_utils import do_get, parse_api_response
+from .config import LansengerConfig
 from .models import (
     DepartmentChildrenResult,
     DepartmentDetailResult,
     DepartmentStaffsResult,
 )
+from .url_helpers import build_api_url
 
 
 async def fetch_department_detail(
@@ -32,7 +31,7 @@ async def fetch_department_detail(
     *,
     user_token: str = "",
     tag_id: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> DepartmentDetailResult:
     """Fetch a department's detailed information.
 
@@ -90,7 +89,7 @@ async def fetch_department_children(
     department_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> DepartmentChildrenResult:
     """Fetch a department's child departments.
 
@@ -130,7 +129,7 @@ async def fetch_department_staffs(
     user_token: str = "",
     page: int = 1,
     page_size: int = 100,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> DepartmentStaffsResult:
     """Fetch staff members in a department (paginated).
 

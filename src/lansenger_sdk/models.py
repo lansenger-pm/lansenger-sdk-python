@@ -3,22 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
 class SendMessageResult:
     success: bool
-    message_id: Optional[str] = None
-    error: Optional[str] = None
+    message_id: str | None = None
+    error: str | None = None
     platform: str = "lansenger"
-    msg_type: Optional[str] = None
-    operation: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    msg_type: str | None = None
+    operation: str | None = None
+    raw_response: dict[str, Any] | None = None
     retryable: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "platform": self.platform}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "platform": self.platform}
         if self.message_id is not None:
             d["message_id"] = self.message_id
         if self.error is not None:
@@ -29,20 +29,20 @@ class SendMessageResult:
 @dataclass
 class StaffBasicInfoResult:
     success: bool
-    org_id: Optional[str] = None
-    org_name: Optional[str] = None
-    name: Optional[str] = None
-    gender: Optional[int] = None
-    signature: Optional[str] = None
-    avatar_url: Optional[str] = None
-    avatar_id: Optional[str] = None
-    status: Optional[int] = None
-    departments: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    org_id: str | None = None
+    org_name: str | None = None
+    name: str | None = None
+    gender: int | None = None
+    signature: str | None = None
+    avatar_url: str | None = None
+    avatar_id: str | None = None
+    status: int | None = None
+    departments: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("org_id", "org_name", "name", "gender", "signature",
                      "avatar_url", "avatar_id", "status", "departments"):
             v = getattr(self, key)
@@ -56,41 +56,41 @@ class StaffBasicInfoResult:
 @dataclass
 class StaffDetailResult:
     success: bool
-    name: Optional[str] = None
-    signature: Optional[str] = None
-    avatar_id: Optional[str] = None
-    avatar_url: Optional[str] = None
-    status: Optional[int] = None
-    departments: Optional[List[Dict[str, Any]]] = None
-    gender: Optional[int] = None
-    org_id: Optional[str] = None
-    org_name: Optional[str] = None
-    login_name: Optional[str] = None
-    employee_number: Optional[str] = None
-    email: Optional[str] = None
-    external_id: Optional[str] = None
-    nationality: Optional[str] = None
-    birthdate: Optional[str] = None
-    id_number: Optional[str] = None
-    native_place: Optional[str] = None
-    duties: Optional[str] = None
-    parties: Optional[str] = None
-    address: Optional[str] = None
-    mobile_phone: Optional[Dict[str, str]] = None
-    extra_phones: Optional[List[Dict[str, str]]] = None
-    introduction: Optional[Dict[str, Any]] = None
-    education: Optional[List[Dict[str, Any]]] = None
-    career: Optional[List[Dict[str, Any]]] = None
-    login_ways: Optional[List[int]] = None
-    tags: Optional[List[str]] = None
-    extra_field_set: Optional[Dict[str, str]] = None
-    leaders: Optional[List[str]] = None
-    join_date: Optional[int] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    name: str | None = None
+    signature: str | None = None
+    avatar_id: str | None = None
+    avatar_url: str | None = None
+    status: int | None = None
+    departments: list[dict[str, Any]] | None = None
+    gender: int | None = None
+    org_id: str | None = None
+    org_name: str | None = None
+    login_name: str | None = None
+    employee_number: str | None = None
+    email: str | None = None
+    external_id: str | None = None
+    nationality: str | None = None
+    birthdate: str | None = None
+    id_number: str | None = None
+    native_place: str | None = None
+    duties: str | None = None
+    parties: str | None = None
+    address: str | None = None
+    mobile_phone: dict[str, str] | None = None
+    extra_phones: list[dict[str, str]] | None = None
+    introduction: dict[str, Any] | None = None
+    education: list[dict[str, Any]] | None = None
+    career: list[dict[str, Any]] | None = None
+    login_ways: list[int] | None = None
+    tags: list[str] | None = None
+    extra_field_set: dict[str, str] | None = None
+    leaders: list[str] | None = None
+    join_date: int | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("name", "signature", "avatar_id", "avatar_url", "status",
                      "departments", "gender", "org_id", "org_name", "login_name",
                      "employee_number", "email", "external_id", "nationality",
@@ -109,12 +109,12 @@ class StaffDetailResult:
 @dataclass
 class DepartmentAncestorsResult:
     success: bool
-    ancestor_groups: Optional[List[List[Dict[str, str]]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    ancestor_groups: list[list[dict[str, str]]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.ancestor_groups is not None:
             d["ancestor_groups"] = self.ancestor_groups
         if self.error is not None:
@@ -125,12 +125,12 @@ class DepartmentAncestorsResult:
 @dataclass
 class StaffIdMappingResult:
     success: bool
-    staff_id: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    staff_id: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.staff_id is not None:
             d["staff_id"] = self.staff_id
         if self.error is not None:
@@ -141,18 +141,18 @@ class StaffIdMappingResult:
 @dataclass
 class OrgInfoResult:
     success: bool
-    org_id: Optional[str] = None
-    org_name: Optional[str] = None
-    icon_url: Optional[str] = None
-    org_max_member_limit: Optional[int] = None
-    org_order_type: Optional[int] = None
-    org_days_limit: Optional[int] = None
-    org_billing_date: Optional[int] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    org_id: str | None = None
+    org_name: str | None = None
+    icon_url: str | None = None
+    org_max_member_limit: int | None = None
+    org_order_type: int | None = None
+    org_days_limit: int | None = None
+    org_billing_date: int | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("org_id", "org_name", "icon_url", "org_max_member_limit",
                      "org_order_type", "org_days_limit", "org_billing_date"):
             v = getattr(self, key)
@@ -168,12 +168,12 @@ class ExtraFieldIdsResult:
     success: bool
     has_more: bool = False
     total: int = 0
-    extra_field_ids: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    extra_field_ids: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total}
         if self.extra_field_ids is not None:
             d["extra_field_ids"] = self.extra_field_ids
         if self.error is not None:
@@ -186,12 +186,12 @@ class StaffSearchResult:
     success: bool
     has_more: bool = False
     total: int = 0
-    staff_info: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    staff_info: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total}
         if self.staff_info is not None:
             d["staff_info"] = self.staff_info
         if self.error is not None:
@@ -203,14 +203,14 @@ class StaffSearchResult:
 class QueryGroupsResult:
     success: bool
     total_group_ids: int = 0
-    group_ids: List[str] = field(default_factory=list)
-    error: Optional[str] = None
+    group_ids: list[str] = field(default_factory=list)
+    error: str | None = None
     platform: str = "lansenger"
     operation: str = "query_groups"
-    raw_response: Optional[Dict[str, Any]] = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
             "success": self.success,
             "total_group_ids": self.total_group_ids,
             "group_ids": self.group_ids,
@@ -225,12 +225,12 @@ class QueryGroupsResult:
 @dataclass
 class UploadMediaResult:
     success: bool
-    media_id: Optional[str] = None
-    created_time: Optional[str] = None
-    error: Optional[str] = None
+    media_id: str | None = None
+    created_time: str | None = None
+    error: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.media_id is not None:
             d["media_id"] = self.media_id
         if self.created_time is not None:
@@ -243,11 +243,11 @@ class UploadMediaResult:
 @dataclass
 class DownloadMediaResult:
     success: bool
-    data: Optional[bytes] = None
-    error: Optional[str] = None
+    data: bytes | None = None
+    error: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.data is not None:
             d["size"] = len(self.data)
         if self.error is not None:
@@ -258,15 +258,15 @@ class DownloadMediaResult:
 @dataclass
 class MediaPathResult:
     success: bool
-    media_path: Optional[str] = None
-    name: Optional[str] = None
-    type: Optional[str] = None
-    size: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    media_path: str | None = None
+    name: str | None = None
+    type: str | None = None
+    size: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("media_path", "name", "type", "size"):
             v = getattr(self, key)
             if v is not None:
@@ -284,13 +284,13 @@ class AppCardParams:
     body_sub_title: str = ""
     body_content: str = ""
     signature: str = ""
-    fields: Optional[List[Dict[str, str]]] = None
-    links: Optional[List[Dict[str, str]]] = None
+    fields: list[dict[str, str]] | None = None
+    links: list[dict[str, str]] | None = None
     card_link: str = ""
     pc_card_link: str = ""
     pad_card_link: str = ""
     is_dynamic: bool = False
-    head_status_info: Optional[Dict[str, str]] = None
+    head_status_info: dict[str, str] | None = None
     staff_id: str = ""
     head_icon_url: str = ""
     is_group: bool = False
@@ -321,11 +321,11 @@ class OaCardParams:
     title: str = ""
     sub_title: str = ""
     staff_id: str = ""
-    fields: Optional[List[Dict[str, str]]] = None
+    fields: list[dict[str, str]] | None = None
     link: str = ""
     pc_link: str = ""
     pad_link: str = ""
-    card_action: Optional[Dict[str, Any]] = None
+    card_action: dict[str, Any] | None = None
     is_group: bool = False
     user_token: str = ""
     sender_id: str = ""
@@ -334,8 +334,8 @@ class OaCardParams:
 @dataclass
 class DynamicCardUpdateParams:
     msg_id: str
-    head_status_info: Optional[Dict[str, str]] = None
-    links: Optional[List[Dict[str, str]]] = None
+    head_status_info: dict[str, str] | None = None
+    links: list[dict[str, str]] | None = None
     is_last_update: bool = False
 
 
@@ -355,17 +355,17 @@ class ApproveCardParams:
     head_status_colour: str = ""
     # body
     body_format_type: int = 1  # 1=MARK_DOWN
-    fields: Optional[List[Dict[str, str]]] = None  # [{"key","value"},...]
+    fields: list[dict[str, str]] | None = None  # [{"key","value"},...]
     # reminder
     reminder_all: bool = False
-    reminder_user_ids: Optional[List[str]] = None
-    reminder_bot_ids: Optional[List[str]] = None
+    reminder_user_ids: list[str] | None = None
+    reminder_bot_ids: list[str] | None = None
     # card link
     card_link: str = ""
     card_link_for_pc: str = ""
     card_link_for_pad: str = ""
     # buttons
-    buttons: Optional[List[Dict[str, Any]]] = None
+    buttons: list[dict[str, Any]] | None = None
     # expire
     expire_time: int = 0  # seconds, max 30 days; 0=default 7 days
     # channel
@@ -385,24 +385,24 @@ class ApproveCardUpdateParams:
     head_status_icon_link: str = ""
     head_status_colour: str = ""
     # buttons
-    buttons: Optional[List[Dict[str, Any]]] = None
+    buttons: list[dict[str, Any]] | None = None
 
 
 @dataclass
 class UserTokenResult:
     success: bool
-    user_token: Optional[str] = None
+    user_token: str | None = None
     expires_in: int = 7200
-    refresh_token: Optional[str] = None
+    refresh_token: str | None = None
     refresh_expires_in: int = 2592000
-    staff_id: Optional[str] = None
-    scope: Optional[str] = None
-    state: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    staff_id: str | None = None
+    scope: str | None = None
+    state: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.user_token is not None:
             d["user_token"] = self.user_token
             d["expires_in"] = self.expires_in
@@ -423,23 +423,23 @@ class UserTokenResult:
 @dataclass
 class UserInfoResult:
     success: bool
-    staff_id: Optional[str] = None
-    name: Optional[str] = None
-    org_id: Optional[str] = None
-    org_name: Optional[str] = None
-    avatar_id: Optional[str] = None
-    avatar_url: Optional[str] = None
-    mobile_phone: Optional[Dict[str, str]] = None
-    email: Optional[str] = None
-    employee_number: Optional[str] = None
-    login_name: Optional[str] = None
-    external_id: Optional[str] = None
-    department: Optional[List[Dict[str, str]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    staff_id: str | None = None
+    name: str | None = None
+    org_id: str | None = None
+    org_name: str | None = None
+    avatar_id: str | None = None
+    avatar_url: str | None = None
+    mobile_phone: dict[str, str] | None = None
+    email: str | None = None
+    employee_number: str | None = None
+    login_name: str | None = None
+    external_id: str | None = None
+    department: list[dict[str, str]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.staff_id is not None:
             d["staff_id"] = self.staff_id
         if self.name is not None:
@@ -470,14 +470,14 @@ class UserInfoResult:
 @dataclass
 class AccountMessageResult:
     success: bool
-    message_id: Optional[str] = None
-    invalid_staff: Optional[List[str]] = None
-    invalid_department: Optional[List[str]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    message_id: str | None = None
+    invalid_staff: list[str] | None = None
+    invalid_department: list[str] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.message_id is not None:
             d["message_id"] = self.message_id
         if self.invalid_staff is not None:
@@ -492,12 +492,12 @@ class AccountMessageResult:
 @dataclass
 class UserMessageResult:
     success: bool
-    message_id: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    message_id: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.message_id is not None:
             d["message_id"] = self.message_id
         if self.error is not None:
@@ -508,14 +508,14 @@ class UserMessageResult:
 @dataclass
 class BotMessageResult:
     success: bool
-    message_id: Optional[str] = None
-    invalid_staff: Optional[List[str]] = None
-    invalid_department: Optional[List[str]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    message_id: str | None = None
+    invalid_staff: list[str] | None = None
+    invalid_department: list[str] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.message_id is not None:
             d["message_id"] = self.message_id
         if self.invalid_staff is not None:
@@ -530,12 +530,12 @@ class BotMessageResult:
 @dataclass
 class StreamMessageResult:
     success: bool
-    message_id: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    message_id: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.message_id is not None:
             d["message_id"] = self.message_id
         if self.error is not None:
@@ -550,8 +550,8 @@ class GroupCreateInfo:
     owner_id: str = ""
     description: str = ""
     avatar_id: str = ""
-    staff_id_list: Optional[List[str]] = None
-    department_id_list: Optional[List[str]] = None
+    staff_id_list: list[str] | None = None
+    department_id_list: list[str] | None = None
     apply_request_id: str = ""
     apply_notes: str = ""
     apply_global_unique_id: str = ""
@@ -561,15 +561,15 @@ class GroupCreateInfo:
 @dataclass
 class CreateGroupResult:
     success: bool
-    group_id: Optional[str] = None
+    group_id: str | None = None
     total_members: int = 0
-    invalid_staff: Optional[List[str]] = None
-    invalid_department: Optional[List[str]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    invalid_staff: list[str] | None = None
+    invalid_department: list[str] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.group_id is not None:
             d["group_id"] = self.group_id
         d["total_members"] = self.total_members
@@ -585,27 +585,27 @@ class CreateGroupResult:
 @dataclass
 class GroupInfoResult:
     success: bool
-    name: Optional[str] = None
-    description: Optional[str] = None
-    avatar_id: Optional[str] = None
-    avatar_url: Optional[str] = None
-    owner: Optional[Dict[str, str]] = None
-    creator: Optional[Dict[str, str]] = None
-    state: Optional[int] = None
-    manage_mode: Optional[int] = None
-    location_share: Optional[int] = None
-    needs_confirm: Optional[int] = None
-    is_public: Optional[int] = None
-    max_members: Optional[int] = None
-    max_history_msg_count: Optional[int] = None
-    total_members: Optional[int] = None
-    remind_all: Optional[bool] = None
-    send_msg_status: Optional[bool] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    name: str | None = None
+    description: str | None = None
+    avatar_id: str | None = None
+    avatar_url: str | None = None
+    owner: dict[str, str] | None = None
+    creator: dict[str, str] | None = None
+    state: int | None = None
+    manage_mode: int | None = None
+    location_share: int | None = None
+    needs_confirm: int | None = None
+    is_public: int | None = None
+    max_members: int | None = None
+    max_history_msg_count: int | None = None
+    total_members: int | None = None
+    remind_all: bool | None = None
+    send_msg_status: bool | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("name", "description", "avatar_id", "avatar_url", "owner",
                      "creator", "state", "manage_mode", "location_share",
                      "needs_confirm", "is_public", "max_members",
@@ -623,12 +623,12 @@ class GroupInfoResult:
 class GroupMemberResult:
     success: bool
     total_members: int = 0
-    members: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    members: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "total_members": self.total_members}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total_members": self.total_members}
         if self.members is not None:
             d["members"] = self.members
         if self.error is not None:
@@ -639,11 +639,11 @@ class GroupMemberResult:
 @dataclass
 class UpdateGroupResult:
     success: bool
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.error is not None:
             d["error"] = self.error
         return d
@@ -655,13 +655,13 @@ class UpdateGroupMembersResult:
     total_members: int = 0
     added_staff_count: int = 0
     deleted_staff_count: int = 0
-    invalid_staff: Optional[List[str]] = None
-    invalid_department: Optional[List[str]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    invalid_staff: list[str] | None = None
+    invalid_department: list[str] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "total_members": self.total_members,
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total_members": self.total_members,
                              "added_staff_count": self.added_staff_count,
                              "deleted_staff_count": self.deleted_staff_count}
         if self.invalid_staff is not None:
@@ -677,12 +677,12 @@ class UpdateGroupMembersResult:
 class GroupListResult:
     success: bool
     total_group_ids: int = 0
-    group_ids: Optional[List[str]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    group_ids: list[str] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "total_group_ids": self.total_group_ids}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total_group_ids": self.total_group_ids}
         if self.group_ids is not None:
             d["group_ids"] = self.group_ids
         if self.error is not None:
@@ -694,11 +694,11 @@ class GroupListResult:
 class IsInGroupResult:
     success: bool
     is_in_group: bool = False
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "is_in_group": self.is_in_group}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "is_in_group": self.is_in_group}
         if self.error is not None:
             d["error"] = self.error
         return d
@@ -707,29 +707,29 @@ class IsInGroupResult:
 @dataclass
 class DepartmentDetailResult:
     success: bool
-    id: Optional[str] = None
-    name: Optional[str] = None
-    external_id: Optional[str] = None
-    parent_id: Optional[str] = None
-    order: Optional[float] = None
-    has_children: Optional[bool] = None
-    normal_members: Optional[int] = None
-    inactive_members: Optional[int] = None
-    frozen_members: Optional[int] = None
-    deleted_members: Optional[int] = None
-    tags: Optional[List[str]] = None
-    ancestor_departments: Optional[List[Dict[str, str]]] = None
-    leaders: Optional[List[str]] = None
-    emails: Optional[List[str]] = None
-    phones: Optional[List[str]] = None
-    addresses: Optional[List[str]] = None
-    introductions: Optional[List[str]] = None
-    dept_type: Optional[int] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    id: str | None = None
+    name: str | None = None
+    external_id: str | None = None
+    parent_id: str | None = None
+    order: float | None = None
+    has_children: bool | None = None
+    normal_members: int | None = None
+    inactive_members: int | None = None
+    frozen_members: int | None = None
+    deleted_members: int | None = None
+    tags: list[str] | None = None
+    ancestor_departments: list[dict[str, str]] | None = None
+    leaders: list[str] | None = None
+    emails: list[str] | None = None
+    phones: list[str] | None = None
+    addresses: list[str] | None = None
+    introductions: list[str] | None = None
+    dept_type: int | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("id", "name", "external_id", "parent_id", "order",
                      "has_children", "normal_members", "inactive_members",
                      "frozen_members", "deleted_members", "tags",
@@ -746,12 +746,12 @@ class DepartmentDetailResult:
 @dataclass
 class DepartmentChildrenResult:
     success: bool
-    departments: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    departments: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.departments is not None:
             d["departments"] = self.departments
         if self.error is not None:
@@ -762,12 +762,12 @@ class DepartmentChildrenResult:
 @dataclass
 class TodoTaskCreateResult:
     success: bool
-    todotask_id: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    todotask_id: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.todotask_id is not None:
             d["todotask_id"] = self.todotask_id
         if self.error is not None:
@@ -778,23 +778,23 @@ class TodoTaskCreateResult:
 @dataclass
 class TodoTaskInfoResult:
     success: bool
-    todotask_id: Optional[str] = None
-    source_id: Optional[str] = None
-    title: Optional[str] = None
-    desc: Optional[str] = None
-    status: Optional[str] = None
-    type: Optional[int] = None
-    link: Optional[str] = None
-    pc_link: Optional[str] = None
-    sender_id: Optional[str] = None
-    executor_ids: Optional[List[str]] = None
-    create_time: Optional[str] = None
-    app_id: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    todotask_id: str | None = None
+    source_id: str | None = None
+    title: str | None = None
+    desc: str | None = None
+    status: str | None = None
+    type: int | None = None
+    link: str | None = None
+    pc_link: str | None = None
+    sender_id: str | None = None
+    executor_ids: list[str] | None = None
+    create_time: str | None = None
+    app_id: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("todotask_id", "source_id", "title", "desc", "status",
                      "type", "link", "pc_link", "sender_id", "executor_ids",
                      "create_time", "app_id"):
@@ -810,12 +810,12 @@ class TodoTaskInfoResult:
 class TodoTaskListResult:
     success: bool
     total: int = 0
-    todotask_list: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    todotask_list: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "total": self.total}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
         if self.todotask_list is not None:
             d["todotask_list"] = self.todotask_list
         if self.error is not None:
@@ -826,12 +826,12 @@ class TodoTaskListResult:
 @dataclass
 class TodoTaskStatusCountResult:
     success: bool
-    status_counts: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    status_counts: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.status_counts is not None:
             d["status_counts"] = self.status_counts
         if self.error is not None:
@@ -843,12 +843,12 @@ class TodoTaskStatusCountResult:
 class TodoTaskExecutorListResult:
     success: bool
     total: int = 0
-    executor_list: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    executor_list: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "total": self.total}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
         if self.executor_list is not None:
             d["executor_list"] = self.executor_list
         if self.error is not None:
@@ -859,18 +859,18 @@ class TodoTaskExecutorListResult:
 @dataclass
 class CalendarPrimaryResult:
     success: bool
-    calendar_id: Optional[str] = None
-    summary: Optional[str] = None
-    description: Optional[str] = None
-    permissions: Optional[str] = None
-    color: Optional[str] = None
-    type: Optional[str] = None
-    role: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    calendar_id: str | None = None
+    summary: str | None = None
+    description: str | None = None
+    permissions: str | None = None
+    color: str | None = None
+    type: str | None = None
+    role: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("calendar_id", "summary", "description", "permissions",
                       "color", "type", "role"):
             v = getattr(self, key)
@@ -884,12 +884,12 @@ class CalendarPrimaryResult:
 @dataclass
 class ScheduleCreateResult:
     success: bool
-    schedule_id: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    schedule_id: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.schedule_id is not None:
             d["schedule_id"] = self.schedule_id
         if self.error is not None:
@@ -900,20 +900,20 @@ class ScheduleCreateResult:
 @dataclass
 class ScheduleInfoResult:
     success: bool
-    schedule_id: Optional[str] = None
-    summary: Optional[str] = None
-    description: Optional[str] = None
-    repeat_type: Optional[str] = None
-    all_day: Optional[str] = None
-    start_time: Optional[Dict[str, Any]] = None
-    end_time: Optional[Dict[str, Any]] = None
-    creator: Optional[Dict[str, Any]] = None
-    rsvp_status: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    schedule_id: str | None = None
+    summary: str | None = None
+    description: str | None = None
+    repeat_type: str | None = None
+    all_day: str | None = None
+    start_time: dict[str, Any] | None = None
+    end_time: dict[str, Any] | None = None
+    creator: dict[str, Any] | None = None
+    rsvp_status: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("schedule_id", "summary", "description", "repeat_type",
                       "all_day", "start_time", "end_time", "creator",
                       "rsvp_status"):
@@ -928,12 +928,12 @@ class ScheduleInfoResult:
 @dataclass
 class ScheduleListResult:
     success: bool
-    schedule_list: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    schedule_list: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.schedule_list is not None:
             d["schedule_list"] = self.schedule_list
         if self.error is not None:
@@ -945,12 +945,12 @@ class ScheduleListResult:
 class ScheduleAttendeesResult:
     success: bool
     total: int = 0
-    attendees: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    attendees: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "total": self.total}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
         if self.attendees is not None:
             d["attendees"] = self.attendees
         if self.error is not None:
@@ -961,12 +961,12 @@ class ScheduleAttendeesResult:
 @dataclass
 class ScheduleUpdateResult:
     success: bool
-    schedule_ids: Optional[List[str]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    schedule_ids: list[str] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.schedule_ids is not None:
             d["schedule_ids"] = self.schedule_ids
         if self.error is not None:
@@ -977,11 +977,11 @@ class ScheduleUpdateResult:
 @dataclass
 class ScheduleAttendeeMetaResult:
     success: bool
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.error is not None:
             d["error"] = self.error
         return d
@@ -991,13 +991,13 @@ class ScheduleAttendeeMetaResult:
 class ScheduleAttendeesUpdateResult:
     """4.23.19 — batch add/delete schedule attendees in one call."""
     success: bool
-    schedule_ids: Optional[List[str]] = None
-    failed_attendees: Optional[List[str]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    schedule_ids: list[str] | None = None
+    failed_attendees: list[str] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.schedule_ids is not None:
             d["schedule_ids"] = self.schedule_ids
         if self.failed_attendees is not None:
@@ -1011,11 +1011,11 @@ class ScheduleAttendeesUpdateResult:
 class BotCommandResult:
     """4.37 — bot command create/delete result."""
     success: bool
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.error is not None:
             d["error"] = self.error
         return d
@@ -1025,16 +1025,16 @@ class BotCommandResult:
 class BotCommandQueryResult:
     """4.37.2 — query bot commands result."""
     success: bool
-    scope_type: Optional[int] = None
-    chat_id: Optional[str] = None
-    chat_type: Optional[str] = None
-    staff_id: Optional[str] = None
-    commands: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    scope_type: int | None = None
+    chat_id: str | None = None
+    chat_type: str | None = None
+    staff_id: str | None = None
+    commands: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("scope_type", "chat_id", "chat_type", "staff_id"):
             v = getattr(self, key)
             if v is not None:
@@ -1050,15 +1050,15 @@ class BotCommandQueryResult:
 class PersonalAppCreateResult:
     """4.38.1 — create personal app result."""
     success: bool
-    app_id: Optional[str] = None
-    secret: Optional[str] = None
-    apigw_addr: Optional[str] = None
-    passport_addr: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    app_id: str | None = None
+    secret: str | None = None
+    apigw_addr: str | None = None
+    passport_addr: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("app_id", "secret", "apigw_addr", "passport_addr"):
             v = getattr(self, key)
             if v is not None:
@@ -1072,17 +1072,17 @@ class PersonalAppCreateResult:
 class PersonalAppInfoResult:
     """4.38.3 — fetch personal app info result."""
     success: bool
-    app_id: Optional[str] = None
-    name: Optional[str] = None
-    avatar_id: Optional[str] = None
-    description: Optional[str] = None
-    apigw_addr: Optional[str] = None
-    passport_addr: Optional[str] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    app_id: str | None = None
+    name: str | None = None
+    avatar_id: str | None = None
+    description: str | None = None
+    apigw_addr: str | None = None
+    passport_addr: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         for key in ("app_id", "name", "avatar_id", "description",
                       "apigw_addr", "passport_addr"):
             v = getattr(self, key)
@@ -1097,12 +1097,12 @@ class PersonalAppInfoResult:
 class PersonalAppListResult:
     """4.38.5 — list personal apps result."""
     success: bool
-    app_list: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    app_list: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.app_list is not None:
             d["app_list"] = self.app_list
         if self.error is not None:
@@ -1115,12 +1115,12 @@ class DepartmentStaffsResult:
     success: bool
     has_more: bool = False
     total: int = 0
-    staffs: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    staffs: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total}
         if self.staffs is not None:
             d["staffs"] = self.staffs
         if self.error is not None:
@@ -1132,10 +1132,10 @@ class DepartmentStaffsResult:
 class ChatStaffInfo:
     staff_id: str = ""
     staff_name: str = ""
-    sector_names: Optional[List[str]] = None
+    sector_names: list[str] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"staff_id": self.staff_id, "staff_name": self.staff_name}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"staff_id": self.staff_id, "staff_name": self.staff_name}
         if self.sector_names is not None:
             d["sector_names"] = self.sector_names
         return d
@@ -1146,21 +1146,21 @@ class ChatGroupInfo:
     group_id: str = ""
     group_name: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"group_id": self.group_id, "group_name": self.group_name}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"group_id": self.group_id, "group_name": self.group_name}
         return d
 
 
 @dataclass
 class ChatListResult:
     success: bool
-    staff_infos: Optional[List[ChatStaffInfo]] = None
-    group_infos: Optional[List[ChatGroupInfo]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    staff_infos: list[ChatStaffInfo] | None = None
+    group_infos: list[ChatGroupInfo] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
         if self.staff_infos is not None:
             d["staff_infos"] = [s.to_dict() for s in self.staff_infos]
         if self.group_infos is not None:
@@ -1175,10 +1175,10 @@ class ChatMessageInfo:
     send_time: str = ""
     sender: str = ""
     message_type: str = ""
-    content: Optional[Dict[str, Any]] = None
+    content: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"send_time": self.send_time, "sender": self.sender, "message_type": self.message_type}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"send_time": self.send_time, "sender": self.sender, "message_type": self.message_type}
         if self.content is not None:
             d["content"] = self.content
         return d
@@ -1207,12 +1207,12 @@ class ChatMessagesResult:
     name: str = ""
     chat_type: str = ""
     retryable: bool = False
-    messages: Optional[List[ChatMessageInfo]] = None
-    error: Optional[str] = None
-    raw_response: Optional[Dict[str, Any]] = None
+    messages: list[ChatMessageInfo] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total, "last_version": self.last_version, "name": self.name, "chat_type": self.chat_type}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "has_more": self.has_more, "total": self.total, "last_version": self.last_version, "name": self.name, "chat_type": self.chat_type}
         if self.messages is not None:
             d["messages"] = [m.to_dict() for m in self.messages]
         if self.error is not None:

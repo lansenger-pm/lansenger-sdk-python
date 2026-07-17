@@ -11,12 +11,11 @@ but recommended — it authenticates as a specific human user.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
 from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .models import (
     ChatGroupInfo,
     ChatListResult,
@@ -24,6 +23,7 @@ from .models import (
     ChatMessagesResult,
     ChatStaffInfo,
 )
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.chats")
 
@@ -37,7 +37,7 @@ async def fetch_chat_list(
     start_time: int = 0,
     end_time: int = 0,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ChatListResult:
     """Fetch personal chat list (private + group conversations).
 
@@ -53,7 +53,7 @@ async def fetch_chat_list(
     """
     url = build_api_url(config, "chats", "fetch", app_token, user_token=user_token)
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     if chat_type:
         payload["chatType"] = chat_type
     if keyword:
@@ -125,7 +125,7 @@ async def fetch_chat_messages(
     end_time: int = 0,
     sender_id: str = "",
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ChatMessagesResult:
     """Fetch messages from a specific conversation.
 
@@ -154,7 +154,7 @@ async def fetch_chat_messages(
     if base_version:
         url += f"&base_version={base_version}"
 
-    payload: Dict[str, Any] = {}
+    payload: dict[str, Any] = {}
     if staff_id:
         payload["staffId"] = staff_id
     if group_id:

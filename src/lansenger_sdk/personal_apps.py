@@ -12,14 +12,14 @@ All endpoints require both app_token and user_token.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
+from .api_utils import do_get, do_post, parse_api_response
 from .config import LansengerConfig
 from .models import PersonalAppCreateResult, PersonalAppInfoResult, PersonalAppListResult
 from .url_helpers import build_api_url
-from .api_utils import do_get, do_post, parse_api_response
 
 
 async def create_personal_app(
@@ -30,7 +30,7 @@ async def create_personal_app(
     name: str = "",
     avatar_id: str = "",
     description: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> PersonalAppCreateResult:
     """Create a personal app (4.38.1).
 
@@ -45,7 +45,7 @@ async def create_personal_app(
 
     url = build_api_url(config, "personal_apps", "create", app_token, user_token=user_token)
 
-    body: Dict[str, Any] = {}
+    body: dict[str, Any] = {}
     if name:
         body["name"] = name
     if avatar_id:
@@ -80,7 +80,7 @@ async def update_personal_app(
     name: str,
     avatar_id: str = "",
     description: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> PersonalAppInfoResult:
     """Update a personal app (4.38.2).
 
@@ -103,7 +103,7 @@ async def update_personal_app(
         user_token=user_token, app_id=app_id,
     )
 
-    body: Dict[str, Any] = {"name": name}
+    body: dict[str, Any] = {"name": name}
     if avatar_id:
         body["avatarId"] = avatar_id
     if description:
@@ -125,7 +125,7 @@ async def fetch_personal_app(
     app_id: str,
     *,
     user_token: str,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> PersonalAppInfoResult:
     """Fetch personal app info (4.38.3).
 
@@ -169,7 +169,7 @@ async def delete_personal_app(
     app_id: str,
     *,
     user_token: str,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> PersonalAppInfoResult:
     """Delete a personal app (4.38.4).
 
@@ -202,7 +202,7 @@ async def fetch_personal_app_list(
     app_token: str,
     *,
     user_token: str,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> PersonalAppListResult:
     """Fetch personal app list (4.38.5).
 
@@ -226,10 +226,7 @@ async def fetch_personal_app_list(
 
     d = data.get("data", {})
     app_list = d.get("appList")
-    if isinstance(app_list, list):
-        app_list = app_list
-    else:
-        app_list = None
+    app_list = app_list if isinstance(app_list, list) else None
 
     return PersonalAppListResult(
         success=True,

@@ -151,7 +151,7 @@ AUDIO_EXTENSIONS = {".mp3", ".wav", ".amr", ".m4a", ".ogg", ".flac", ".aac"}
 
 def guess_media_type(file_path: str) -> Optional[int]:
     """Guess media_type for core upload (4.5.1): 1=video, 2=image, 3=audio/file.
-    
+
     Returns None for unknown types so callers can fall back to their own default.
     """
     import os

@@ -22,16 +22,15 @@ from __future__ import annotations
 
 import logging
 import uuid
-from urllib.parse import urlencode, quote
-from typing import Optional
+from urllib.parse import quote, urlencode
 
 import httpx
 
 from .config import LansengerConfig
-from .constants import API_ENDPOINTS, OAUTH2_SCOPE_BASIC_USER_INFO, OAUTH2_SCOPES
-from .exceptions import LansengerAuthError, LansengerConfigError, LansengerNetworkError
-from .url_helpers import build_api_url
+from .constants import API_ENDPOINTS, OAUTH2_SCOPE_BASIC_USER_INFO
+from .exceptions import LansengerConfigError
 from .models import UserTokenResult
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.oauth")
 
@@ -110,7 +109,7 @@ async def exchange_code_for_user_token(
     app_token: str,
     code: str,
     *,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
     redirect_uri: str = "",
 ) -> UserTokenResult:
     """Exchange an OAuth2 authorization code for a userToken + refreshToken.
@@ -180,7 +179,7 @@ async def refresh_user_token(
     app_token: str,
     refresh_token: str,
     *,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
     scope: str = "",
 ) -> UserTokenResult:
     """Refresh a userToken using a refreshToken.

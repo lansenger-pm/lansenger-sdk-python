@@ -11,13 +11,12 @@ This API requires both tokens:
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import httpx
 
 from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .models import UserInfoResult
+from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.users")
 
@@ -27,7 +26,7 @@ async def fetch_user_info(
     app_token: str,
     user_token: str,
     *,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> UserInfoResult:
     """Fetch a Lansenger user's basic information.
 

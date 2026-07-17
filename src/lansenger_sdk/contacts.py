@@ -16,12 +16,11 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import quote
 
-from .config import LansengerConfig
-from .url_helpers import build_api_url
 from .api_utils import do_get, do_post, parse_api_response
+from .config import LansengerConfig
 from .models import (
     DepartmentAncestorsResult,
     ExtraFieldIdsResult,
@@ -31,6 +30,7 @@ from .models import (
     StaffIdMappingResult,
     StaffSearchResult,
 )
+from .url_helpers import build_api_url
 
 
 async def fetch_staff_basic_info(
@@ -39,7 +39,7 @@ async def fetch_staff_basic_info(
     staff_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> StaffBasicInfoResult:
     """Fetch a staff member's basic information.
 
@@ -85,7 +85,7 @@ async def fetch_staff_detail(
     staff_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> StaffDetailResult:
     """Fetch a staff member's detailed information (requires org/personal auth).
 
@@ -152,7 +152,7 @@ async def fetch_department_ancestors(
     staff_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> DepartmentAncestorsResult:
     """Fetch ancestor department chain for a staff member.
 
@@ -177,7 +177,7 @@ async def fetch_department_ancestors(
         return DepartmentAncestorsResult(success=False, error=api_err)
 
     result_data = data.get("data", [])
-    ancestor_groups: List[List[Dict[str, str]]] = []
+    ancestor_groups: list[list[dict[str, str]]] = []
     for entry in result_data:
         ancestors = entry.get("ancestorDepartments", [])
         ancestor_groups.append(ancestors)
@@ -197,7 +197,7 @@ async def fetch_staff_id_mapping(
     id_value: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> StaffIdMappingResult:
     """Map a unique identifier (phone/email/employee_number) to staffId.
 
@@ -244,7 +244,7 @@ async def fetch_org_extra_field_ids(
     user_token: str = "",
     page: int = 1,
     page_size: int = 1000,
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> ExtraFieldIdsResult:
     """Fetch organization extra field ID list.
 
@@ -289,10 +289,10 @@ async def search_staff(
     user_token: str = "",
     user_id: str = "",
     recursive: bool = True,
-    sector_ids: Optional[List[str]] = None,
-    page: Optional[int] = None,
-    page_size: Optional[int] = None,
-    http_client: Optional[httpx.AsyncClient] = None,
+    sector_ids: list[str] | None = None,
+    page: int | None = None,
+    page_size: int | None = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> StaffSearchResult:
     """Search staff by keyword with optional department scope.
 
@@ -319,7 +319,7 @@ async def search_staff(
     if page is not None and page_size is not None:
         url += f"&page={page}&page_size={page_size}"
 
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "keyword": keyword,
         "recursive": recursive,
     }
@@ -350,7 +350,7 @@ async def fetch_org_info(
     org_id: str,
     *,
     user_token: str = "",
-    http_client: Optional[httpx.AsyncClient] = None,
+    http_client: httpx.AsyncClient | None = None,
 ) -> OrgInfoResult:
     """Fetch organization basic information.
 
