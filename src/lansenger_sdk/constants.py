@@ -56,8 +56,10 @@ API_ENDPOINTS = {
     "media": {
         "create": "/v1/medias/create",
         "app_create": "/v1/app/medias/create",
+        "app_create_v2": "/v2/app/medias/create",
         "fetch": "/v1/medias/{media_id}/fetch",
         "path_fetch": "/v1/medias/{media_id}/path/fetch",
+        "share_fetch": "/v1/media/share/{share_id}/fetch",
     },
     "message": {
         "revoke": "/v1/messages/revoke",

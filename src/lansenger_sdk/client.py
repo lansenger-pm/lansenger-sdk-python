@@ -1521,6 +1521,70 @@ class LansengerClient:
             )
         return SendMessageResult(success=False, error=result.error, operation="upload_app_media")
 
+    async def upload_app_media_v2(
+        self,
+        file_path: str,
+        *,
+        media_type: str | None = None,
+        user_token: str = "",
+        width: int | None = None,
+        height: int | None = None,
+        duration: int | None = None,
+    ) -> SendMessageResult:
+        """Upload a media file via app/bot endpoint V2 (4.5.5).
+
+        Uses /v2/app/medias/create. Same parameters as 4.5.4 (V1) plus the
+        required user_token.
+
+        Args:
+            file_path: Path to the local file.
+            media_type: "file", "video", "image", or "audio". Auto-detected if omitted.
+            user_token: User token (required by V2).
+            width: Optional width (for video/image).
+            height: Optional height (for video/image).
+            duration: Optional duration in seconds (for video/audio).
+        """
+        self._ensure_clients()
+        from .media import upload_app_media_v2
+
+        mt = media_type or guess_app_media_type(file_path) or APP_MEDIA_TYPE_FILE
+        result = await upload_app_media_v2(
+            self._config, self._token_manager, self._http_client,
+            file_path, mt, user_token=user_token,
+            width=width, height=height, duration=duration,
+        )
+        if result.success:
+            return SendMessageResult(
+                success=True, message_id=result.media_id, operation="upload_app_media_v2",
+            )
+        return SendMessageResult(success=False, error=result.error, operation="upload_app_media_v2")
+
+    async def download_media_by_share_id(
+        self,
+        share_id: str,
+        *,
+        user_token: str = "",
+    ) -> DownloadMediaResult:
+        """Download a file by its share ID (4.5.6).
+
+        Uses GET /v1/media/share/{shareid}/fetch. Success returns the file
+        binary stream.
+
+        Args:
+            share_id: File share ID.
+            user_token: Optional user token.
+
+        Returns:
+            DownloadMediaResult with data bytes on success.
+        """
+        self._ensure_clients()
+        from .media import download_media_by_share_id
+
+        return await download_media_by_share_id(
+            self._config, self._token_manager, self._http_client,
+            share_id, user_token=user_token,
+        )
+
     async def download_media(
         self,
         media_id: str,

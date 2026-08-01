@@ -171,6 +171,146 @@ async def upload_app_media(
     return UploadMediaResult(success=True, media_id=media_id)
 
 
+async def upload_app_media_v2(
+    config: LansengerConfig,
+    token_manager: TokenManager,
+    http_client: httpx.AsyncClient,
+    file_path: str,
+    media_type: str = APP_MEDIA_TYPE_FILE,
+    *,
+    user_token: str,
+    width: int | None = None,
+    height: int | None = None,
+    duration: int | None = None,
+    context: str | None = None,
+) -> UploadMediaResult:
+    """Upload a media file via app/bot endpoint V2 (4.5.5).
+
+    Uses /v2/app/medias/create. Identical to 4.5.4 (V1) except the path
+    and the required user_token parameter.
+
+    Args:
+        config: SDK config
+        token_manager: Token manager for authentication
+        http_client: HTTP client
+        file_path: Path to the local file
+        media_type: "file", "video", "image", or "audio" (default: "file")
+        user_token: Required userToken (the only V2 difference from V1)
+        width: Optional width (for video/image)
+        height: Optional height (for video/image)
+        duration: Optional duration in seconds (for video/audio)
+        context: Optional context string (reserved)
+
+    Returns:
+        UploadMediaResult with media_id on success
+    """
+    if not os.path.isfile(file_path):
+        return UploadMediaResult(success=False, error=f"File not found: {file_path}")
+
+    try:
+        token = await token_manager.get_token()
+    except Exception as e:
+        return UploadMediaResult(success=False, error=f"Auth failed: {e}")
+
+    url = build_api_url(config, "media", "app_create_v2", token, user_token=user_token) + f"&type={media_type}"
+    if width is not None:
+        url += f"&width={width}"
+    if height is not None:
+        url += f"&height={height}"
+    if duration is not None:
+        url += f"&duration={duration}"
+    if context is not None:
+        url += f"&context={context}"
+
+    try:
+        with open(file_path, "rb") as f:
+            file_content = f.read()
+
+        filename = os.path.basename(file_path)
+        files = {"media": (filename, file_content)}
+
+        response = await http_client.post(url, files=files)
+        response.raise_for_status()
+        data = response.json()
+    except httpx.HTTPError as e:
+        return UploadMediaResult(success=False, error=f"Upload HTTP error: {e}")
+    except OSError as e:
+        return UploadMediaResult(success=False, error=f"File read error: {e}")
+
+    err_code = data.get("errCode", -1)
+    if err_code != 0:
+        msg = data.get("errMsg", "Unknown upload error")
+        return UploadMediaResult(success=False, error=f"Upload API error (errCode={err_code}): {msg}")
+
+    d = data.get("data", {})
+    media_id = d.get("mediaId")
+    if not media_id:
+        return UploadMediaResult(success=False, error="Upload response missing mediaId")
+
+    logger.debug("App media uploaded (4.5.5): %s → %s", filename, media_id)
+    return UploadMediaResult(success=True, media_id=media_id)
+
+
+async def download_media_by_share_id(
+    config: LansengerConfig,
+    token_manager: TokenManager,
+    http_client: httpx.AsyncClient,
+    share_id: str,
+    *,
+    user_token: str = "",
+) -> DownloadMediaResult:
+    """Download a file by its share ID (4.5.6).
+
+    Uses GET /v1/media/share/{shareid}/fetch. Success returns the file's
+    binary stream (Content-Type is the file MIME type); failures come back
+    as an application/json error body.
+
+    Args:
+        config: SDK config
+        token_manager: Token manager for authentication
+        http_client: HTTP client
+        share_id: File share ID
+        user_token: Optional user token
+
+    Returns:
+        DownloadMediaResult with raw bytes on success
+    """
+    if not share_id:
+        return DownloadMediaResult(success=False, error="share_id is required")
+
+    try:
+        token = await token_manager.get_token()
+    except Exception as e:
+        return DownloadMediaResult(success=False, error=f"Auth failed: {e}")
+
+    url = build_api_url(config, "media", "share_fetch", token, user_token=user_token, share_id=share_id)
+
+    try:
+        response = await http_client.get(url)
+    except httpx.HTTPError as e:
+        return DownloadMediaResult(success=False, error=f"Download HTTP error: {e}")
+
+    content_type = response.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            data = response.json()
+        except ValueError:
+            return DownloadMediaResult(
+                success=False, error=f"Download failed (HTTP {response.status_code})"
+            )
+        err_code = data.get("errCode", -1)
+        msg = data.get("errMsg", "Unknown download error")
+        return DownloadMediaResult(success=False, error=f"Download API error (errCode={err_code}): {msg}")
+
+    if response.status_code != 200:
+        return DownloadMediaResult(
+            success=False, error=f"Download HTTP error: status {response.status_code}"
+        )
+
+    logger.debug("Media downloaded by share ID (4.5.6): %s (%d bytes)", share_id, len(response.content))
+    return DownloadMediaResult(success=True, data=response.content)
+
+
 async def download_media(
     config: LansengerConfig,
     token_manager: TokenManager,

@@ -694,6 +694,40 @@ class LansengerSyncClient:
             duration=duration,
         ))
 
+    def upload_app_media_v2(
+        self,
+        file_path: str,
+        *,
+        media_type: str | None = None,
+        user_token: str = "",
+        width: int | None = None,
+        height: int | None = None,
+        duration: int | None = None,
+    ) -> SendMessageResult:
+        """Upload a media file via app/bot endpoint V2 (blocking, 4.5.5)."""
+        return _run_async(self._ephemeral_call(
+            "upload_app_media_v2",
+            file_path=file_path,
+            media_type=media_type,
+            user_token=user_token,
+            width=width,
+            height=height,
+            duration=duration,
+        ))
+
+    def download_media_by_share_id(
+        self,
+        share_id: str,
+        *,
+        user_token: str = "",
+    ) -> DownloadMediaResult:
+        """Download a file by its share ID (blocking, 4.5.6)."""
+        return _run_async(self._ephemeral_call(
+            "download_media_by_share_id",
+            share_id=share_id,
+            user_token=user_token,
+        ))
+
     def download_media(self, media_id: str) -> DownloadMediaResult:
         """Download media bytes (blocking)."""
         return _run_async(self._ephemeral_call(
