@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  # Gate 1: version numbers must be consistent across all locations.
+  # Fails the release if any of pyproject.toml / __init__.py / CHANGELOG.md
+  # disagree, or if the tag name itself doesn't match.
+  verify-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: check
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PYPROJECT=$(grep -m1 '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          INIT=$(grep -m1 '__version__' src/lansenger_sdk/__init__.py | sed 's/.*"\(.*\)".*/\1/')
+          echo "Tag:           $TAG"
+          echo "pyproject.toml: $PYPROJECT"
+          echo "__init__.py:    $INIT"
+          if [ "$TAG" != "$PYPROJECT" ] || [ "$TAG" != "$INIT" ] || [ "$PYPROJECT" != "$INIT" ]; then
+            echo "::error::Version mismatch — tag=$TAG pyproject=$PYPROJECT init=$INIT. Update all three together (see AGENTS.md)."
+            exit 1
+          fi
+          if ! grep -q "## \[$TAG\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$TAG]' entry."
+            exit 1
+          fi
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+
+  # Gate 2: tests must be green. No release ships with a red suite.
+  test:
+    needs: verify-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
+  # Gate 3: build must succeed. Only then publish.
+  publish:
+    needs: [verify-version, test]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
