@@ -316,3 +316,21 @@ async def test_send_group_message_reminder_non_text_ignored():
     )
     assert result.success is False
     assert "group_id is required" in result.error
+
+def test_client_passthrough_mode_no_app_id_secret():
+    """Pass-through mode: app_token only, app_id/app_secret optional (issue #1)."""
+    os.environ.pop("LANSENGER_APP_ID", None)
+    os.environ.pop("LANSENGER_APP_SECRET", None)
+    client = LansengerClient(app_token="at", user_token="ut", api_gateway_url="https://gw")
+    assert client._config.app_id == ""
+    assert client._config.app_secret == ""
+    assert client._config.app_token == "at"
+    assert client._config.is_external_mode() is True
+
+
+def test_sync_client_passthrough_mode_no_app_id_secret():
+    """Sync pass-through mode: app_token only (issue #1)."""
+    client = LansengerSyncClient(app_token="at", user_token="ut", api_gateway_url="https://gw")
+    assert client._app_id == ""
+    assert client._app_secret == ""
+    assert client._app_token == "at"

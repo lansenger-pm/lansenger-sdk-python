@@ -101,6 +101,47 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
 
+### External 模式（直接注入 Token）
+
+對於需要自行管理 token 的場景（如 CI/CD 管線、自訂認證系統），可以直接傳入 `app_token` 和 `user_token`，完全繞過憑證儲存：
+
+```python
+# External 模式 — 直接傳入 token，無需憑證檔案
+client = LansengerClient(
+    app_id="", 
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+    api_gateway_url="https://your-gateway.example.com"
+)
+
+# 或者使用 LansengerConfig
+config = LansengerConfig(
+    app_id="", 
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+    api_gateway_url="https://your-gateway.example.com"
+)
+client = LansengerClient.from_config(config)
+
+# 同步客戶端也支援 external 模式
+from lansenger_sdk import LansengerSyncClient
+
+sync_client = LansengerSyncClient(
+    app_id="",
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+)
+```
+
+**External 模式行為：**
+- `app_token` 直接使用，不呼叫 token 刷新 API
+- `user_token` 直接使用，不經過 OAuth2 流程或刷新
+- 不持久化憑證 — token 僅保存在記憶體中
+- 您需要自行保持 token 有效
+
 ## 2. 組織與部門
 
 ```python

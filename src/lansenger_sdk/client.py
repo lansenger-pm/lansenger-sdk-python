@@ -144,8 +144,8 @@ class LansengerClient:
 
     def __init__(
         self,
-        app_id: str,
-        app_secret: str,
+        app_id: str = "",
+        app_secret: str = "",
         api_gateway_url: str = "",
         passport_url: str = "",
         http_timeout: float = 30.0,
@@ -155,6 +155,20 @@ class LansengerClient:
         app_token: str = "",
         user_token: str = "",
     ):
+        """Initialize the async client.
+
+        Two mutually exclusive modes:
+        - **Standard mode**: pass ``app_id`` + ``app_secret`` (or use
+          ``from_env()`` / ``from_store()``). The SDK auto-fetches and
+          refreshes the appToken.
+        - **External / pass-through mode**: pass ``app_token`` directly
+          (optionally ``user_token``). ``app_id``/``app_secret`` are
+          optional and default to empty strings; the SDK does not refresh
+          tokens — the caller manages their lifecycle.
+
+        Raises LansengerConfigError only when neither app_id/app_secret nor
+        app_token is provided.
+        """
         self._config = LansengerConfig(
             app_id=app_id,
             app_secret=app_secret,

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.1] - 2026-08-04
+
+### Fixed
+
+- **client**: `LansengerClient` and `LansengerSyncClient` now treat `app_id`/`app_secret` as optional (default `""`). When `app_token` is provided, the client enters pass-through mode without requiring `app_id`/`app_secret`. Previously these were required positional arguments, causing `TypeError` in external-token usage patterns documented by the skill suite. Aligns the client constructors with `LansengerConfig.create()` which already supported this.
+
 ## [1.7.0] - 2026-07-29
 
 ### Added

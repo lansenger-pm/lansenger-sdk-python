@@ -101,6 +101,47 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
 
+### External Mode (Direct Token Injection)
+
+For scenarios where you manage tokens externally (e.g., CI/CD pipelines, your own auth system), you can bypass the credential store entirely by providing `app_token` and `user_token` directly:
+
+```python
+# External mode — provide tokens directly, no credential file needed
+client = LansengerClient(
+    app_id="", 
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+    api_gateway_url="https://your-gateway.example.com"
+)
+
+# Or using LansengerConfig
+config = LansengerConfig(
+    app_id="", 
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+    api_gateway_url="https://your-gateway.example.com"
+)
+client = LansengerClient.from_config(config)
+
+# Async client also supports external mode
+from lansenger_sdk import LansengerSyncClient
+
+sync_client = LansengerSyncClient(
+    app_id="",
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+)
+```
+
+**Behavior in external mode:**
+- `app_token` is used directly without calling the token refresh API
+- `user_token` is used directly without OAuth2 flow or refresh
+- No credential persistence — tokens are kept in memory only
+- You are responsible for keeping tokens valid
+
 ## 2. Organization & Departments
 
 ```python

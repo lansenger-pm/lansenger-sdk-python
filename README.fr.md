@@ -101,6 +101,47 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
 
+### Mode externe (Injection directe de jetons)
+
+Pour les scénarios où vous gérez les jetons externement (par exemple, pipelines CI/CD, votre propre système d'authentification), vous pouvez contourner complètement le stockage des identifiants en fournissant directement `app_token` et `user_token` :
+
+```python
+# Mode externe — fournir les jetons directement, pas de fichier d'identifiants nécessaire
+client = LansengerClient(
+    app_id="", 
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+    api_gateway_url="https://your-gateway.example.com"
+)
+
+# Ou utiliser LansengerConfig
+config = LansengerConfig(
+    app_id="", 
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+    api_gateway_url="https://your-gateway.example.com"
+)
+client = LansengerClient.from_config(config)
+
+# Le client synchrone prend également en charge le mode externe
+from lansenger_sdk import LansengerSyncClient
+
+sync_client = LansengerSyncClient(
+    app_id="",
+    app_secret="",
+    app_token="your-app-token",
+    user_token="your-user-token",
+)
+```
+
+**Comportement en mode externe :**
+- `app_token` est utilisé directement sans appeler l'API de rafraîchissement de jeton
+- `user_token` est utilisé directement sans passer par le flux OAuth2 ou le rafraîchissement
+- Aucune persistance des identifiants — les jetons sont uniquement conservés en mémoire
+- Vous êtes responsable de maintenir les jetons valides
+
 ## 2. Organisation & Départements
 
 ```python
