@@ -436,7 +436,7 @@ def test_user_token_no_staff_id_fallback(tmp_store):
 
 def test_user_token_nonexistent_staff_id(tmp_store):
     """load_user_token with a non-existent staff_id falls back to available tokens.
-    
+
     This is the graceful-degradation behavior: when the exact staff_id is not
     found, the store returns what's available (first user from nested, or flat).
     This ensures UserTokenManager (which may not know its staff_id at init time)
