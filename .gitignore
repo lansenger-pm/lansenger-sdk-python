@@ -21,3 +21,8 @@ htmlcov/
 *.swo
 *~
 .DS_Store
+# Agent/IDE local files
+.trae/
+.claude/
+.cursor/
+.codex/
