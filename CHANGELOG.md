@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.3] - 2026-08-11
+
+### Changed
+
+- **CI**: 新增 release gates（pyproject/__init__/CHANGELOG 版本一致性校验 + 测试通过后才发布）与 ruff lint 检查，发布流程自动化。
+- **chore**: .trae/.claude/.cursor/.codex 等 IDE 本地目录不再纳入版本跟踪。
+
 ## [1.7.2] - 2026-08-04
 
 ### Fixed
