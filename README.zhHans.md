@@ -510,6 +510,7 @@ client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
 # 手动操作存储
 store = CredentialStore(path="~/.lansenger/sdk_state.json")
 store.save_credentials("app_id", "app_secret", api_gateway_url="...", passport_url="...")
+store.save_identity_type("personal-bot")  # 可选：凭证身份类型 — personal-bot（个人机器人）/ org-app（组织应用）/ org-bot（组织机器人）
 store.save_user_token("user_token", refresh_token="refresh_token")
 token = store.load_app_token()  # 过期则返回 None
 ```

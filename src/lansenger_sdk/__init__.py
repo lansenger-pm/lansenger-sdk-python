@@ -190,7 +190,7 @@ from .oauth import (
     refresh_user_token,
     validate_callback_state,
 )
-from .persistence import CredentialStore
+from .persistence import CredentialStore, VALID_IDENTITY_TYPES
 from .reminders import (
     REMINDER_TYPE_NONE,
     REMINDER_TYPE_PHONE,
@@ -396,10 +396,11 @@ __all__ = [
     "ScheduleDeleteData",
     "TagMemberData",
     "CredentialStore",
+    "VALID_IDENTITY_TYPES",
     "TokenManager",
     "UserTokenManager",
     "fetch_chat_list",
     "fetch_chat_messages",
 ]
 
-__version__ = "1.7.3"
+__version__ = "1.7.4"

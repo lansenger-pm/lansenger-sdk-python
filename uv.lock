@@ -112,7 +112,7 @@ wheels = [
 
 [[package]]
 name = "lansenger-sdk"
-version = "1.6.27"
+version = "1.7.4"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

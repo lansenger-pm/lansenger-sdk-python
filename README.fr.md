@@ -510,6 +510,7 @@ client = LansengerClient.from_env(store_path="~/.lansenger/sdk_state.json")
 # Opérations manuelles sur le store
 store = CredentialStore(path="~/.lansenger/sdk_state.json")
 store.save_credentials("app_id", "app_secret", api_gateway_url="...", passport_url="...")
+store.save_identity_type("personal-bot")  # optionnel : type d'identité — personal-bot / org-app / org-bot
 store.save_user_token("user_token", refresh_token="refresh_token")
 token = store.load_app_token()  # None si expiré
 ```

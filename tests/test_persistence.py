@@ -658,3 +658,56 @@ async def test_client_set_user_tokens_with_staff_id():
     finally:
         if os.path.exists(path):
             os.unlink(path)
+
+
+# ── identity_type persistence ────────────────────────────────────
+
+
+def test_identity_type_round_trip(tmp_store):
+    """save_identity_type / load_identity_type round-trip for all valid values."""
+    assert tmp_store.load_identity_type() == ""
+    for value in ("personal-bot", "org-app", "org-bot"):
+        tmp_store.save_identity_type(value)
+        assert tmp_store.load_identity_type() == value
+
+
+def test_identity_type_invalid_raises_value_error(tmp_store):
+    """save_identity_type rejects values outside VALID_IDENTITY_TYPES."""
+    with pytest.raises(ValueError):
+        tmp_store.save_identity_type("bad-value")
+    assert tmp_store.load_identity_type() == ""
+
+
+def test_identity_type_empty_string_clears(tmp_store):
+    """Saving an empty string removes the field; load returns empty."""
+    tmp_store.save_identity_type("org-app")
+    tmp_store.save_identity_type("")
+    assert tmp_store.load_identity_type() == ""
+    state = tmp_store.load()
+    assert "identity_type" not in state["profiles"]["default"]
+
+
+def test_load_credentials_includes_identity_type(tmp_store):
+    """load_credentials() returns an identity_type key (empty when unset)."""
+    tmp_store.save_credentials("app123", "secret456")
+    creds = tmp_store.load_credentials()
+    assert creds["identity_type"] == ""
+    tmp_store.save_identity_type("org-bot")
+    creds = tmp_store.load_credentials()
+    assert creds["identity_type"] == "org-bot"
+
+
+def test_save_credentials_preserves_identity_type(tmp_store):
+    """Rewriting credentials does not lose the stored identity_type."""
+    tmp_store.save_identity_type("personal-bot")
+    tmp_store.save_credentials("app-new", "secret-new", api_gateway_url="https://gw.example.com")
+    assert tmp_store.load_identity_type() == "personal-bot"
+    creds = tmp_store.load_credentials()
+    assert creds["app_id"] == "app-new"
+    assert creds["identity_type"] == "personal-bot"
+
+
+def test_valid_identity_types_exported():
+    """VALID_IDENTITY_TYPES is importable from the package root."""
+    from lansenger_sdk import VALID_IDENTITY_TYPES
+    assert VALID_IDENTITY_TYPES == ("personal-bot", "org-app", "org-bot")

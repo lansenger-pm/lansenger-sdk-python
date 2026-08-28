@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.4] - 2026-08-28
+
+### Added
+
+- **persistence**: `CredentialStore` 支持 `identity_type` 身份类型持久化——新增 `VALID_IDENTITY_TYPES`（`personal-bot` / `org-app` / `org-bot`）与 `load_identity_type()` / `save_identity_type()`，`load_credentials()` 返回值新增 `identity_type` 键（缺失为空串）。用于区分个人机器人与组织应用凭证。
+
 ## [1.7.3] - 2026-08-11
 
 ### Changed

@@ -48,6 +48,8 @@ DEFAULT_STATE_FILE = "sdk_state.json"
 
 DEFAULT_PROFILE = "default"
 
+VALID_IDENTITY_TYPES = ("personal-bot", "org-app", "org-bot")
+
 _LEGACY_KEYS = {"app_id", "app_secret", "api_gateway_url", "passport_url",
                 "redirect_uri", "encoding_key", "callback_token",
                 "app_token", "app_token_expiry", "user_token", "refresh_token",
@@ -176,6 +178,7 @@ class CredentialStore:
             "redirect_uri": data.get("redirect_uri", ""),
             "encoding_key": data.get("encoding_key", ""),
             "callback_token": data.get("callback_token", ""),
+            "identity_type": data.get("identity_type", ""),
         }
 
     def save_credentials(
@@ -221,6 +224,32 @@ class CredentialStore:
         data = self._get_profile_data(state)
         data["encoding_key"] = encoding_key
         data["callback_token"] = callback_token
+        state = self._set_profile_data(state, data)
+        self.save(state)
+
+    def load_identity_type(self) -> str:
+        """Load identity_type for current profile. Returns "" when not declared."""
+        state = self.load()
+        data = self._get_profile_data(state)
+        return data.get("identity_type", "")
+
+    def save_identity_type(self, identity_type: str) -> None:
+        """Save or clear identity_type for current profile.
+
+        Valid values are defined in VALID_IDENTITY_TYPES; an empty string
+        clears the field. Raises ValueError for invalid non-empty values.
+        """
+        if identity_type and identity_type not in VALID_IDENTITY_TYPES:
+            raise ValueError(
+                f"Invalid identity_type: {identity_type!r}. "
+                f"Valid values: {', '.join(VALID_IDENTITY_TYPES)}"
+            )
+        state = self.load()
+        data = self._get_profile_data(state)
+        if identity_type:
+            data["identity_type"] = identity_type
+        else:
+            data.pop("identity_type", None)
         state = self._set_profile_data(state, data)
         self.save(state)
 
