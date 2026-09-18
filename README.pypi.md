@@ -4,7 +4,7 @@ Framework-independent Python SDK for the Lansenger (蓝信) platform — support
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-341-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-476-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zero framework dependencies — only `httpx`. Works with any async or sync Python codebase.
 
@@ -33,6 +33,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Groups** — create, info, members, list, membership check, update settings & members, dismiss
 - **Calendar & schedule** — primary calendar, schedule CRUD + update, attendee management + attendee metadata
 - **Unified todo** — create, update, delete, query, executor management, status counts
+- **Notices (通知系统)** — send official-account notices (text/link content, phone/staff targeting, confirm/forward/reply flags, reminder policies, attachments), query org official accounts
 - **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
 
 ## Quick Install
@@ -402,6 +403,45 @@ types = client.get_callback_event_types()  # 25 event types across 13 categories
 
 AES decryption requires `pycryptodome` or `cryptography` package (auto-detected).
 
+## 9. Notice (通知系统)
+
+Send official-account notices and query the official accounts of an organization.
+
+> Paths carry a `/server` segment (production stage; dev/test environments omit it).
+> The module has no revoke/delete interface. When `user_token` is provided, the body
+> identity fields (`create_mobile` / `create_user_id`) may be omitted.
+
+```python
+# 1) Find official accounts — the "code" field is the accountCode used for sending
+accounts = await client.fetch_notice_accounts(org_id="org-001")
+account_code = accounts.accounts[0]["code"]
+
+# 2) Send a text notice targeted by phone (max 10 receivers / 10 cc)
+result = await client.send_notice(
+    title="关于系统升级的通知",
+    content_type=1,                        # 1=text (content required), 2=link (notice_link required)
+    account_code=account_code,
+    user_type=1,                           # 1=phone, 2=staffId/department
+    content="系统将于本周六进行升级维护",
+    release_phones=["13800138000", "13800138001"],
+    cc_phones=["13800138002"],
+    create_mobile="13800138000",           # omit when user_token is provided
+    confirm_flag=1,                        # require read confirmation (1=yes, 0=no)
+    remind_status=1, remind_msg_type="mobile", at_once_flag=1,
+)
+print(result.success, result.notice_code, result.notice_status)  # status: 1=draft, 2=sent, 3=revoked
+
+# 3) Or target staff/departments (max 200)
+result = await client.send_notice(
+    title="部门通知", content_type=1, account_code=account_code,
+    user_type=2,
+    content="请及时填写本周周报",
+    release_range=[{"objId": "dept-1", "objName": "研发部", "objType": 2}],  # objType: 1=staff, 2=department
+    cc_staff_ids=["staff-002"],
+    create_user_id="staff-001",
+)
+```
+
 ## Message Type Capability Matrix
 
 | msgType | Markdown | @mention | Attachments | Private Channels | Group Chat | Notes |
@@ -564,6 +604,7 @@ lansenger-sdk-python/
 │   ├── callbacks.py         # Callback events — 25 event types, structured parsing, AES decryption (4.10.1.4), SHA1 signature verification
 │   ├── groups.py            # Group APIs (including dismiss 4.28.6)
 │   ├── todos.py             # Unified Todo
+│   ├── notices.py           # Notice (通知系统)
 │   ├── calendars.py         # Calendar & Schedule (including update 4.23.12, attendee-meta 4.23.17)
 │   ├── reminders.py         # Urgent message reminders (4.6.14)
 │   └── users.py             # User info

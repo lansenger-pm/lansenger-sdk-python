@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.8.0] - 2026-09-17
+
+### Added
+
+- **notices**: `send_notice()` — 通知系统 `/xtra/notice/server/openapi/v1/send`，通过官方账号发送通知。支持文本/链接两种内容类型、手机号（≤10）/staffId+部门（≤200）两种投放范围、确认/转发/回复/匿名标志、提醒策略簇（remindStatus/remindMsgType/remindAfterType/remindRangeType 等）与附件 resourceList。传入 `user_token` 时 body 身份字段（`createMobile`/`createUserId`）可省略。
+- **notices**: `fetch_notice_accounts()` — 通知系统 `/xtra/notice/server/openapi/v1/notice/account`，查询组织官方账号列表（`code` 字段即发送所需的 `accountCode`）。
+- **client**: `LansengerClient.send_notice()` / `fetch_notice_accounts()`（async）与 `LansengerSyncClient` 同名阻塞镜像；`models` 新增 `NoticeSendResult` / `NoticeAccountListResult`。
+- **notices**: 投放范围上限（手机 10、staff/部门 200）、remindAfterType/remindRangeType 枚举的本地前置校验，错误消息与既有 `"<param> is required"` 契约一致。
+
+### Fixed
+
+- **notices**: 实测（stage 2026-09-17）服务端对缺失 `remindStatus`、以及 range 对象内缺失/为 null 的 `ccRangeList` 均无空值保护（报 `errCode=-1 unknown exception`），SDK 自动兜底：`remindStatus=0`、`ccRangeList=[]` 强制下发；skill 文档同步补充实测结论（orgId 实际必传、3381 权限错误说明）。
+- **calendar**: `LansengerSyncClient.update_schedule_attendees` 缺失 — CLI `calendar update-attendees` 调用会抛 `AttributeError`（sync 侧漏写镜像方法）。补齐 sync 方法，并在 `__init__` 导出 `update_schedule_attendees` / `ScheduleAttendeesUpdateResult`，清理 sync_client 中不可达的死代码块。
+
+---
+
 ## [1.7.4] - 2026-08-28
 
 ### Added

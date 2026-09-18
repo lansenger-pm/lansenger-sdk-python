@@ -6,7 +6,7 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-341-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-476-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
@@ -35,6 +35,7 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Groups** — créer, infos, membres, liste, vérification de membership, mise à jour des paramètres & membres, dissoudre
 - **Calendrier & Schedule** — calendrier principal, CRUD de schedule + mise à jour, gestion des participants + métadonnées participants, update_schedule_attendees()
 - **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
+- **Notices (通知系统)** — envoyer des notifications via un compte officiel (texte/lien, ciblage téléphone/staff, indicateurs de confirmation/transfert/réponse, stratégies de rappel, pièces jointes), lister les comptes officiels d'une organisation
 - **Commandes de bot** — créer/gérer les entrées de commande de bot
 - **Applications personnelles** — gérer les bots personnels
 - **Événements de callback** — 25 types d'événements, parsing structuré, décryptage AES (spec 4.10.1.4), vérification de signature SHA1
@@ -459,6 +460,46 @@ types = client.get_callback_event_types()  # 25 types d'événements sur 13 cat�
 
 Le décryptage AES nécessite le package `pycryptodome` ou `cryptography` (auto-détecté).
 
+## 9. Notifications (通知系统)
+
+Envoyer des notifications via un compte officiel et lister les comptes officiels d'une organisation.
+
+> Les chemins contiennent un segment `/server` (stage de production ; les environnements
+> dev/test s'en passent). Ce module n'offre pas d'interface de révocation/suppression.
+> Lorsque `user_token` est fourni, les champs d'identité du body (`create_mobile` /
+> `create_user_id`) peuvent être omis.
+
+```python
+# 1) Trouver les comptes officiels — le champ "code" est le accountCode d'envoi
+accounts = await client.fetch_notice_accounts(org_id="org-001")
+account_code = accounts.accounts[0]["code"]
+
+# 2) Envoyer une notification texte ciblée par téléphone (max 10 destinataires / 10 en copie)
+result = await client.send_notice(
+    title="关于系统升级的通知",
+    content_type=1,                        # 1=texte (content requis), 2=lien (notice_link requis)
+    account_code=account_code,
+    user_type=1,                           # 1=téléphone, 2=staffId/département
+    content="系统将于本周六进行升级维护",
+    release_phones=["13800138000", "13800138001"],
+    cc_phones=["13800138002"],
+    create_mobile="13800138000",           # omis si user_token est fourni
+    confirm_flag=1,                        # confirmation de lecture requise (1=oui, 0=non)
+    remind_status=1, remind_msg_type="mobile", at_once_flag=1,
+)
+print(result.success, result.notice_code, result.notice_status)  # statut : 1=brouillon, 2=envoyé, 3=retiré
+
+# 3) Ou cibler staff/départements (max 200)
+result = await client.send_notice(
+    title="部门通知", content_type=1, account_code=account_code,
+    user_type=2,
+    content="请及时填写本周周报",
+    release_range=[{"objId": "dept-1", "objName": "研发部", "objType": 2}],  # objType : 1=staff, 2=département
+    cc_staff_ids=["staff-002"],
+    create_user_id="staff-001",
+)
+```
+
 ## Matrice de capacités des types de messages
 
 | msgType | Markdown | @mention | Attachments | Canaux privés | Chat de groupe | Notes |
@@ -621,6 +662,7 @@ lansenger-sdk-python/
 │   ├── callbacks.py         # Événements de callback — 25 types d'événements, parsing structuré, décryptage AES (4.10.1.4), vérification de signature SHA1
 │   ├── groups.py            # API Groups (incluant dissoudre 4.28.6)
 │   ├── todos.py             # Todo unifié
+│   ├── notices.py           # Notifications (通知系统)
 │   ├── calendars.py         # Calendrier & Schedule (incluant mise à jour 4.23.12, métadonnées participants 4.23.17)
 │   ├── reminders.py         # Rappels urgents de messages (4.6.14)
 │   └── users.py             # Infos utilisateur

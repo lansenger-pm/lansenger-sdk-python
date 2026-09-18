@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-341-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-476-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 零框架依赖 — 仅依赖 `httpx`。兼容任何异步或同步 Python 项目。
 
@@ -35,6 +35,7 @@
 - **群组** — 创建、信息、成员、列表、成员检查、更新设置与成员、解散
 - **日历与日程** — 主日历、日程 CRUD + 更新、参会人管理 + 参会人元数据、update_schedule_attendees()
 - **统一待办** — 创建、更新、删除、查询、执行人管理、状态计数
+- **通知系统** — 通过官方账号发送通知（文本/链接内容、手机号/staffId 两种投放、确认/转发/回复标志、提醒策略、附件），查询组织官方账号
 - **机器人命令** — 创建/查询/删除机器人快捷命令
 - **个人应用** — 创建/修改/查询/删除/列表个人机器人应用
 - **回调事件** — 25 种事件类型、结构化解析、AES 解密（按 4.10.1.4 规范）、SHA1 签名验证
@@ -459,6 +460,44 @@ types = client.get_callback_event_types()  # 13 个类别下共 25 种事件类�
 
 AES 解密需安装 `pycryptodome` 或 `cryptography` 包（自动检测）。
 
+## 9. 通知系统
+
+通过官方账号发送通知，查询组织的官方账号列表。
+
+> 路径带 `/server` 段（生产 stage；开发/测试环境无此段）。本模块无撤回/删除接口。
+> 传入 `user_token` 后，body 身份字段（`create_mobile` / `create_user_id`）可省略。
+
+```python
+# 1) 查询官方账号 —— code 字段即发送所需的 accountCode
+accounts = await client.fetch_notice_accounts(org_id="org-001")
+account_code = accounts.accounts[0]["code"]
+
+# 2) 发送文本通知，按手机号投放（接收/抄送各最多 10 个）
+result = await client.send_notice(
+    title="关于系统升级的通知",
+    content_type=1,                        # 1=文本（content 必填），2=链接（notice_link 必填）
+    account_code=account_code,
+    user_type=1,                           # 1=手机号，2=staffId/部门
+    content="系统将于本周六进行升级维护",
+    release_phones=["13800138000", "13800138001"],
+    cc_phones=["13800138002"],
+    create_mobile="13800138000",           # 传了 user_token 可省略
+    confirm_flag=1,                        # 需要确认（1=是，0=否）
+    remind_status=1, remind_msg_type="mobile", at_once_flag=1,
+)
+print(result.success, result.notice_code, result.notice_status)  # 状态：1=草稿，2=已发送，3=已撤回
+
+# 3) 或按 staffId/部门投放（最多 200 个）
+result = await client.send_notice(
+    title="部门通知", content_type=1, account_code=account_code,
+    user_type=2,
+    content="请及时填写本周周报",
+    release_range=[{"objId": "dept-1", "objName": "研发部", "objType": 2}],  # objType：1=人，2=部门
+    cc_staff_ids=["staff-002"],
+    create_user_id="staff-001",
+)
+```
+
 ## 消息类型能力矩阵
 
 | msgType | Markdown | @提及 | 附件 | 私聊通道 | 群聊 | 备注 |
@@ -621,6 +660,7 @@ lansenger-sdk-python/
 │   ├── callbacks.py         # 回调事件 — 25 种事件类型、结构化解析、AES 解密（4.10.1.4）、SHA1 签名验证
 │   ├── groups.py            # 群组 API（含解散 4.28.6）
 │   ├── todos.py             # 统一待办
+│   ├── notices.py           # 通知系统
 │   ├── calendars.py         # 日历与日程（含更新 4.23.12、参会人元数据 4.23.17）
 │   ├── reminders.py         # 加急提醒（4.6.14）
 │   └── users.py             # 用户信息

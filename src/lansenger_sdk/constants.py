@@ -105,6 +105,12 @@ API_ENDPOINTS = {
         "delete": "/v1/personal/apps/{app_id}/delete",
         "list_fetch": "/v1/personal/apps/list/fetch",
     },
+    # notice module (通知系统): paths carry a /server segment — production
+    # stage; dev/test environments serve the same API without it.
+    "notices": {
+        "send": "/xtra/notice/server/openapi/v1/send",
+        "accounts_fetch": "/xtra/notice/server/openapi/v1/notice/account",
+    },
     "todo": {
         "create": "/xtra/task/unified/v1/todotask/create",
         "info_update": "/xtra/task/unified/v1/todotask/info/update",

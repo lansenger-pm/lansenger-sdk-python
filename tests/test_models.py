@@ -22,6 +22,8 @@ from lansenger_sdk.models import (
     PersonalAppCreateResult,
     PersonalAppInfoResult,
     PersonalAppListResult,
+    NoticeSendResult,
+    NoticeAccountListResult,
 )
 
 
@@ -233,3 +235,22 @@ def test_personal_app_list_result():
     d = result.to_dict()
     assert d["success"] is True
     assert d["app_list"] == []
+
+
+def test_notice_send_result():
+    result = NoticeSendResult(success=True, notice_code="NTC001", notice_status=2, publish_user_name="张三")
+    d = result.to_dict()
+    assert d["success"] is True
+    assert d["notice_code"] == "NTC001"
+    assert d["notice_status"] == 2
+    assert d["publish_user_name"] == "张三"
+    assert "title" not in d
+    assert "raw_response" not in d
+
+
+def test_notice_account_list_result():
+    result = NoticeAccountListResult(success=True, total=2, accounts=[{"code": "ACC001"}, {"code": "ACC002"}])
+    d = result.to_dict()
+    assert d["success"] is True
+    assert d["total"] == 2
+    assert d["accounts"][1]["code"] == "ACC002"

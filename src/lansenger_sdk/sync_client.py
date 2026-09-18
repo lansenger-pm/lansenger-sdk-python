@@ -41,6 +41,8 @@ from .models import (
     IsInGroupResult,
     LinkCardParams,
     MediaPathResult,
+    NoticeAccountListResult,
+    NoticeSendResult,
     OaCardParams,
     OrgInfoResult,
     PersonalAppCreateResult,
@@ -49,6 +51,7 @@ from .models import (
     QueryGroupsResult,
     ScheduleAttendeeMetaResult,
     ScheduleAttendeesResult,
+    ScheduleAttendeesUpdateResult,
     ScheduleCreateResult,
     ScheduleInfoResult,
     ScheduleListResult,
@@ -1990,6 +1993,21 @@ class LansengerSyncClient:
             user_token=user_token,
             user_id=user_id,
         ))
+
+    def update_schedule_attendees(
+        self,
+        calendar_id: str,
+        schedule_id: str,
+        *,
+        add_attendees: list | None = None,
+        delete_attendees: list | None = None,
+        reminder_type: str | None = None,
+        operation_type: str | None = None,
+        current_time: int | None = None,
+        user_token: str = "",
+        user_id: str = "",
+    ) -> ScheduleAttendeesUpdateResult:
+        """Batch add and/or delete schedule attendees (blocking, 4.23.19)."""
         return _run_async(self._ephemeral_call(
             "update_schedule_attendees",
             calendar_id=calendar_id,
@@ -2130,5 +2148,91 @@ class LansengerSyncClient:
         """Fetch personal app list (blocking, 4.38.5)."""
         return _run_async(self._ephemeral_call(
             "fetch_personal_app_list",
+            user_token=user_token,
+        ))
+
+    # ── Notice (通知系统) (sync wrappers) ──────────────────────────────
+
+    def send_notice(
+        self,
+        title: str,
+        content_type: int,
+        account_code: str,
+        user_type: int,
+        *,
+        content: str = "",
+        notice_link: str = "",
+        notice_location: str = "",
+        latitude: float | None = None,
+        longitude: float | None = None,
+        release_phones: list | None = None,
+        cc_phones: list | None = None,
+        release_range: list | None = None,
+        cc_staff_ids: list | None = None,
+        create_mobile: str = "",
+        create_user_id: str = "",
+        resource_list: list | None = None,
+        extend_id: str = "",
+        confirm_flag: int | None = None,
+        forward_flag: int | None = None,
+        reply_flag: int | None = None,
+        anonymous_flag: int | None = None,
+        remind_status: int | None = None,
+        remind_msg_type: str = "",
+        at_once_flag: int | None = None,
+        remind_after_type: str = "",
+        remind_max_count: int | None = None,
+        remind_interval_time: int | None = None,
+        remind_interval_time_duration: str = "",
+        remind_range_type: str = "",
+        remind_range_staff_ids: list | None = None,
+        user_token: str = "",
+    ) -> NoticeSendResult:
+        """Send a notice via an official account (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "send_notice",
+            title=title,
+            content_type=content_type,
+            account_code=account_code,
+            user_type=user_type,
+            content=content,
+            notice_link=notice_link,
+            notice_location=notice_location,
+            latitude=latitude,
+            longitude=longitude,
+            release_phones=release_phones,
+            cc_phones=cc_phones,
+            release_range=release_range,
+            cc_staff_ids=cc_staff_ids,
+            create_mobile=create_mobile,
+            create_user_id=create_user_id,
+            resource_list=resource_list,
+            extend_id=extend_id,
+            confirm_flag=confirm_flag,
+            forward_flag=forward_flag,
+            reply_flag=reply_flag,
+            anonymous_flag=anonymous_flag,
+            remind_status=remind_status,
+            remind_msg_type=remind_msg_type,
+            at_once_flag=at_once_flag,
+            remind_after_type=remind_after_type,
+            remind_max_count=remind_max_count,
+            remind_interval_time=remind_interval_time,
+            remind_interval_time_duration=remind_interval_time_duration,
+            remind_range_type=remind_range_type,
+            remind_range_staff_ids=remind_range_staff_ids,
+            user_token=user_token,
+        ))
+
+    def fetch_notice_accounts(
+        self,
+        *,
+        org_id: str = "",
+        user_token: str = "",
+    ) -> NoticeAccountListResult:
+        """List official accounts of an organization (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_notice_accounts",
+            org_id=org_id,
             user_token=user_token,
         ))

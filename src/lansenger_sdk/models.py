@@ -1218,3 +1218,57 @@ class ChatMessagesResult:
         if self.error is not None:
             d["error"] = self.error
         return d
+
+
+@dataclass
+class NoticeSendResult:
+    """通知系统 /xtra/notice/server/openapi/v1/send — send notice result."""
+
+    success: bool
+    notice_code: str | None = None
+    notice_id: int | None = None
+    title: str | None = None
+    notice_type: int | None = None
+    content_type: int | None = None
+    content_abstract: str | None = None
+    notice_link: str | None = None
+    notice_status: int | None = None
+    confirm_status: int | None = None
+    publish_time: int | None = None
+    publish_user_id: str | None = None
+    publish_user_name: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in (
+            "notice_code", "notice_id", "title", "notice_type", "content_type",
+            "content_abstract", "notice_link", "notice_status", "confirm_status",
+            "publish_time", "publish_user_id", "publish_user_name",
+        ):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class NoticeAccountListResult:
+    """通知系统 /xtra/notice/server/openapi/v1/notice/account — official account list result."""
+
+    success: bool
+    total: int = 0
+    accounts: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.accounts is not None:
+            d["accounts"] = self.accounts
+        if self.error is not None:
+            d["error"] = self.error
+        return d

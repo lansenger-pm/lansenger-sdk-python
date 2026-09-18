@@ -97,3 +97,9 @@ def test_sse_endpoint_paths():
     assert "sse" in API_ENDPOINTS
     assert API_ENDPOINTS["sse"]["msg_create"] == "/v1/sse/msg/create"
     assert API_ENDPOINTS["sse"]["msg_fetch"] == "/v1/sse/msg/fetch"
+
+
+def test_notices_endpoint_paths():
+    assert "notices" in API_ENDPOINTS
+    assert API_ENDPOINTS["notices"]["send"] == "/xtra/notice/server/openapi/v1/send"
+    assert API_ENDPOINTS["notices"]["accounts_fetch"] == "/xtra/notice/server/openapi/v1/notice/account"

@@ -44,6 +44,16 @@ from .constants import (
     guess_media_type,
 )
 from .exceptions import LansengerAuthError, LansengerNetworkError
+from .notices import (
+    NOTICE_CONTENT_TYPE_LINK,
+    NOTICE_CONTENT_TYPE_TEXT,
+    NOTICE_OPEN_RANGE_MAX,
+    NOTICE_PHONE_RANGE_MAX,
+    NOTICE_REMIND_AFTER_TYPES,
+    NOTICE_REMIND_RANGE_TYPES,
+    NOTICE_USER_TYPE_OPENID,
+    NOTICE_USER_TYPE_PHONE,
+)
 from .media import download_media, upload_app_media, upload_media
 from .models import (
     AccountMessageResult,
@@ -68,6 +78,8 @@ from .models import (
     IsInGroupResult,
     LinkCardParams,
     MediaPathResult,
+    NoticeAccountListResult,
+    NoticeSendResult,
     OaCardParams,
     OrgInfoResult,
     PersonalAppCreateResult,
@@ -3780,6 +3792,154 @@ class LansengerClient:
         return await fetch_personal_app_list(
             self._config,
             app_token=app_token,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    # ── Public API: Notice (通知系统) ────────────────────────────────────
+
+    async def send_notice(
+        self,
+        title: str,
+        content_type: int,
+        account_code: str,
+        user_type: int,
+        *,
+        content: str = "",
+        notice_link: str = "",
+        notice_location: str = "",
+        latitude: float | None = None,
+        longitude: float | None = None,
+        release_phones: list[str] | None = None,
+        cc_phones: list[str] | None = None,
+        release_range: list[dict[str, Any]] | None = None,
+        cc_staff_ids: list[str] | None = None,
+        create_mobile: str = "",
+        create_user_id: str = "",
+        resource_list: list[dict[str, Any]] | None = None,
+        extend_id: str = "",
+        confirm_flag: int | None = None,
+        forward_flag: int | None = None,
+        reply_flag: int | None = None,
+        anonymous_flag: int | None = None,
+        remind_status: int | None = None,
+        remind_msg_type: str = "",
+        at_once_flag: int | None = None,
+        remind_after_type: str = "",
+        remind_max_count: int | None = None,
+        remind_interval_time: int | None = None,
+        remind_interval_time_duration: str = "",
+        remind_range_type: str = "",
+        remind_range_staff_ids: list[str] | None = None,
+        user_token: str = "",
+    ) -> NoticeSendResult:
+        """Send a notice via an official account (通知系统 /v1/send).
+
+        Args:
+            title: Notice title.
+            content_type: 1=text (content required), 2=link (notice_link required).
+            account_code: Official account CODE — fetch via fetch_notice_accounts().
+            user_type: 1=phone targeting (release_phones), 2=staffId/department
+                targeting (release_range of {objId, objName, objType} dicts).
+            create_mobile: Operator mobile (user_type=1); may be omitted when
+                user_token is provided.
+            create_user_id: Creator staff ID (user_type=2); may be omitted when
+                user_token is provided.
+            release_phones: Receiver mobile numbers, max 10.
+            cc_phones: CC mobile numbers, max 10.
+            release_range: Receiver range items, max 200.
+            cc_staff_ids: CC staff IDs, max 200.
+        """
+        if not title:
+            return NoticeSendResult(success=False, error="title is required")
+        if content_type not in (NOTICE_CONTENT_TYPE_TEXT, NOTICE_CONTENT_TYPE_LINK):
+            return NoticeSendResult(success=False, error="content_type must be 1 (text) or 2 (link)")
+        if content_type == NOTICE_CONTENT_TYPE_TEXT and not content:
+            return NoticeSendResult(success=False, error="content is required when content_type is 1 (text)")
+        if content_type == NOTICE_CONTENT_TYPE_LINK and not notice_link:
+            return NoticeSendResult(success=False, error="notice_link is required when content_type is 2 (link)")
+        if not account_code:
+            return NoticeSendResult(success=False, error="account_code is required")
+        if user_type not in (NOTICE_USER_TYPE_PHONE, NOTICE_USER_TYPE_OPENID):
+            return NoticeSendResult(success=False, error="user_type must be 1 (phone) or 2 (openid)")
+        if user_type == NOTICE_USER_TYPE_PHONE:
+            if not release_phones:
+                return NoticeSendResult(success=False, error="release_phones is required when user_type is 1 (phone)")
+            if len(release_phones) > NOTICE_PHONE_RANGE_MAX:
+                return NoticeSendResult(success=False, error=f"release_phones allows at most {NOTICE_PHONE_RANGE_MAX} numbers")
+            if cc_phones and len(cc_phones) > NOTICE_PHONE_RANGE_MAX:
+                return NoticeSendResult(success=False, error=f"cc_phones allows at most {NOTICE_PHONE_RANGE_MAX} numbers")
+            if not create_mobile and not user_token:
+                return NoticeSendResult(success=False, error="create_mobile is required when user_type is 1 (phone) and user_token is not provided")
+        if user_type == NOTICE_USER_TYPE_OPENID:
+            if not release_range:
+                return NoticeSendResult(success=False, error="release_range is required when user_type is 2 (openid)")
+            if len(release_range) > NOTICE_OPEN_RANGE_MAX:
+                return NoticeSendResult(success=False, error=f"release_range allows at most {NOTICE_OPEN_RANGE_MAX} items")
+            if cc_staff_ids and len(cc_staff_ids) > NOTICE_OPEN_RANGE_MAX:
+                return NoticeSendResult(success=False, error=f"cc_staff_ids allows at most {NOTICE_OPEN_RANGE_MAX} items")
+            if not create_user_id and not user_token:
+                return NoticeSendResult(success=False, error="create_user_id is required when user_type is 2 (openid) and user_token is not provided")
+        if remind_after_type and remind_after_type not in NOTICE_REMIND_AFTER_TYPES:
+            return NoticeSendResult(success=False, error=f"remind_after_type must be one of: {', '.join(NOTICE_REMIND_AFTER_TYPES)}")
+        if remind_range_type and remind_range_type not in NOTICE_REMIND_RANGE_TYPES:
+            return NoticeSendResult(success=False, error=f"remind_range_type must be one of: {', '.join(NOTICE_REMIND_RANGE_TYPES)}")
+        self._ensure_clients()
+        from .notices import send_notice
+
+        app_token = await self._get_token()
+        return await send_notice(
+            self._config,
+            app_token=app_token,
+            title=title,
+            content_type=content_type,
+            account_code=account_code,
+            user_type=user_type,
+            content=content,
+            notice_link=notice_link,
+            notice_location=notice_location,
+            latitude=latitude,
+            longitude=longitude,
+            release_phones=release_phones,
+            cc_phones=cc_phones,
+            release_range=release_range,
+            cc_staff_ids=cc_staff_ids,
+            create_mobile=create_mobile,
+            create_user_id=create_user_id,
+            resource_list=resource_list,
+            extend_id=extend_id,
+            confirm_flag=confirm_flag,
+            forward_flag=forward_flag,
+            reply_flag=reply_flag,
+            anonymous_flag=anonymous_flag,
+            remind_status=remind_status,
+            remind_msg_type=remind_msg_type,
+            at_once_flag=at_once_flag,
+            remind_after_type=remind_after_type,
+            remind_max_count=remind_max_count,
+            remind_interval_time=remind_interval_time,
+            remind_interval_time_duration=remind_interval_time_duration,
+            remind_range_type=remind_range_type,
+            remind_range_staff_ids=remind_range_staff_ids,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_notice_accounts(
+        self,
+        *,
+        org_id: str = "",
+        user_token: str = "",
+    ) -> NoticeAccountListResult:
+        """List official accounts of an organization (通知系统 /v1/notice/account)."""
+        self._ensure_clients()
+        from .notices import fetch_notice_accounts
+
+        app_token = await self._get_token()
+        return await fetch_notice_accounts(
+            self._config,
+            app_token=app_token,
+            org_id=org_id,
             user_token=user_token,
             http_client=self._http_client,
         )
