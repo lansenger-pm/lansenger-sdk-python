@@ -54,6 +54,12 @@ from .notices import (
     NOTICE_USER_TYPE_OPENID,
     NOTICE_USER_TYPE_PHONE,
 )
+from .questionnaires import (
+    QUESTIONNAIRE_ANSWER_LIMIT_ONCE,
+    QUESTIONNAIRE_ANSWER_LIMIT_UNLIMITED,
+    QUESTIONNAIRE_SCOPE_INTERNAL,
+    QUESTIONNAIRE_SCOPE_PUBLIC,
+)
 from .media import download_media, upload_app_media, upload_media
 from .models import (
     AccountMessageResult,
@@ -81,6 +87,18 @@ from .models import (
     NoticeAccountListResult,
     NoticeSendResult,
     OaCardParams,
+    QuestionnaireAccountListResult,
+    QuestionnaireAnswerDetailResult,
+    QuestionnaireAnswerUrlResult,
+    QuestionnaireCopyResult,
+    QuestionnaireDetailResult,
+    QuestionnaireOpResult,
+    QuestionnairePageResult,
+    QuestionnaireQuestionDeleteResult,
+    QuestionnaireQuestionSaveResult,
+    QuestionnaireRecordResult,
+    QuestionnaireSaveResult,
+    QuestionnaireUploadUrlResult,
     OrgInfoResult,
     PersonalAppCreateResult,
     PersonalAppInfoResult,
@@ -3942,6 +3960,408 @@ class LansengerClient:
             org_id=org_id,
             user_token=user_token,
             http_client=self._http_client,
+        )
+
+    # ── Public API: Questionnaire (问卷系统) ─────────────────────────────
+
+    async def save_questionnaire(
+        self,
+        title: str,
+        account_code: str,
+        *,
+        code: str = "",
+        welcome_speech: str = "",
+        bye_speech: str = "",
+        cover_resource_id: str = "",
+        resource_ids: str = "",
+        app_id: str = "",
+        user_type: int | None = None,
+        create_mobile: str = "",
+        create_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireSaveResult:
+        """Create/update a questionnaire (问卷系统 /v1/saveQuestionnaire)."""
+        if not title:
+            return QuestionnaireSaveResult(success=False, error="title is required")
+        if not account_code:
+            return QuestionnaireSaveResult(success=False, error="account_code is required")
+        self._ensure_clients()
+        from .questionnaires import save_questionnaire
+
+        app_token = await self._get_token()
+        return await save_questionnaire(
+            self._config, app_token=app_token, title=title, account_code=account_code,
+            code=code, welcome_speech=welcome_speech, bye_speech=bye_speech,
+            cover_resource_id=cover_resource_id, resource_ids=resource_ids, app_id=app_id,
+            user_type=user_type, create_mobile=create_mobile, create_user_id=create_user_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def save_questionnaire_questions(
+        self,
+        questionnaire_code: str,
+        question_list: list[dict[str, Any]],
+        *,
+        create_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireQuestionSaveResult:
+        """Batch-save questions of a questionnaire (问卷系统 /v1/saveQuestionList)."""
+        if not questionnaire_code:
+            return QuestionnaireQuestionSaveResult(success=False, error="questionnaire_code is required")
+        if not question_list:
+            return QuestionnaireQuestionSaveResult(success=False, error="question_list is required")
+        self._ensure_clients()
+        from .questionnaires import save_questionnaire_questions
+
+        app_token = await self._get_token()
+        return await save_questionnaire_questions(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            question_list=question_list, create_user_id=create_user_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def delete_questionnaire_question(
+        self,
+        question_code: str,
+        *,
+        create_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireQuestionDeleteResult:
+        """Delete a question by code (问卷系统 /v1/deleteQuestion)."""
+        if not question_code:
+            return QuestionnaireQuestionDeleteResult(success=False, error="question_code is required")
+        self._ensure_clients()
+        from .questionnaires import delete_questionnaire_question
+
+        app_token = await self._get_token()
+        return await delete_questionnaire_question(
+            self._config, app_token=app_token, question_code=question_code,
+            create_user_id=create_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def publish_questionnaire(
+        self,
+        questionnaire_code: str,
+        *,
+        scope_type: int = QUESTIONNAIRE_SCOPE_INTERNAL,
+        staff_ids: list[str] | None = None,
+        phones: list[str] | None = None,
+        answer_limit: int = QUESTIONNAIRE_ANSWER_LIMIT_ONCE,
+        message_flag: int = 0,
+        page_flag: int = 0,
+        share_flag: int = 0,
+        view_stats_flag: int = 1,
+        anonym_flag: int = 0,
+        publish_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """Publish a questionnaire (问卷系统 /v1/publish)."""
+        if not questionnaire_code:
+            return QuestionnaireOpResult(success=False, error="questionnaire_code is required")
+        if scope_type not in (QUESTIONNAIRE_SCOPE_INTERNAL, QUESTIONNAIRE_SCOPE_PUBLIC):
+            return QuestionnaireOpResult(success=False, error="scope_type must be 1 (internal) or 2 (public)")
+        if answer_limit not in (QUESTIONNAIRE_ANSWER_LIMIT_ONCE, QUESTIONNAIRE_ANSWER_LIMIT_UNLIMITED):
+            return QuestionnaireOpResult(success=False, error="answer_limit must be 1 (once) or -1 (unlimited)")
+        self._ensure_clients()
+        from .questionnaires import publish_questionnaire
+
+        app_token = await self._get_token()
+        return await publish_questionnaire(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            scope_type=scope_type, staff_ids=staff_ids, phones=phones,
+            answer_limit=answer_limit, message_flag=message_flag, page_flag=page_flag,
+            share_flag=share_flag, view_stats_flag=view_stats_flag, anonym_flag=anonym_flag,
+            publish_user_id=publish_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def withdraw_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """Withdraw a published questionnaire to draft (问卷系统 /v1/withdraw)."""
+        if not questionnaire_code:
+            return QuestionnaireOpResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import withdraw_questionnaire
+
+        app_token = await self._get_token()
+        return await withdraw_questionnaire(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            operate_user_id=operate_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def finish_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """End an ongoing questionnaire (问卷系统 /v1/finish)."""
+        if not questionnaire_code:
+            return QuestionnaireOpResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import finish_questionnaire
+
+        app_token = await self._get_token()
+        return await finish_questionnaire(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            operate_user_id=operate_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def delete_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """Delete a questionnaire (问卷系统 /v1/delete)."""
+        if not questionnaire_code:
+            return QuestionnaireOpResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import delete_questionnaire
+
+        app_token = await self._get_token()
+        return await delete_questionnaire(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            operate_user_id=operate_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_detail(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireDetailResult:
+        """Fetch full questionnaire detail incl. questions; needs admin permission (问卷系统 /v1/detail)."""
+        if not questionnaire_code:
+            return QuestionnaireDetailResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_detail
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_detail(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            operate_user_id=operate_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_brief(
+        self, questionnaire_code: str, *, user_token: str = "",
+    ) -> QuestionnaireDetailResult:
+        """Fetch questionnaire detail without admin check (no questions) (问卷系统 /v1/detailWithoutAuth)."""
+        if not questionnaire_code:
+            return QuestionnaireDetailResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_brief
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_brief(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_answer_url(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAnswerUrlResult:
+        """Fetch the answer-page URL (问卷系统 /v1/getAnswerUrl)."""
+        if not questionnaire_code:
+            return QuestionnaireAnswerUrlResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_answer_url
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_answer_url(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            operate_user_id=operate_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def copy_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireCopyResult:
+        """Copy a questionnaire into a new draft (问卷系统 /v1/copy)."""
+        if not questionnaire_code:
+            return QuestionnaireCopyResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import copy_questionnaire
+
+        app_token = await self._get_token()
+        return await copy_questionnaire(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            operate_user_id=operate_user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaires_by_codes(
+        self, code_list: list[str], *, include_deleted: int = 0, user_token: str = "",
+    ) -> QuestionnaireQueryListResult:
+        """Batch-fetch questionnaire basic info by codes (问卷系统 /v1/queryList)."""
+        if not code_list:
+            return QuestionnaireQueryListResult(success=False, error="code_list is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaires_by_codes
+
+        app_token = await self._get_token()
+        return await fetch_questionnaires_by_codes(
+            self._config, app_token=app_token, code_list=code_list,
+            include_deleted=include_deleted, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_office_accounts(
+        self, *, user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAccountListResult:
+        """Fetch office accounts the user can manage (问卷系统 /v1/userOfficeAccountList)."""
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_office_accounts
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_office_accounts(
+            self._config, app_token=app_token, user_id=user_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_created_questionnaires(
+        self, account_code: str, *, page_no: int = 1, page_size: int = 10,
+        status: int | None = None, user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page questionnaires created under an office account (问卷系统 /v1/createList)."""
+        if not account_code:
+            return QuestionnairePageResult(success=False, error="account_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_created_questionnaires
+
+        app_token = await self._get_token()
+        return await fetch_created_questionnaires(
+            self._config, app_token=app_token, account_code=account_code,
+            page_no=page_no, page_size=page_size, status=status,
+            user_id=user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_my_created_questionnaires(
+        self, org_id: str, *, page_no: int = 1, page_size: int = 10,
+        title: str = "", status: int | None = None, user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page all questionnaires I created, personal + official (问卷系统 /v1/myCreateList)."""
+        if not org_id:
+            return QuestionnairePageResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_my_created_questionnaires
+
+        app_token = await self._get_token()
+        return await fetch_my_created_questionnaires(
+            self._config, app_token=app_token, org_id=org_id,
+            page_no=page_no, page_size=page_size, title=title, status=status,
+            user_id=user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_participated_questionnaires(
+        self, org_id: str, *, page_no: int = 1, page_size: int = 10,
+        status: int | None = None, user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page questionnaires the user answered (问卷系统 /v1/participationList)."""
+        if not org_id:
+            return QuestionnairePageResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_participated_questionnaires
+
+        app_token = await self._get_token()
+        return await fetch_participated_questionnaires(
+            self._config, app_token=app_token, org_id=org_id,
+            page_no=page_no, page_size=page_size, status=status,
+            user_id=user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_answer_records(
+        self, account_code: str, questionnaire_code: str, *, page_no: int = 1, page_size: int = 10,
+        user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page answer records of a questionnaire (问卷系统 /v1/answerList)."""
+        if not account_code:
+            return QuestionnairePageResult(success=False, error="account_code is required")
+        if not questionnaire_code:
+            return QuestionnairePageResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_answer_records
+
+        app_token = await self._get_token()
+        return await fetch_answer_records(
+            self._config, app_token=app_token, account_code=account_code,
+            questionnaire_code=questionnaire_code, page_no=page_no, page_size=page_size,
+            user_id=user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_answer_detail(
+        self, account_code: str, answer_code: str, *, user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAnswerDetailResult:
+        """Fetch one answer record's full detail (问卷系统 /v1/answerDetail)."""
+        if not account_code:
+            return QuestionnaireAnswerDetailResult(success=False, error="account_code is required")
+        if not answer_code:
+            return QuestionnaireAnswerDetailResult(success=False, error="answer_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_answer_detail
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_answer_detail(
+            self._config, app_token=app_token, account_code=account_code, answer_code=answer_code,
+            user_id=user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_last_answer_detail(
+        self, questionnaire_code: str, *, answer_record_code: str = "", user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAnswerDetailResult:
+        """Fetch the user's last answer detail (问卷系统 /v1/lastAnswerDetail)."""
+        if not questionnaire_code:
+            return QuestionnaireAnswerDetailResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_last_answer_detail
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_last_answer_detail(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            answer_record_code=answer_record_code, user_id=user_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_answer_data(
+        self, account_code: str, questionnaire_code: str, *, page_no: int = 1, page_size: int = 10,
+        user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page answer data for export (问卷系统 /v1/answerData)."""
+        if not account_code:
+            return QuestionnairePageResult(success=False, error="account_code is required")
+        if not questionnaire_code:
+            return QuestionnairePageResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_answer_data
+
+        app_token = await self._get_token()
+        return await fetch_answer_data(
+            self._config, app_token=app_token, account_code=account_code,
+            questionnaire_code=questionnaire_code, page_no=page_no, page_size=page_size,
+            user_id=user_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_last_answer_record(
+        self, questionnaire_code: str, *, answer_record_code: str = "", user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireRecordResult:
+        """Fetch the user's last answer record, main table only (问卷系统 /v1/lastAnswerRecord)."""
+        if not questionnaire_code:
+            return QuestionnaireRecordResult(success=False, error="questionnaire_code is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_last_answer_record
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_last_answer_record(
+            self._config, app_token=app_token, questionnaire_code=questionnaire_code,
+            answer_record_code=answer_record_code, user_id=user_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_questionnaire_upload_url(
+        self, file_name: str, md5: str, size: int, *, user_token: str = "",
+    ) -> QuestionnaireUploadUrlResult:
+        """Fetch a presigned upload URL; upload via PUT + Content-MD5 header (问卷系统 /v1/upload)."""
+        if not file_name:
+            return QuestionnaireUploadUrlResult(success=False, error="file_name is required")
+        if not md5:
+            return QuestionnaireUploadUrlResult(success=False, error="md5 is required")
+        if not size:
+            return QuestionnaireUploadUrlResult(success=False, error="size is required")
+        self._ensure_clients()
+        from .questionnaires import fetch_questionnaire_upload_url
+
+        app_token = await self._get_token()
+        return await fetch_questionnaire_upload_url(
+            self._config, app_token=app_token, file_name=file_name, md5=md5, size=size,
+            user_token=user_token, http_client=self._http_client,
         )
 
     # ── Utility: Callback event parsing ───────────────────────────────

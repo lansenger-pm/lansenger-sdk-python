@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.9.0] - 2026-09-18
+
+### Added
+
+- **questionnaires**: 问卷系统 `/xtra/questionnaire/server/openapi/v1/` 全部 22 个端点 — 问卷管理（创建/更新 `save_questionnaire`、批量存题 `save_questionnaire_questions`、删题 `delete_questionnaire_question`、发布 `publish_questionnaire`、撤回/结束/删除）、详情查询（`fetch_questionnaire_detail` / `fetch_questionnaire_brief` / `fetch_questionnaires_by_codes` / `fetch_questionnaire_answer_url` / `copy_questionnaire`）、官方账号与列表查询（`fetch_questionnaire_office_accounts` / `fetch_created_questionnaires` / `fetch_my_created_questionnaires` / `fetch_participated_questionnaires`，PageResult 分页）、答卷分析（`fetch_answer_records` / `fetch_questionnaire_answer_detail` / `fetch_questionnaire_last_answer_detail` / `fetch_answer_data` / `fetch_questionnaire_last_answer_record`）、预签名上传地址 `fetch_questionnaire_upload_url`（PUT + Content-MD5 两步上传）。
+- **client**: `LansengerClient` 全部 22 个 async 方法与 `LansengerSyncClient` 阻塞镜像；`models` 新增 13 个 `Questionnaire*` 结果模型（PageResult 五端点共用 `QuestionnairePageResult`）。
+- **constants**: 问卷状态（1 草稿/2 进行中/3 已撤回/4 已结束/5 待发布）、发布范围、答题限制、16 种题型 `QUESTIONNAIRE_QUESTION_TYPES`。
+- **notes**: 创建/发布/答卷类接口需有效 `accountCode`（缺失报 3104）；题目结构为深嵌套 JSON，SDK 透传原始 dict（camelCase）；错误信息可能无分隔符拼接（文档明示）。
+
+---
+
 ## [1.8.0] - 2026-09-17
 
 ### Added

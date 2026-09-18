@@ -4,7 +4,7 @@ Framework-independent Python SDK for the Lansenger (蓝信) platform — support
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-476-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-507-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zero framework dependencies — only `httpx`. Works with any async or sync Python codebase.
 
@@ -34,6 +34,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Calendar & schedule** — primary calendar, schedule CRUD + update, attendee management + attendee metadata
 - **Unified todo** — create, update, delete, query, executor management, status counts
 - **Notices (通知系统)** — send official-account notices (text/link content, phone/staff targeting, confirm/forward/reply flags, reminder policies, attachments), query org official accounts
+- **Questionnaires (问卷系统)** — create/update/publish/withdraw/finish/delete questionnaires, batch question management, office-account & created/participated lists (paged), answer records and export, presigned upload URL
 - **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
 
 ## Quick Install
@@ -442,6 +443,39 @@ result = await client.send_notice(
 )
 ```
 
+## 10. Questionnaire (问卷系统)
+
+Create, publish, and analyze questionnaires. Create/publish endpoints require a valid
+official-account ``accountCode`` (missing → errCode 3104); question structures are
+passed through as camelCase dicts; validation errors may arrive concatenated.
+
+```python
+# 1) Find manageable office accounts — the "code" field is the accountCode
+accounts = await client.fetch_questionnaire_office_accounts()
+account_code = accounts.accounts[0]["code"]
+
+# 2) Create a questionnaire, add questions, publish
+r = await client.save_questionnaire(
+    title="2026年度员工满意度调查", account_code=account_code,
+    welcome_speech="欢迎参加本次调查",
+)
+qn = r.questionnaire_code
+await client.save_questionnaire_questions(qn, [
+    {
+        "questionName": "您对当前工作环境是否满意？",
+        "questionType": "radio",          # 16 types: radio/checkbox/fillblank/multiScore/...
+        "requiredFlag": 1,
+        "questionOptionList": [{"optionName": "非常满意", "optionOrder": 1}],
+    },
+])
+await client.publish_questionnaire(qn, scope_type=1, staff_ids=["U10001"])
+
+# 3) Analyze answers
+page = await client.fetch_answer_records(account_code, qn)
+detail = await client.fetch_questionnaire_answer_detail(account_code, page.items[0]["code"])
+print(detail.answer_user_name, detail.answers)   # answers: {questionCode: {context}}
+```
+
 ## Message Type Capability Matrix
 
 | msgType | Markdown | @mention | Attachments | Private Channels | Group Chat | Notes |
@@ -605,6 +639,7 @@ lansenger-sdk-python/
 │   ├── groups.py            # Group APIs (including dismiss 4.28.6)
 │   ├── todos.py             # Unified Todo
 │   ├── notices.py           # Notice (通知系统)
+│   ├── questionnaires.py    # Questionnaire (问卷系统)
 │   ├── calendars.py         # Calendar & Schedule (including update 4.23.12, attendee-meta 4.23.17)
 │   ├── reminders.py         # Urgent message reminders (4.6.14)
 │   └── users.py             # User info

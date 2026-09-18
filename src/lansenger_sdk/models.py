@@ -1272,3 +1272,291 @@ class NoticeAccountListResult:
         if self.error is not None:
             d["error"] = self.error
         return d
+
+
+@dataclass
+class QuestionnaireSaveResult:
+    """问卷系统 /v1/saveQuestionnaire — create/update questionnaire result."""
+
+    success: bool
+    questionnaire_code: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.questionnaire_code is not None:
+            d["questionnaire_code"] = self.questionnaire_code
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireQuestionSaveResult:
+    """问卷系统 /v1/saveQuestionList — batch save questions result."""
+
+    success: bool
+    saved_count: int = 0
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "saved_count": self.saved_count}
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireQuestionDeleteResult:
+    """问卷系统 /v1/deleteQuestion — delete question result."""
+
+    success: bool
+    deleted: bool = False
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "deleted": self.deleted}
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireOpResult:
+    """问卷系统 /v1/publish|withdraw|finish|delete — boolean operation result."""
+
+    success: bool
+    done: bool = False
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "done": self.done}
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireDetailResult:
+    """问卷系统 /v1/detail 与 /v1/detailWithoutAuth（brief，questions=None）— detail result."""
+
+    success: bool
+    questionnaire_id: int | None = None
+    code: str | None = None
+    title: str | None = None
+    status: int | None = None
+    account_type: int | None = None
+    account_code: str | None = None
+    answer_user_count: int | None = None
+    answer_user_times: int | None = None
+    question_count: int | None = None
+    questions: list[dict[str, Any]] | None = None
+    publish_time: int | None = None
+    publish_user_name: str | None = None
+    create_user_name: str | None = None
+    create_time: int | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in (
+            "questionnaire_id", "code", "title", "status", "account_type", "account_code",
+            "answer_user_count", "answer_user_times", "question_count", "questions",
+            "publish_time", "publish_user_name", "create_user_name", "create_time",
+        ):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireAnswerUrlResult:
+    """问卷系统 /v1/getAnswerUrl — answer page URL result."""
+
+    success: bool
+    url: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.url is not None:
+            d["url"] = self.url
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireCopyResult:
+    """问卷系统 /v1/copy — copy result."""
+
+    success: bool
+    new_code: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.new_code is not None:
+            d["new_code"] = self.new_code
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireQueryListResult:
+    """问卷系统 /v1/queryList — batch query by codes result."""
+
+    success: bool
+    total: int = 0
+    items: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireAccountListResult:
+    """问卷系统 /v1/userOfficeAccountList — manageable office accounts result."""
+
+    success: bool
+    total: int = 0
+    accounts: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.accounts is not None:
+            d["accounts"] = self.accounts
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnairePageResult:
+    """问卷系统 /v1/createList|myCreateList|participationList|answerList|answerData — PageResult."""
+
+    success: bool
+    page_no: int = 0
+    page_size: int = 0
+    pages: int = 0
+    total: int = 0
+    has_more: bool = False
+    items: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "success": self.success, "page_no": self.page_no, "page_size": self.page_size,
+            "pages": self.pages, "total": self.total, "has_more": self.has_more,
+        }
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireAnswerDetailResult:
+    """问卷系统 /v1/answerDetail 与 /v1/lastAnswerDetail — answer detail result."""
+
+    success: bool
+    answer_code: str | None = None
+    answer_user_id: str | None = None
+    answer_user_name: str | None = None
+    answer_status: int | None = None
+    answer_type: int | None = None
+    answer_use_time: int | None = None
+    answer_question_count: int | None = None
+    answer_commit_time: int | None = None
+    questionnaire: dict[str, Any] | None = None
+    questions: list[dict[str, Any]] | None = None
+    answers: dict[str, Any] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in (
+            "answer_code", "answer_user_id", "answer_user_name", "answer_status", "answer_type",
+            "answer_use_time", "answer_question_count", "answer_commit_time",
+            "questionnaire", "questions", "answers",
+        ):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireRecordResult:
+    """问卷系统 /v1/lastAnswerRecord — last answer record (main table) result."""
+
+    success: bool
+    record_id: int | None = None
+    record_code: str | None = None
+    answer_user_id: str | None = None
+    answer_user_name: str | None = None
+    answer_status: int | None = None
+    answer_type: int | None = None
+    answer_use_time: int | None = None
+    answer_question_count: int | None = None
+    answer_commit_time: int | None = None
+    stats_status: int | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in (
+            "record_id", "record_code", "answer_user_id", "answer_user_name", "answer_status",
+            "answer_type", "answer_use_time", "answer_question_count", "answer_commit_time",
+            "stats_status",
+        ):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QuestionnaireUploadUrlResult:
+    """问卷系统 /v1/upload — presigned upload URL result."""
+
+    success: bool
+    url: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.url is not None:
+            d["url"] = self.url
+        if self.error is not None:
+            d["error"] = self.error
+        return d

@@ -44,6 +44,18 @@ from .models import (
     NoticeAccountListResult,
     NoticeSendResult,
     OaCardParams,
+    QuestionnaireAccountListResult,
+    QuestionnaireAnswerDetailResult,
+    QuestionnaireAnswerUrlResult,
+    QuestionnaireCopyResult,
+    QuestionnaireDetailResult,
+    QuestionnaireOpResult,
+    QuestionnairePageResult,
+    QuestionnaireQuestionDeleteResult,
+    QuestionnaireQuestionSaveResult,
+    QuestionnaireRecordResult,
+    QuestionnaireSaveResult,
+    QuestionnaireUploadUrlResult,
     OrgInfoResult,
     PersonalAppCreateResult,
     PersonalAppInfoResult,
@@ -2235,4 +2247,268 @@ class LansengerSyncClient:
             "fetch_notice_accounts",
             org_id=org_id,
             user_token=user_token,
+        ))
+
+    # ── Questionnaire (问卷系统) (sync wrappers) ───────────────────────
+
+    def save_questionnaire(
+        self,
+        title: str,
+        account_code: str,
+        *,
+        code: str = "",
+        welcome_speech: str = "",
+        bye_speech: str = "",
+        cover_resource_id: str = "",
+        resource_ids: str = "",
+        app_id: str = "",
+        user_type: int | None = None,
+        create_mobile: str = "",
+        create_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireSaveResult:
+        """Create/update a questionnaire (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "save_questionnaire",
+            title=title, account_code=account_code, code=code,
+            welcome_speech=welcome_speech, bye_speech=bye_speech,
+            cover_resource_id=cover_resource_id, resource_ids=resource_ids,
+            app_id=app_id, user_type=user_type, create_mobile=create_mobile,
+            create_user_id=create_user_id, user_token=user_token,
+        ))
+
+    def save_questionnaire_questions(
+        self,
+        questionnaire_code: str,
+        question_list: list,
+        *,
+        create_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireQuestionSaveResult:
+        """Batch-save questions of a questionnaire (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "save_questionnaire_questions",
+            questionnaire_code=questionnaire_code, question_list=question_list,
+            create_user_id=create_user_id, user_token=user_token,
+        ))
+
+    def delete_questionnaire_question(
+        self,
+        question_code: str,
+        *,
+        create_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireQuestionDeleteResult:
+        """Delete a question by code (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "delete_questionnaire_question",
+            question_code=question_code, create_user_id=create_user_id,
+            user_token=user_token,
+        ))
+
+    def publish_questionnaire(
+        self,
+        questionnaire_code: str,
+        *,
+        scope_type: int = 1,
+        staff_ids: list | None = None,
+        phones: list | None = None,
+        answer_limit: int = 1,
+        message_flag: int = 0,
+        page_flag: int = 0,
+        share_flag: int = 0,
+        view_stats_flag: int = 1,
+        anonym_flag: int = 0,
+        publish_user_id: str = "",
+        user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """Publish a questionnaire (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "publish_questionnaire",
+            questionnaire_code=questionnaire_code, scope_type=scope_type,
+            staff_ids=staff_ids, phones=phones, answer_limit=answer_limit,
+            message_flag=message_flag, page_flag=page_flag, share_flag=share_flag,
+            view_stats_flag=view_stats_flag, anonym_flag=anonym_flag,
+            publish_user_id=publish_user_id, user_token=user_token,
+        ))
+
+    def withdraw_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """Withdraw a published questionnaire to draft (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "withdraw_questionnaire",
+            questionnaire_code=questionnaire_code, operate_user_id=operate_user_id,
+            user_token=user_token,
+        ))
+
+    def finish_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """End an ongoing questionnaire (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "finish_questionnaire",
+            questionnaire_code=questionnaire_code, operate_user_id=operate_user_id,
+            user_token=user_token,
+        ))
+
+    def delete_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireOpResult:
+        """Delete a questionnaire (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "delete_questionnaire",
+            questionnaire_code=questionnaire_code, operate_user_id=operate_user_id,
+            user_token=user_token,
+        ))
+
+    def fetch_questionnaire_detail(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireDetailResult:
+        """Fetch full questionnaire detail incl. questions (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_detail",
+            questionnaire_code=questionnaire_code, operate_user_id=operate_user_id,
+            user_token=user_token,
+        ))
+
+    def fetch_questionnaire_brief(
+        self, questionnaire_code: str, *, user_token: str = "",
+    ) -> QuestionnaireDetailResult:
+        """Fetch questionnaire detail without admin check (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_brief",
+            questionnaire_code=questionnaire_code, user_token=user_token,
+        ))
+
+    def fetch_questionnaire_answer_url(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAnswerUrlResult:
+        """Fetch the answer-page URL (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_answer_url",
+            questionnaire_code=questionnaire_code, operate_user_id=operate_user_id,
+            user_token=user_token,
+        ))
+
+    def copy_questionnaire(
+        self, questionnaire_code: str, *, operate_user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireCopyResult:
+        """Copy a questionnaire into a new draft (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "copy_questionnaire",
+            questionnaire_code=questionnaire_code, operate_user_id=operate_user_id,
+            user_token=user_token,
+        ))
+
+    def fetch_questionnaires_by_codes(
+        self, code_list: list, *, include_deleted: int = 0, user_token: str = "",
+    ) -> QuestionnaireQueryListResult:
+        """Batch-fetch questionnaire basic info by codes (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaires_by_codes",
+            code_list=code_list, include_deleted=include_deleted, user_token=user_token,
+        ))
+
+    def fetch_questionnaire_office_accounts(
+        self, *, user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAccountListResult:
+        """Fetch office accounts the user can manage (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_office_accounts",
+            user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_created_questionnaires(
+        self, account_code: str, *, page_no: int = 1, page_size: int = 10,
+        status: int | None = None, user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page questionnaires created under an office account (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_created_questionnaires",
+            account_code=account_code, page_no=page_no, page_size=page_size,
+            status=status, user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_my_created_questionnaires(
+        self, org_id: str, *, page_no: int = 1, page_size: int = 10,
+        title: str = "", status: int | None = None, user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page all questionnaires I created (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_my_created_questionnaires",
+            org_id=org_id, page_no=page_no, page_size=page_size, title=title,
+            status=status, user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_participated_questionnaires(
+        self, org_id: str, *, page_no: int = 1, page_size: int = 10,
+        status: int | None = None, user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page questionnaires the user answered (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_participated_questionnaires",
+            org_id=org_id, page_no=page_no, page_size=page_size, status=status,
+            user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_answer_records(
+        self, account_code: str, questionnaire_code: str, *, page_no: int = 1, page_size: int = 10,
+        user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page answer records of a questionnaire (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_answer_records",
+            account_code=account_code, questionnaire_code=questionnaire_code,
+            page_no=page_no, page_size=page_size, user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_questionnaire_answer_detail(
+        self, account_code: str, answer_code: str, *, user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAnswerDetailResult:
+        """Fetch one answer record's full detail (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_answer_detail",
+            account_code=account_code, answer_code=answer_code,
+            user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_questionnaire_last_answer_detail(
+        self, questionnaire_code: str, *, answer_record_code: str = "", user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireAnswerDetailResult:
+        """Fetch the user's last answer detail (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_last_answer_detail",
+            questionnaire_code=questionnaire_code, answer_record_code=answer_record_code,
+            user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_answer_data(
+        self, account_code: str, questionnaire_code: str, *, page_no: int = 1, page_size: int = 10,
+        user_id: str = "", user_token: str = "",
+    ) -> QuestionnairePageResult:
+        """Page answer data for export (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_answer_data",
+            account_code=account_code, questionnaire_code=questionnaire_code,
+            page_no=page_no, page_size=page_size, user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_questionnaire_last_answer_record(
+        self, questionnaire_code: str, *, answer_record_code: str = "", user_id: str = "", user_token: str = "",
+    ) -> QuestionnaireRecordResult:
+        """Fetch the user's last answer record (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_last_answer_record",
+            questionnaire_code=questionnaire_code, answer_record_code=answer_record_code,
+            user_id=user_id, user_token=user_token,
+        ))
+
+    def fetch_questionnaire_upload_url(
+        self, file_name: str, md5: str, size: int, *, user_token: str = "",
+    ) -> QuestionnaireUploadUrlResult:
+        """Fetch a presigned upload URL (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_questionnaire_upload_url",
+            file_name=file_name, md5=md5, size=size, user_token=user_token,
         ))

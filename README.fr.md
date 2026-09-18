@@ -6,7 +6,7 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-476-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-507-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
@@ -36,6 +36,7 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Calendrier & Schedule** — calendrier principal, CRUD de schedule + mise à jour, gestion des participants + métadonnées participants, update_schedule_attendees()
 - **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
 - **Notices (通知系统)** — envoyer des notifications via un compte officiel (texte/lien, ciblage téléphone/staff, indicateurs de confirmation/transfert/réponse, stratégies de rappel, pièces jointes), lister les comptes officiels d'une organisation
+- **Questionnaires (问卷系统)** — créer/mettre à jour/publier/retirer/terminer/supprimer des questionnaires, gestion groupée des questions, listes paginées (comptes officiels, créés, participés), enregistrements et export des réponses, URL de téléversement pré-signée
 - **Commandes de bot** — créer/gérer les entrées de commande de bot
 - **Applications personnelles** — gérer les bots personnels
 - **Événements de callback** — 25 types d'événements, parsing structuré, décryptage AES (spec 4.10.1.4), vérification de signature SHA1
@@ -500,6 +501,39 @@ result = await client.send_notice(
 )
 ```
 
+## 10. Questionnaire (问卷系统)
+
+Create, publish, and analyze questionnaires. Create/publish endpoints require a valid
+official-account ``accountCode`` (missing → errCode 3104); question structures are
+passed through as camelCase dicts; validation errors may arrive concatenated.
+
+```python
+# 1) Find manageable office accounts — the "code" field is the accountCode
+accounts = await client.fetch_questionnaire_office_accounts()
+account_code = accounts.accounts[0]["code"]
+
+# 2) Create a questionnaire, add questions, publish
+r = await client.save_questionnaire(
+    title="2026年度员工满意度调查", account_code=account_code,
+    welcome_speech="欢迎参加本次调查",
+)
+qn = r.questionnaire_code
+await client.save_questionnaire_questions(qn, [
+    {
+        "questionName": "您对当前工作环境是否满意？",
+        "questionType": "radio",          # 16 types: radio/checkbox/fillblank/multiScore/...
+        "requiredFlag": 1,
+        "questionOptionList": [{"optionName": "非常满意", "optionOrder": 1}],
+    },
+])
+await client.publish_questionnaire(qn, scope_type=1, staff_ids=["U10001"])
+
+# 3) Analyze answers
+page = await client.fetch_answer_records(account_code, qn)
+detail = await client.fetch_questionnaire_answer_detail(account_code, page.items[0]["code"])
+print(detail.answer_user_name, detail.answers)   # answers: {questionCode: {context}}
+```
+
 ## Matrice de capacités des types de messages
 
 | msgType | Markdown | @mention | Attachments | Canaux privés | Chat de groupe | Notes |
@@ -663,6 +697,7 @@ lansenger-sdk-python/
 │   ├── groups.py            # API Groups (incluant dissoudre 4.28.6)
 │   ├── todos.py             # Todo unifié
 │   ├── notices.py           # Notifications (通知系统)
+│   ├── questionnaires.py    # Questionnaires (问卷系统)
 │   ├── calendars.py         # Calendrier & Schedule (incluant mise à jour 4.23.12, métadonnées participants 4.23.17)
 │   ├── reminders.py         # Rappels urgents de messages (4.6.14)
 │   └── users.py             # Infos utilisateur

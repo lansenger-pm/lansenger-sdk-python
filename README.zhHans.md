@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-476-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-507-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 零框架依赖 — 仅依赖 `httpx`。兼容任何异步或同步 Python 项目。
 
@@ -36,6 +36,7 @@
 - **日历与日程** — 主日历、日程 CRUD + 更新、参会人管理 + 参会人元数据、update_schedule_attendees()
 - **统一待办** — 创建、更新、删除、查询、执行人管理、状态计数
 - **通知系统** — 通过官方账号发送通知（文本/链接内容、手机号/staffId 两种投放、确认/转发/回复标志、提醒策略、附件），查询组织官方账号
+- **问卷系统** — 创建/更新/发布/撤回/结束/删除问卷，批量管理题目，官方账号与我创建/我参与的列表（分页），答卷记录与导出，预签名上传地址
 - **机器人命令** — 创建/查询/删除机器人快捷命令
 - **个人应用** — 创建/修改/查询/删除/列表个人机器人应用
 - **回调事件** — 25 种事件类型、结构化解析、AES 解密（按 4.10.1.4 规范）、SHA1 签名验证
@@ -498,6 +499,37 @@ result = await client.send_notice(
 )
 ```
 
+## 10. 问卷系统
+
+创建、发布并分析问卷。创建/发布类接口需要有效的官方账号 ``accountCode``（缺失报 errCode 3104）；题目结构以 camelCase dict 透传；校验错误信息可能无分隔符拼接。
+
+```python
+# 1) 查询我有管理权限的官方账号 —— code 字段即 accountCode
+accounts = await client.fetch_questionnaire_office_accounts()
+account_code = accounts.accounts[0]["code"]
+
+# 2) 创建问卷、存题、发布
+r = await client.save_questionnaire(
+    title="2026年度员工满意度调查", account_code=account_code,
+    welcome_speech="欢迎参加本次调查",
+)
+qn = r.questionnaire_code
+await client.save_questionnaire_questions(qn, [
+    {
+        "questionName": "您对当前工作环境是否满意？",
+        "questionType": "radio",          # 16 types: radio/checkbox/fillblank/multiScore/...
+        "requiredFlag": 1,
+        "questionOptionList": [{"optionName": "非常满意", "optionOrder": 1}],
+    },
+])
+await client.publish_questionnaire(qn, scope_type=1, staff_ids=["U10001"])
+
+# 3) 分析答卷
+page = await client.fetch_answer_records(account_code, qn)
+detail = await client.fetch_questionnaire_answer_detail(account_code, page.items[0]["code"])
+print(detail.answer_user_name, detail.answers)   # answers: {questionCode: {context}}
+```
+
 ## 消息类型能力矩阵
 
 | msgType | Markdown | @提及 | 附件 | 私聊通道 | 群聊 | 备注 |
@@ -661,6 +693,7 @@ lansenger-sdk-python/
 │   ├── groups.py            # 群组 API（含解散 4.28.6）
 │   ├── todos.py             # 统一待办
 │   ├── notices.py           # 通知系统
+│   ├── questionnaires.py    # 问卷系统
 │   ├── calendars.py         # 日历与日程（含更新 4.23.12、参会人元数据 4.23.17）
 │   ├── reminders.py         # 加急提醒（4.6.14）
 │   └── users.py             # 用户信息
