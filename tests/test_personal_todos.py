@@ -90,7 +90,8 @@ async def test_update_personal_todo_uses_top_level_org_id():
     mock = _mock_http_client({"errCode": 0, "data": "TASK001"})
     r = await update_personal_todo(
         _make_config(), app_token="tok", todo_code="TASK001", org_id="org1",
-        update_fields=["subject", "dueTime"], subject="新主题", due_time=300,
+        update_fields=["subject"], subject="新主题",
+        create_user_id="u1", appid="app1",
         http_client=mock,
     )
     assert r.success is True and r.todo_code == "TASK001"
@@ -98,7 +99,22 @@ async def test_update_personal_todo_uses_top_level_org_id():
     assert body["orgId"] == "org1"
     assert "orgId" not in body["updateContent"]
     assert body["updateContent"]["subject"] == "新主题"
-    assert body["updateContent"]["dueTime"] == 300
+    assert body["updateContent"]["createUserId"] == "u1"
+    assert body["updateContent"]["appid"] == "app1"
+
+
+@pytest.mark.asyncio
+async def test_update_personal_todo_requires_identity_fields():
+    r = await update_personal_todo(
+        _make_config(), app_token="tok", todo_code="TASK001", org_id="org1",
+        update_fields=["subject"], subject="新主题",
+    )
+    assert r.success is False and "create_user_id is required" in r.error
+    r = await update_personal_todo(
+        _make_config(), app_token="tok", todo_code="TASK001", org_id="org1",
+        update_fields=["subject"], subject="新主题", create_user_id="u1",
+    )
+    assert r.success is False and "appid is required" in r.error
 
 
 @pytest.mark.asyncio

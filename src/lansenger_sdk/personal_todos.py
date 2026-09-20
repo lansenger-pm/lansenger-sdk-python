@@ -182,6 +182,10 @@ async def update_personal_todo(
         return PersonalTodoSaveResult(success=False, error="org_id is required")
     if not update_fields:
         return PersonalTodoSaveResult(success=False, error="update_fields is required")
+    if not create_user_id:
+        return PersonalTodoSaveResult(success=False, error="create_user_id is required")
+    if not appid:
+        return PersonalTodoSaveResult(success=False, error="appid is required")
 
     update_content: dict[str, Any] = {"code": todo_code}
     candidate_fields: dict[str, Any] = {
@@ -206,6 +210,8 @@ async def update_personal_todo(
     for key, value in candidate_fields.items():
         if key in update_fields and value is not None and value != "":
             update_content[key] = value
+    update_content["createUserId"] = create_user_id
+    update_content["appid"] = appid
 
     url = build_api_url(config, "personal_todos", "update", app_token, user_token=user_token)
     body = {

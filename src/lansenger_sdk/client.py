@@ -4763,6 +4763,10 @@ class LansengerClient:
             return PersonalTodoSaveResult(success=False, error="org_id is required")
         if not update_fields:
             return PersonalTodoSaveResult(success=False, error="update_fields is required")
+        if not create_user_id:
+            return PersonalTodoSaveResult(success=False, error="create_user_id is required")
+        if not appid:
+            return PersonalTodoSaveResult(success=False, error="appid is required")
         self._ensure_clients()
         from .personal_todos import update_personal_todo
 
