@@ -3876,10 +3876,10 @@ class LansengerClient:
             account_code: Official account CODE — fetch via fetch_notice_accounts().
             user_type: 1=phone targeting (release_phones), 2=staffId/department
                 targeting (release_range of {objId, objName, objType} dicts).
-            create_mobile: Operator mobile (user_type=1); may be omitted when
-                user_token is provided.
-            create_user_id: Creator staff ID (user_type=2); may be omitted when
-                user_token is provided.
+            create_mobile: Operator mobile (user_type=1). One of create_mobile
+                or create_user_id is required.
+            create_user_id: Creator staff ID (user_type=2). One of create_mobile
+                or create_user_id is required.
             release_phones: Receiver mobile numbers, max 10.
             cc_phones: CC mobile numbers, max 10.
             release_range: Receiver range items, max 200.
@@ -3904,8 +3904,8 @@ class LansengerClient:
                 return NoticeSendResult(success=False, error=f"release_phones allows at most {NOTICE_PHONE_RANGE_MAX} numbers")
             if cc_phones and len(cc_phones) > NOTICE_PHONE_RANGE_MAX:
                 return NoticeSendResult(success=False, error=f"cc_phones allows at most {NOTICE_PHONE_RANGE_MAX} numbers")
-            if not create_mobile and not user_token:
-                return NoticeSendResult(success=False, error="create_mobile is required when user_type is 1 (phone) and user_token is not provided")
+            if not create_mobile and not create_user_id:
+                return NoticeSendResult(success=False, error="create_mobile or create_user_id is required when user_type is 1 (phone)")
         if user_type == NOTICE_USER_TYPE_OPENID:
             if not release_range:
                 return NoticeSendResult(success=False, error="release_range is required when user_type is 2 (openid)")
@@ -3913,8 +3913,8 @@ class LansengerClient:
                 return NoticeSendResult(success=False, error=f"release_range allows at most {NOTICE_OPEN_RANGE_MAX} items")
             if cc_staff_ids and len(cc_staff_ids) > NOTICE_OPEN_RANGE_MAX:
                 return NoticeSendResult(success=False, error=f"cc_staff_ids allows at most {NOTICE_OPEN_RANGE_MAX} items")
-            if not create_user_id and not user_token:
-                return NoticeSendResult(success=False, error="create_user_id is required when user_type is 2 (openid) and user_token is not provided")
+            if not create_user_id and not create_mobile:
+                return NoticeSendResult(success=False, error="create_mobile or create_user_id is required when user_type is 2 (openid)")
         if remind_after_type and remind_after_type not in NOTICE_REMIND_AFTER_TYPES:
             return NoticeSendResult(success=False, error=f"remind_after_type must be one of: {', '.join(NOTICE_REMIND_AFTER_TYPES)}")
         if remind_range_type and remind_range_type not in NOTICE_REMIND_RANGE_TYPES:

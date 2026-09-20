@@ -4,10 +4,10 @@ Endpoints:
 - POST /xtra/notice/server/openapi/v1/send           — send a notice via an official account
 - POST /xtra/notice/server/openapi/v1/notice/account — list official accounts of an organization
 
-All endpoints use POST with app_token query param. user_token optional:
-when provided, body identity fields (createMobile / createUserId) may be
-omitted. Paths carry a ``/server`` segment (production stage; dev/test
-environments serve the same API without it).
+All endpoints use POST with app_token query param. user_token is optional;
+the send endpoint still requires createMobile or createUserId. Paths carry a
+``/server`` segment (production stage; dev/test environments serve the same
+API without it).
 
 The notice module has no revoke/delete interface: ``noticeStatus=3``
 (revoked) exists in payloads but cannot be produced through this API.
@@ -107,10 +107,10 @@ async def send_notice(
             each ``{"objId": ..., "objName": ..., "objType": 1|2}``
             (1=staff, 2=department).
         cc_staff_ids: CC staff IDs, max NOTICE_OPEN_RANGE_MAX.
-        create_mobile: Operator mobile (user_type=1); may be omitted when
-            user_token is provided.
-        create_user_id: Creator staff ID (user_type=2); may be omitted when
-            user_token is provided.
+        create_mobile: Operator mobile (user_type=1). One of create_mobile
+            or create_user_id is required.
+        create_user_id: Creator staff ID (user_type=2). One of create_mobile
+            or create_user_id is required.
         resource_list: Attachment items (ResourceBaseInfo dicts, camelCase).
         confirm_flag/forward_flag/reply_flag/anonymous_flag: 1=yes, 0=no;
             omitted → server default (1).
@@ -145,8 +145,8 @@ async def send_notice(
             return NoticeSendResult(success=False, error=f"release_phones allows at most {NOTICE_PHONE_RANGE_MAX} numbers")
         if cc_phones and len(cc_phones) > NOTICE_PHONE_RANGE_MAX:
             return NoticeSendResult(success=False, error=f"cc_phones allows at most {NOTICE_PHONE_RANGE_MAX} numbers")
-        if not create_mobile and not user_token:
-            return NoticeSendResult(success=False, error="create_mobile is required when user_type is 1 (phone) and user_token is not provided")
+        if not create_mobile and not create_user_id:
+            return NoticeSendResult(success=False, error="create_mobile or create_user_id is required when user_type is 1 (phone)")
     if user_type == NOTICE_USER_TYPE_OPENID:
         if not release_range:
             return NoticeSendResult(success=False, error="release_range is required when user_type is 2 (openid)")
@@ -154,8 +154,8 @@ async def send_notice(
             return NoticeSendResult(success=False, error=f"release_range allows at most {NOTICE_OPEN_RANGE_MAX} items")
         if cc_staff_ids and len(cc_staff_ids) > NOTICE_OPEN_RANGE_MAX:
             return NoticeSendResult(success=False, error=f"cc_staff_ids allows at most {NOTICE_OPEN_RANGE_MAX} items")
-        if not create_user_id and not user_token:
-            return NoticeSendResult(success=False, error="create_user_id is required when user_type is 2 (openid) and user_token is not provided")
+        if not create_user_id and not create_mobile:
+            return NoticeSendResult(success=False, error="create_mobile or create_user_id is required when user_type is 2 (openid)")
 
     if remind_after_type and remind_after_type not in NOTICE_REMIND_AFTER_TYPES:
         return NoticeSendResult(success=False, error=f"remind_after_type must be one of: {', '.join(NOTICE_REMIND_AFTER_TYPES)}")

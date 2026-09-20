@@ -124,11 +124,11 @@ async def test_send_notice_phone_limit():
 
 
 @pytest.mark.asyncio
-async def test_send_notice_phone_requires_create_mobile_without_user_token():
+async def test_send_notice_phone_requires_creator_identity():
     config = _make_config()
     result = await send_notice(config, app_token="tok", title="t", content_type=1, account_code="ACC001", user_type=1, content="c", release_phones=["13800138000"], create_mobile="")
     assert result.success is False
-    assert "create_mobile is required" in result.error
+    assert "create_mobile or create_user_id is required" in result.error
 
 
 @pytest.mark.asyncio
@@ -140,15 +140,15 @@ async def test_send_notice_openid_requires_release_range():
 
 
 @pytest.mark.asyncio
-async def test_send_notice_openid_requires_create_user_id_without_user_token():
+async def test_send_notice_openid_requires_creator_identity():
     config = _make_config()
     result = await send_notice(config, app_token="tok", title="t", content_type=1, account_code="ACC001", user_type=2, content="c", release_range=[{"objId": "s1", "objName": "张三", "objType": 1}], create_user_id="")
     assert result.success is False
-    assert "create_user_id is required" in result.error
+    assert "create_mobile or create_user_id is required" in result.error
 
 
 @pytest.mark.asyncio
-async def test_send_notice_openid_create_user_id_ok_with_user_token():
+async def test_send_notice_openid_user_token_does_not_replace_creator_identity():
     config = _make_config()
     mock_client = _mock_http_client({"errCode": 0, "data": {"code": "NTC001", "noticeStatus": 2}})
     result = await send_notice(
@@ -156,8 +156,9 @@ async def test_send_notice_openid_create_user_id_ok_with_user_token():
         content="c", release_range=[{"objId": "s1", "objName": "张三", "objType": 1}], create_user_id="",
         user_token="utok", http_client=mock_client,
     )
-    assert result.success is True
-    assert result.notice_code == "NTC001"
+    assert result.success is False
+    assert "create_mobile or create_user_id is required" in result.error
+    mock_client.post.assert_not_called()
 
 
 @pytest.mark.asyncio
