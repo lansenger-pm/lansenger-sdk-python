@@ -53,8 +53,8 @@ from .models import (
 )
 from .url_helpers import build_api_url
 
-VC_MEMBER_ROLE_HOST = "host"
-VC_MEMBER_ROLE_MEMBER = "member"
+VC_MEMBER_ROLE_HOST = "admin"
+VC_MEMBER_ROLE_MEMBER = "participant"
 
 # opCode values for member/control (接口枚举字典)
 VC_OPS = (
@@ -84,7 +84,7 @@ def _host_required(members: list[dict[str, Any]] | None) -> str | None:
         return "member is required (with exactly one host)"
     hosts = [m for m in members if str(m.get("role", "")) == VC_MEMBER_ROLE_HOST]
     if len(hosts) != 1:
-        return "exactly one member must have role='host'"
+        return "exactly one member must have role='admin'"
     return None
 
 
@@ -125,7 +125,7 @@ async def create_meeting(
     """Create a meeting (instant or reserved) (/meeting/create).
 
     Args:
-        members: [{staffId, employeeName, role}]; exactly one role='host'.
+        members: [{staffId, employeeName, role}]; exactly one role='admin'.
         start_time: epoch milliseconds; later than now for reserved meetings.
     """
     if not subject:

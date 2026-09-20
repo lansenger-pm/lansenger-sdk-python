@@ -46,8 +46,8 @@ def _mock_http_client(response_data):
 
 
 MEMBERS = [
-    {"staffId": "u1", "employeeName": "张三", "role": "member"},
-    {"staffId": "u2", "employeeName": "李四", "role": "host"},
+    {"staffId": "u1", "employeeName": "张三", "role": "participant"},
+    {"staffId": "u2", "employeeName": "李四", "role": "admin"},
 ]
 
 
@@ -58,13 +58,13 @@ async def test_create_meeting_requires_subject_and_host(monkeypatch):
     r = await c.create_meeting(subject="", start_time=100, members=MEMBERS, org_id="524288")
     assert r.success is False and "subject is required" in r.error
 
-    no_host = [m for m in MEMBERS if m["role"] != "host"]
+    no_host = [m for m in MEMBERS if m["role"] != "admin"]
     r = await c.create_meeting(subject="s", start_time=100, members=no_host, org_id="524288")
-    assert r.success is False and "exactly one member must have role='host'" in r.error
+    assert r.success is False and "exactly one member must have role='admin'" in r.error
 
-    two_hosts = MEMBERS + [{"staffId": "u3", "employeeName": "王五", "role": "host"}]
+    two_hosts = MEMBERS + [{"staffId": "u3", "employeeName": "王五", "role": "admin"}]
     r = await c.create_meeting(subject="s", start_time=100, members=two_hosts, org_id="524288")
-    assert r.success is False and "exactly one member must have role='host'" in r.error
+    assert r.success is False and "exactly one member must have role='admin'" in r.error
 
 
 @pytest.mark.asyncio
