@@ -468,8 +468,8 @@ AES decryption requires `pycryptodome` or `cryptography` package (auto-detected)
 Send official-account notices and query the official accounts of an organization.
 
 > Paths carry a `/server` segment (production stage; dev/test environments omit it).
-> The module has no revoke/delete interface. When `user_token` is provided, the body
-> identity fields (`create_mobile` / `create_user_id`) may be omitted.
+> The module has no revoke/delete interface. At least one of `create_mobile` /
+> `create_user_id` is required; `user_token` does not replace the creator identity.
 
 ```python
 # 1) Find official accounts — the "code" field is the accountCode used for sending
@@ -485,7 +485,7 @@ result = await client.send_notice(
     content="系统将于本周六进行升级维护",
     release_phones=["13800138000", "13800138001"],
     cc_phones=["13800138002"],
-    create_mobile="13800138000",           # omit when user_token is provided
+    create_mobile="13800138000",           # required: create_mobile or create_user_id
     confirm_flag=1,                        # require read confirmation (1=yes, 0=no)
     remind_status=1, remind_msg_type="mobile", at_once_flag=1,
 )

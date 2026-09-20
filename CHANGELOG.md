@@ -48,7 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **notices**: `send_notice()` — 通知系统 `/xtra/notice/server/openapi/v1/send`，通过官方账号发送通知。支持文本/链接两种内容类型、手机号（≤10）/staffId+部门（≤200）两种投放范围、确认/转发/回复/匿名标志、提醒策略簇（remindStatus/remindMsgType/remindAfterType/remindRangeType 等）与附件 resourceList。传入 `user_token` 时 body 身份字段（`createMobile`/`createUserId`）可省略。
+- **notices**: `send_notice()` — 通知系统 `/xtra/notice/server/openapi/v1/send`，通过官方账号发送通知。支持文本/链接两种内容类型、手机号（≤10）/staffId+部门（≤200）两种投放范围、确认/转发/回复/匿名标志、提醒策略簇（remindStatus/remindMsgType/remindAfterType/remindRangeType 等）与附件 resourceList。服务端要求 `createMobile` / `createUserId` 至少填一个；`user_token` 不替代创建人字段。
 - **notices**: `fetch_notice_accounts()` — 通知系统 `/xtra/notice/server/openapi/v1/notice/account`，查询组织官方账号列表（`code` 字段即发送所需的 `accountCode`）。
 - **client**: `LansengerClient.send_notice()` / `fetch_notice_accounts()`（async）与 `LansengerSyncClient` 同名阻塞镜像；`models` 新增 `NoticeSendResult` / `NoticeAccountListResult`。
 - **notices**: 投放范围上限（手机 10、staff/部门 200）、remindAfterType/remindRangeType 枚举的本地前置校验，错误消息与既有 `"<param> is required"` 契约一致。

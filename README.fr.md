@@ -469,8 +469,8 @@ Envoyer des notifications via un compte officiel et lister les comptes officiels
 
 > Les chemins contiennent un segment `/server` (stage de production ; les environnements
 > dev/test s'en passent). Ce module n'offre pas d'interface de révocation/suppression.
-> Lorsque `user_token` est fourni, les champs d'identité du body (`create_mobile` /
-> `create_user_id`) peuvent être omis.
+> Au moins un des champs `create_mobile` / `create_user_id` est requis ;
+> `user_token` ne remplace pas l'identité du créateur.
 
 ```python
 # 1) Trouver les comptes officiels — le champ "code" est le accountCode d'envoi
@@ -486,7 +486,7 @@ result = await client.send_notice(
     content="系统将于本周六进行升级维护",
     release_phones=["13800138000", "13800138001"],
     cc_phones=["13800138002"],
-    create_mobile="13800138000",           # omis si user_token est fourni
+    create_mobile="13800138000",           # requis : create_mobile ou create_user_id
     confirm_flag=1,                        # confirmation de lecture requise (1=oui, 0=non)
     remind_status=1, remind_msg_type="mobile", at_once_flag=1,
 )

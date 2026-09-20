@@ -468,7 +468,7 @@ AES 解密需安装 `pycryptodome` 或 `cryptography` 包（自动检测）。
 通过官方账号发送通知，查询组织的官方账号列表。
 
 > 路径带 `/server` 段（生产 stage；开发/测试环境无此段）。本模块无撤回/删除接口。
-> 传入 `user_token` 后，body 身份字段（`create_mobile` / `create_user_id`）可省略。
+> 服务端要求 `create_mobile` / `create_user_id` 至少填一个；`user_token` 不替代创建人字段。
 
 ```python
 # 1) 查询官方账号 —— code 字段即发送所需的 accountCode
@@ -484,7 +484,7 @@ result = await client.send_notice(
     content="系统将于本周六进行升级维护",
     release_phones=["13800138000", "13800138001"],
     cc_phones=["13800138002"],
-    create_mobile="13800138000",           # 传了 user_token 可省略
+    create_mobile="13800138000",           # 必填：create_mobile / create_user_id 至少一个
     confirm_flag=1,                        # 需要确认（1=是，0=否）
     remind_status=1, remind_msg_type="mobile", at_once_flag=1,
 )
