@@ -6,57 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [1.11.0] - 2026-09-20
+## [1.7.5] - 2026-09-20
 
 ### Added
 
-- **personal_todos**: 个人待办 `/xtra/tdtask/server/openapi/v3/` 与资源接口 — 创建个人待办、按字段编辑个人待办、分页查询用户待办列表，以及资源上传、下载链接和预签名上传地址，共 6 个端点。
-- **client**: 6 个 async 方法与 `LansengerSyncClient` 阻塞镜像；`models` 新增 `PersonalTodoSaveResult`、`PersonalTodoListResult`、`PersonalTodoResourceResult`、`PersonalTodoUrlResult`。
-- **constants**: 个人待办类型、完成状态、优先级、平台来源，以及 9MB 资源上传上限。
-
-### Notes
-
-- **personal_todos**: 与应用身份的统一待办 `/xtra/task/unified/v1/` 完全分离；`orgId` 必须显式传入，编辑接口的 `orgId` 位于请求体顶层。
-- **personal_todos**: 服务端当前不提供完成/删除能力；文档中的 `status`、`execStatus` 等字段不生效，SDK 不伪装这些能力。
-- **personal_todos**: 兼容新环境成功码 `0` 和旧环境写接口成功码 `200`。
-- **personal_todos**: 创建接口 `finishTime` 默认发送 `0`，与 stage 实测可调用请求一致，不使用 `null`。
-
----
-
-## [1.10.0] - 2026-09-18
-
-### Added
-
-- **boardrooms**: 会议室预定 V2 `/xtra/boardroom/server/openapi/v2/` 全部 11 个端点 — 会议室检索（`fetch_boardroom_list`，按办公区/楼层/设备/时段筛选）、详情、当日预订与停用信息（`fetch_boardroom_schedule`）、预订详情（含参会人/审批流，raw_response 透传）、预订与修改（`reserve_boardroom` / `edit_boardroom_reserve`，支持单次与重复预订）、取消与扫码确认、我的预订分页、分级与办公区列表。
-- **client**: 11 个 async 方法与 `LansengerSyncClient` 阻塞镜像；`models` 新增 8 个 `Boardroom*` 结果模型。
-- **notes**: `gradingId`（分区ID）多数接口必填（缺失报错或静默空结果）；`user_token` 传入时 body 身份字段被服务端忽略；`Fooler` 为 `Floor` 历史拼写；预订时间格式 `yyyy-MM-dd HH:mm:ss`，roomList 筛选为 `yyyy-MM-dd HH:mm`。
-
----
-
-## [1.9.0] - 2026-09-18
-
-### Added
-
-- **questionnaires**: 问卷系统 `/xtra/questionnaire/server/openapi/v1/` 全部 22 个端点 — 问卷管理（创建/更新 `save_questionnaire`、批量存题 `save_questionnaire_questions`、删题 `delete_questionnaire_question`、发布 `publish_questionnaire`、撤回/结束/删除）、详情查询（`fetch_questionnaire_detail` / `fetch_questionnaire_brief` / `fetch_questionnaires_by_codes` / `fetch_questionnaire_answer_url` / `copy_questionnaire`）、官方账号与列表查询（`fetch_questionnaire_office_accounts` / `fetch_created_questionnaires` / `fetch_my_created_questionnaires` / `fetch_participated_questionnaires`，PageResult 分页）、答卷分析（`fetch_answer_records` / `fetch_questionnaire_answer_detail` / `fetch_questionnaire_last_answer_detail` / `fetch_answer_data` / `fetch_questionnaire_last_answer_record`）、预签名上传地址 `fetch_questionnaire_upload_url`（PUT + Content-MD5 两步上传）。
-- **client**: `LansengerClient` 全部 22 个 async 方法与 `LansengerSyncClient` 阻塞镜像；`models` 新增 13 个 `Questionnaire*` 结果模型（PageResult 五端点共用 `QuestionnairePageResult`）。
-- **constants**: 问卷状态（1 草稿/2 进行中/3 已撤回/4 已结束/5 待发布）、发布范围、答题限制、16 种题型 `QUESTIONNAIRE_QUESTION_TYPES`。
-- **notes**: 创建/发布/答卷类接口需有效 `accountCode`（缺失报 3104）；题目结构为深嵌套 JSON，SDK 透传原始 dict（camelCase）；错误信息可能无分隔符拼接（文档明示）。
-
----
-
-## [1.8.0] - 2026-09-17
-
-### Added
-
-- **notices**: `send_notice()` — 通知系统 `/xtra/notice/server/openapi/v1/send`，通过官方账号发送通知。支持文本/链接两种内容类型、手机号（≤10）/staffId+部门（≤200）两种投放范围、确认/转发/回复/匿名标志、提醒策略簇（remindStatus/remindMsgType/remindAfterType/remindRangeType 等）与附件 resourceList。服务端要求 `createMobile` / `createUserId` 至少填一个；`user_token` 不替代创建人字段。
-- **notices**: `fetch_notice_accounts()` — 通知系统 `/xtra/notice/server/openapi/v1/notice/account`，查询组织官方账号列表（`code` 字段即发送所需的 `accountCode`）。
-- **client**: `LansengerClient.send_notice()` / `fetch_notice_accounts()`（async）与 `LansengerSyncClient` 同名阻塞镜像；`models` 新增 `NoticeSendResult` / `NoticeAccountListResult`。
-- **notices**: 投放范围上限（手机 10、staff/部门 200）、remindAfterType/remindRangeType 枚举的本地前置校验，错误消息与既有 `"<param> is required"` 契约一致。
+- **notices**: 新增官方账号通知与账号列表两个接口，覆盖文本/链接内容、手机号与 staffId/部门投放、确认/转发/回复标志、提醒策略和附件。
+- **questionnaires**: 新增问卷系统 22 个接口，覆盖创建/更新、题目管理、发布生命周期、账号与分页查询、答卷分析及预签名上传。
+- **boardrooms**: 新增会议室预定 V2 全部 11 个接口，覆盖检索、详情、日程、预订/修改/取消、扫码确认、我的预订、分级与办公区。
+- **personal_todos**: 新增个人待办及资源 6 个接口，并提供 async client、sync client、models、constants 和导出。
 
 ### Fixed
 
-- **notices**: 实测（stage 2026-09-17）服务端对缺失 `remindStatus`、以及 range 对象内缺失/为 null 的 `ccRangeList` 均无空值保护（报 `errCode=-1 unknown exception`），SDK 自动兜底：`remindStatus=0`、`ccRangeList=[]` 强制下发；skill 文档同步补充实测结论（orgId 实际必传、3381 权限错误说明）。
-- **calendar**: `LansengerSyncClient.update_schedule_attendees` 缺失 — CLI `calendar update-attendees` 调用会抛 `AttributeError`（sync 侧漏写镜像方法）。补齐 sync 方法，并在 `__init__` 导出 `update_schedule_attendees` / `ScheduleAttendeesUpdateResult`，清理 sync_client 中不可达的死代码块。
+- **notices**: 补齐 `remindStatus=0` 和 `ccRangeList=[]` 兜底，避免服务端 NPE；创建人要求 `createMobile` / `createUserId` 至少一个。
+- **calendar**: 补齐 `LansengerSyncClient.update_schedule_attendees` 及导出，修复 CLI 调用时的 `AttributeError`。
+- **personal_todos**: 创建默认 `finishTime=0`，更新请求始终携带 `createUserId` / `appid`，兼容成功码 `0` 和 `200`。
+
+### Notes
+
+- 问卷创建/发布/答卷类接口需要有效 `accountCode`；会议室多数接口需要 `gradingId`。
+- 个人待办与应用身份待办完全分离，`orgId` 必须显式传入。
+- 通知无撤回/删除接口；`user_token` 不替代通知创建人字段。
 
 ---
 
