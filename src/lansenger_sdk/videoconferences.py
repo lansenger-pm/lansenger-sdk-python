@@ -24,6 +24,14 @@ Endpoints (all POST, prefix /xtra/videoconference/openapi/v1):
 - /vod/url/download/fetch      — recording download URLs (max 3 vods)
 - /conf/fetch                  — org videoconference config
 
+LIVE-VERIFIED (2026-09-21, org 2285568): conf fetch / meeting list /
+active fetch / status / detail / create / stop all pass. Enum notes:
+type 0=instant meeting, 1=reserved (reserved requires start_time in the
+future, errCode 105204); cancel only applies to not-started meetings
+(errCode 105224 once started — use stop_meeting instead); member roles
+are admin (host) / joinHost / participant (errCode 105230 without an
+admin member).
+
 All calls go through the standard app gateway (app_token query param, same
 as contacts/groups). Prerequisites per docs: the org has the 视频会议 app
 installed (platform ≥3.6), the EMC backend configured the app's external
