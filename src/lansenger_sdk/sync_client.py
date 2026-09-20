@@ -2690,7 +2690,7 @@ class LansengerSyncClient:
         parent_code: str = "",
         group_id: str = "",
         group_category_code: str = "",
-        finish_time: int | None = None,
+        finish_time: int | None = 0,
         status_tag_no: str = "",
         status_tag_yes: str = "",
         app_info_id: int | None = None,

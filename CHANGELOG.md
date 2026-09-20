@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **personal_todos**: 与应用身份的统一待办 `/xtra/task/unified/v1/` 完全分离；`orgId` 必须显式传入，编辑接口的 `orgId` 位于请求体顶层。
 - **personal_todos**: 服务端当前不提供完成/删除能力；文档中的 `status`、`execStatus` 等字段不生效，SDK 不伪装这些能力。
 - **personal_todos**: 兼容新环境成功码 `0` 和旧环境写接口成功码 `200`。
+- **personal_todos**: 创建接口 `finishTime` 默认发送 `0`，与 stage 实测可调用请求一致，不使用 `null`。
 
 ---
 

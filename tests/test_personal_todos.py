@@ -70,7 +70,7 @@ async def test_save_personal_todo_body_and_result():
     r = await save_personal_todo(
         _make_config(), app_token="tok", subject="完成方案", start_time=100,
         due_time=200, priority=PERSONAL_TODO_PRIORITY_NORMAL, create_user_id="u1",
-        org_id="org1", appid="app1", description="desc", finish_time=None,
+        org_id="org1", appid="app1", description="desc", user_token="ut1",
         executors=[{"staffId": "u1", "opt": 1}],
         resources=[{"fileName": "a.pdf", "resourceId": "r1"}],
         http_client=mock,
@@ -78,9 +78,11 @@ async def test_save_personal_todo_body_and_result():
     assert r.success is True and r.todo_code == "TASK001"
     body = mock.post.call_args.kwargs["json"]
     assert body["type"] == PERSONAL_TODO_TYPE_PERSONAL
-    assert body["finishTime"] is None
+    assert body["finishTime"] == 0
     assert body["executors"] == [{"staffId": "u1", "opt": 1}]
     assert body["resources"] == [{"fileName": "a.pdf", "resourceId": "r1"}]
+    url = mock.post.call_args.args[0]
+    assert "app_token=tok" in url and "user_token=ut1" in url
 
 
 @pytest.mark.asyncio
