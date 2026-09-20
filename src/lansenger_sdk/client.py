@@ -44,6 +44,11 @@ from .constants import (
     guess_media_type,
 )
 from .exceptions import LansengerAuthError, LansengerNetworkError
+from .boardrooms import (
+    BOARDROOM_CANCEL_TYPE_CURRENT,
+    BOARDROOM_EDIT_TYPE_CURRENT,
+    BOARDROOM_RESERVE_TYPE_SINGLE,
+)
 from .notices import (
     NOTICE_CONTENT_TYPE_LINK,
     NOTICE_CONTENT_TYPE_TEXT,
@@ -99,6 +104,14 @@ from .models import (
     QuestionnaireRecordResult,
     QuestionnaireSaveResult,
     QuestionnaireUploadUrlResult,
+    BoardroomAreaListResult,
+    BoardroomDetailResult,
+    BoardroomGradingListResult,
+    BoardroomListResult,
+    BoardroomOpResult,
+    BoardroomReserveDetailResult,
+    BoardroomReserveResult,
+    BoardroomScheduleResult,
     OrgInfoResult,
     PersonalAppCreateResult,
     PersonalAppInfoResult,
@@ -4361,6 +4374,294 @@ class LansengerClient:
         app_token = await self._get_token()
         return await fetch_questionnaire_upload_url(
             self._config, app_token=app_token, file_name=file_name, md5=md5, size=size,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    # ── Public API: Boardroom (会议室预定 V2) ────────────────────────────
+
+    async def fetch_boardroom_list(
+        self,
+        *,
+        grading_id: str = "",
+        area_office_id: str = "",
+        floor_ids: list[str] | None = None,
+        equipment: list[str] | None = None,
+        reserve_time_start: str = "",
+        reserve_time_end: str = "",
+        query_date: str = "",
+        page: int = 1,
+        limit: int = 10,
+        lx_user_id: str = "",
+        org_id: str = "",
+        user_token: str = "",
+    ) -> BoardroomListResult:
+        """Filter meeting rooms (会议室预定 V2 /v2/roomList)."""
+        self._ensure_clients()
+        from .boardrooms import fetch_boardroom_list
+
+        app_token = await self._get_token()
+        return await fetch_boardroom_list(
+            self._config, app_token=app_token, grading_id=grading_id,
+            area_office_id=area_office_id, floor_ids=floor_ids, equipment=equipment,
+            reserve_time_start=reserve_time_start, reserve_time_end=reserve_time_end,
+            query_date=query_date, page=page, limit=limit,
+            lx_user_id=lx_user_id, org_id=org_id, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_boardroom_detail(
+        self, room_id: str, *, org_id: str = "", user_token: str = "",
+    ) -> BoardroomDetailResult:
+        """Fetch meeting-room detail (会议室预定 V2 /v2/roomDetail)."""
+        if not room_id:
+            return BoardroomDetailResult(success=False, error="room_id is required")
+        self._ensure_clients()
+        from .boardrooms import fetch_boardroom_detail
+
+        app_token = await self._get_token()
+        return await fetch_boardroom_detail(
+            self._config, app_token=app_token, room_id=room_id,
+            org_id=org_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_boardroom_schedule(
+        self, room_id: str, query_date: str, grading_id: str, *,
+        reserve_user_id: str = "", org_id: str = "", user_token: str = "",
+    ) -> BoardroomScheduleResult:
+        """Fetch a room's bookings + deactivations for a date (会议室预定 V2 /v2/roomSchedule)."""
+        if not room_id:
+            return BoardroomScheduleResult(success=False, error="room_id is required")
+        if not query_date:
+            return BoardroomScheduleResult(success=False, error="query_date is required")
+        if not grading_id:
+            return BoardroomScheduleResult(success=False, error="grading_id is required")
+        self._ensure_clients()
+        from .boardrooms import fetch_boardroom_schedule
+
+        app_token = await self._get_token()
+        return await fetch_boardroom_schedule(
+            self._config, app_token=app_token, room_id=room_id, query_date=query_date,
+            grading_id=grading_id, reserve_user_id=reserve_user_id, org_id=org_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_boardroom_reserve_detail(
+        self, reserve_room_id: str, *, grading_id: str = "", org_id: str = "", user_token: str = "",
+    ) -> BoardroomReserveDetailResult:
+        """Fetch reservation detail (会议室预定 V2 /v2/reserveDetail)."""
+        if not reserve_room_id:
+            return BoardroomReserveDetailResult(success=False, error="reserve_room_id is required")
+        self._ensure_clients()
+        from .boardrooms import fetch_boardroom_reserve_detail
+
+        app_token = await self._get_token()
+        return await fetch_boardroom_reserve_detail(
+            self._config, app_token=app_token, reserve_room_id=reserve_room_id,
+            grading_id=grading_id, org_id=org_id, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def reserve_boardroom(
+        self,
+        boardroom_id: str,
+        name: str,
+        grading_id: str,
+        reserve_time_start: str,
+        reserve_time_end: str,
+        notice_time: str,
+        *,
+        reserve_user: str = "",
+        org_id: str = "",
+        toastmaster: str = "",
+        leader: str = "",
+        leader_attend: str = "",
+        people_number: str = "",
+        other_demand: str = "",
+        is_video: str = "",
+        video_name: str = "",
+        user_list: list[str] | None = None,
+        invitation_user_list: list[str] | None = None,
+        table_cards: str = "",
+        reserve_type: str = BOARDROOM_RESERVE_TYPE_SINGLE,
+        repeat_type: str = "",
+        repeat_days: list[int] | None = None,
+        skip: str = "",
+        repeat_end_date: str = "",
+        user_token: str = "",
+    ) -> BoardroomReserveResult:
+        """Reserve a meeting room, single or repeating (会议室预定 V2 /v2/reserveRoom)."""
+        if not boardroom_id:
+            return BoardroomReserveResult(success=False, error="boardroom_id is required")
+        if not name:
+            return BoardroomReserveResult(success=False, error="name is required")
+        if not grading_id:
+            return BoardroomReserveResult(success=False, error="grading_id is required")
+        if not reserve_time_start:
+            return BoardroomReserveResult(success=False, error="reserve_time_start is required")
+        if not reserve_time_end:
+            return BoardroomReserveResult(success=False, error="reserve_time_end is required")
+        if not notice_time:
+            return BoardroomReserveResult(success=False, error="notice_time is required")
+        self._ensure_clients()
+        from .boardrooms import reserve_boardroom
+
+        app_token = await self._get_token()
+        return await reserve_boardroom(
+            self._config, app_token=app_token, boardroom_id=boardroom_id, name=name,
+            grading_id=grading_id, reserve_time_start=reserve_time_start,
+            reserve_time_end=reserve_time_end, notice_time=notice_time,
+            reserve_user=reserve_user, org_id=org_id, toastmaster=toastmaster,
+            leader=leader, leader_attend=leader_attend, people_number=people_number,
+            other_demand=other_demand, is_video=is_video, video_name=video_name,
+            user_list=user_list, invitation_user_list=invitation_user_list,
+            table_cards=table_cards, reserve_type=reserve_type, repeat_type=repeat_type,
+            repeat_days=repeat_days, skip=skip, repeat_end_date=repeat_end_date,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def edit_boardroom_reserve(
+        self,
+        reserve_id: str,
+        boardroom_id: str,
+        name: str,
+        grading_id: str,
+        reserve_time_start: str,
+        reserve_time_end: str,
+        notice_time: str,
+        *,
+        edit_type: str = BOARDROOM_EDIT_TYPE_CURRENT,
+        reserve_user: str = "",
+        org_id: str = "",
+        toastmaster: str = "",
+        leader: str = "",
+        leader_attend: str = "",
+        people_number: str = "",
+        other_demand: str = "",
+        is_video: str = "",
+        video_name: str = "",
+        user_list: list[str] | None = None,
+        invitation_user_list: list[str] | None = None,
+        table_cards: str = "",
+        reserve_type: str = BOARDROOM_RESERVE_TYPE_SINGLE,
+        repeat_type: str = "",
+        repeat_days: list[int] | None = None,
+        skip: str = "",
+        repeat_end_date: str = "",
+        user_token: str = "",
+    ) -> BoardroomReserveResult:
+        """Edit a reservation — only non-approval-flow bookings (会议室预定 V2 /v2/editReserve)."""
+        if not reserve_id:
+            return BoardroomReserveResult(success=False, error="reserve_id is required")
+        if not boardroom_id:
+            return BoardroomReserveResult(success=False, error="boardroom_id is required")
+        if not name:
+            return BoardroomReserveResult(success=False, error="name is required")
+        if not grading_id:
+            return BoardroomReserveResult(success=False, error="grading_id is required")
+        if not reserve_time_start:
+            return BoardroomReserveResult(success=False, error="reserve_time_start is required")
+        if not reserve_time_end:
+            return BoardroomReserveResult(success=False, error="reserve_time_end is required")
+        if not notice_time:
+            return BoardroomReserveResult(success=False, error="notice_time is required")
+        self._ensure_clients()
+        from .boardrooms import edit_boardroom_reserve
+
+        app_token = await self._get_token()
+        return await edit_boardroom_reserve(
+            self._config, app_token=app_token, reserve_id=reserve_id,
+            boardroom_id=boardroom_id, name=name, grading_id=grading_id,
+            reserve_time_start=reserve_time_start, reserve_time_end=reserve_time_end,
+            notice_time=notice_time, edit_type=edit_type, reserve_user=reserve_user,
+            org_id=org_id, toastmaster=toastmaster, leader=leader,
+            leader_attend=leader_attend, people_number=people_number,
+            other_demand=other_demand, is_video=is_video, video_name=video_name,
+            user_list=user_list, invitation_user_list=invitation_user_list,
+            table_cards=table_cards, reserve_type=reserve_type, repeat_type=repeat_type,
+            repeat_days=repeat_days, skip=skip, repeat_end_date=repeat_end_date,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def cancel_boardroom_reserve(
+        self, reserve_id: str, *, cancel_user_id: str = "", org_id: str = "",
+        cancel_reason: str = "", is_send: bool | None = None,
+        notify_user_list: list[str] | None = None, cancel_video: str = "",
+        cancel_type: str = "", user_token: str = "",
+    ) -> BoardroomOpResult:
+        """Cancel a reservation — status 0/1/5 only (会议室预定 V2 /v2/reserveCancel)."""
+        if not reserve_id:
+            return BoardroomOpResult(success=False, error="reserve_id is required")
+        self._ensure_clients()
+        from .boardrooms import cancel_boardroom_reserve
+
+        app_token = await self._get_token()
+        return await cancel_boardroom_reserve(
+            self._config, app_token=app_token, reserve_id=reserve_id,
+            cancel_user_id=cancel_user_id, org_id=org_id, cancel_reason=cancel_reason,
+            is_send=is_send, notify_user_list=notify_user_list, cancel_video=cancel_video,
+            cancel_type=cancel_type, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def confirm_boardroom_sign(
+        self, reserve_id: str, *, org_id: str = "", user_token: str = "",
+    ) -> BoardroomOpResult:
+        """Scan-code confirmation — status 1 only (会议室预定 V2 /v2/confirmSign)."""
+        if not reserve_id:
+            return BoardroomOpResult(success=False, error="reserve_id is required")
+        self._ensure_clients()
+        from .boardrooms import confirm_boardroom_sign
+
+        app_token = await self._get_token()
+        return await confirm_boardroom_sign(
+            self._config, app_token=app_token, reserve_id=reserve_id,
+            org_id=org_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_my_boardroom_reserves(
+        self, grading_id: str, *, keys: str = "", start_time: str = "", end_time: str = "",
+        boardroom_id: str = "", floor_ids: list[str] | None = None,
+        page: int = 1, limit: int = 10, lx_user_id: str = "", org_id: str = "",
+        user_token: str = "",
+    ) -> BoardroomListResult:
+        """Page my reservations (会议室预定 V2 /v2/myReserveList)."""
+        if not grading_id:
+            return BoardroomListResult(success=False, error="grading_id is required")
+        self._ensure_clients()
+        from .boardrooms import fetch_my_boardroom_reserves
+
+        app_token = await self._get_token()
+        return await fetch_my_boardroom_reserves(
+            self._config, app_token=app_token, grading_id=grading_id, keys=keys,
+            start_time=start_time, end_time=end_time, boardroom_id=boardroom_id,
+            floor_ids=floor_ids, page=page, limit=limit, lx_user_id=lx_user_id,
+            org_id=org_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_boardroom_gradings(
+        self, *, lx_user_id: str = "", org_id: str = "", user_token: str = "",
+    ) -> BoardroomGradingListResult:
+        """Fetch gradings visible to the user (会议室预定 V2 /v2/gradingList)."""
+        self._ensure_clients()
+        from .boardrooms import fetch_boardroom_gradings
+
+        app_token = await self._get_token()
+        return await fetch_boardroom_gradings(
+            self._config, app_token=app_token, lx_user_id=lx_user_id, org_id=org_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_boardroom_area_offices(
+        self, grading_id: str, *, user_token: str = "",
+    ) -> BoardroomAreaListResult:
+        """Fetch office areas under a grading (会议室预定 V2 /v2/areaOfficeList)."""
+        if not grading_id:
+            return BoardroomAreaListResult(success=False, error="grading_id is required")
+        self._ensure_clients()
+        from .boardrooms import fetch_boardroom_area_offices
+
+        app_token = await self._get_token()
+        return await fetch_boardroom_area_offices(
+            self._config, app_token=app_token, grading_id=grading_id,
             user_token=user_token, http_client=self._http_client,
         )
 

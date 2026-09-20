@@ -6,7 +6,7 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-507-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-525-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
@@ -37,6 +37,7 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
 - **Notices (通知系统)** — envoyer des notifications via un compte officiel (texte/lien, ciblage téléphone/staff, indicateurs de confirmation/transfert/réponse, stratégies de rappel, pièces jointes), lister les comptes officiels d'une organisation
 - **Questionnaires (问卷系统)** — créer/mettre à jour/publier/retirer/terminer/supprimer des questionnaires, gestion groupée des questions, listes paginées (comptes officiels, créés, participés), enregistrements et export des réponses, URL de téléversement pré-signée
+- **Boardroom (会议室预定 V2)** — recherche de salles (zone/étage/équipement/créneau), détails et planning journalier, réservation/modification (simple et récurrente), annulation, confirmation par scan, mes réservations (paginées), listes de gradings et zones
 - **Commandes de bot** — créer/gérer les entrées de commande de bot
 - **Applications personnelles** — gérer les bots personnels
 - **Événements de callback** — 25 types d'événements, parsing structuré, décryptage AES (spec 4.10.1.4), vérification de signature SHA1
@@ -534,6 +535,34 @@ detail = await client.fetch_questionnaire_answer_detail(account_code, page.items
 print(detail.answer_user_name, detail.answers)   # answers: {questionCode: {context}}
 ```
 
+## 11. Boardroom (会议室预定 V2)
+
+Meeting-room lookup and reservation. ``gradingId`` (分区ID) is required by most
+endpoints — fetch visible gradings first. Several doc fields use the historical
+spelling ``Fooler`` (= Floor). Reserve times use ``yyyy-MM-dd HH:mm:ss``.
+
+```python
+# 1) Find visible gradings, then office areas, then rooms
+gradings = await client.fetch_boardroom_gradings()
+grading_id = gradings.gradings[0]["id"]
+areas = await client.fetch_boardroom_area_offices(grading_id)
+rooms = await client.fetch_boardroom_list(grading_id=grading_id, query_date="2026-07-22")
+
+# 2) Check a room's schedule for the day, then reserve
+schedule = await client.fetch_boardroom_schedule(rooms.items[0]["id"], "2026-07-22", grading_id)
+print(schedule.reserves, schedule.deactivations)
+
+r = await client.reserve_boardroom(
+    boardroom_id=rooms.items[0]["id"], name="项目周会", grading_id=grading_id,
+    reserve_time_start="2026-07-22 09:00:00", reserve_time_end="2026-07-22 10:00:00",
+    notice_time="会前15分钟", people_number="10",
+)
+print(r.reserve_code, r.status)   # status: 0审批中 1待扫码确认 5预定成功 ...
+
+# 3) Cancel (status 0/1/5 only) or confirm
+await client.cancel_boardroom_reserve(r.reserve_id, cancel_reason="改期")
+```
+
 ## Matrice de capacités des types de messages
 
 | msgType | Markdown | @mention | Attachments | Canaux privés | Chat de groupe | Notes |
@@ -698,6 +727,7 @@ lansenger-sdk-python/
 │   ├── todos.py             # Todo unifié
 │   ├── notices.py           # Notifications (通知系统)
 │   ├── questionnaires.py    # Questionnaires (问卷系统)
+│   ├── boardrooms.py        # Boardroom (会议室预定 V2)
 │   ├── calendars.py         # Calendrier & Schedule (incluant mise à jour 4.23.12, métadonnées participants 4.23.17)
 │   ├── reminders.py         # Rappels urgents de messages (4.6.14)
 │   └── users.py             # Infos utilisateur

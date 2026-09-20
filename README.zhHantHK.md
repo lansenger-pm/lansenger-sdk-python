@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-507-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 341](https://img.shields.io/badge/Tests-525-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 零框架依賴——僅依賴 `httpx`。可適配任何非同步或同步 Python 專案。
 
@@ -37,6 +37,7 @@
 - **統一待辦** — 建立、更新、刪除、查詢、執行人管理、狀態統計
 - **通知系統** — 透過官方帳號發送通知（文字/連結內容、手機號/staffId 兩種投放、確認/轉發/回覆標誌、提醒策略、附件），查詢組織官方帳號
 - **問卷系統** — 建立/更新/發布/撤回/結束/刪除問卷，批次管理題目，官方帳號與我建立/我參與的列表（分頁），答卷記錄與匯出，預簽名上傳地址
+- **會議室預訂 V2** — 會議室檢索（辦公區/樓層/設備/時段篩選），詳情與當日預訂情況，預訂與修改（單次/重複），取消與掃碼確認，我的預訂（分頁），分級與辦公區列表
 - **機械人命令** — 創建/查詢/刪除機械人快捷命令
 - **個人應用** — 創建/修改/查詢/刪除/列表個人機械人應用
 - **回呼事件** — 25 種事件類型、結構化訊息解析、AES 解密（按 4.10.1.4規範）、SHA1 簽名驗證
@@ -530,6 +531,33 @@ detail = await client.fetch_questionnaire_answer_detail(account_code, page.items
 print(detail.answer_user_name, detail.answers)   # answers: {questionCode: {context}}
 ```
 
+## 11. 会议室预定（会议室预定 V2）
+
+会议室检索与预订。多数接口需要 ``gradingId``（分区ID）—— 先查可见分级。
+文档部分字段使用历史拼写 ``Fooler``（= Floor）。预订时间格式 ``yyyy-MM-dd HH:mm:ss``。
+
+```python
+# 1) 查可见分级 → 办公区 → 会议室
+gradings = await client.fetch_boardroom_gradings()
+grading_id = gradings.gradings[0]["id"]
+areas = await client.fetch_boardroom_area_offices(grading_id)
+rooms = await client.fetch_boardroom_list(grading_id=grading_id, query_date="2026-07-22")
+
+# 2) 查当日预订情况，然后预订
+schedule = await client.fetch_boardroom_schedule(rooms.items[0]["id"], "2026-07-22", grading_id)
+print(schedule.reserves, schedule.deactivations)
+
+r = await client.reserve_boardroom(
+    boardroom_id=rooms.items[0]["id"], name="项目周会", grading_id=grading_id,
+    reserve_time_start="2026-07-22 09:00:00", reserve_time_end="2026-07-22 10:00:00",
+    notice_time="会前15分钟", people_number="10",
+)
+print(r.reserve_code, r.status)   # 状态：0审批中 1待扫码确认 5预定成功 ...
+
+# 3) 取消（仅状态 0/1/5）或扫码确认
+await client.cancel_boardroom_reserve(r.reserve_id, cancel_reason="改期")
+```
+
 ## 訊息類型能力矩陣
 
 | msgType | Markdown | @提及 | 附件 | 私聊通道 | 群聊 | 備註 |
@@ -694,6 +722,7 @@ lansenger-sdk-python/
 │   ├── todos.py             # 統一待辦
 │   ├── notices.py           # 通知系统
 │   ├── questionnaires.py    # 問卷系統
+│   ├── boardrooms.py        # 會議室預訂 V2
 │   ├── calendars.py         # 日曆日程（含更新 4.23.12、參會人元資料 4.23.17）
 │   ├── reminders.py         # 加急提醒（4.6.14）
 │   └── users.py             # 使用者資訊

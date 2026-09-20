@@ -56,6 +56,14 @@ from .models import (
     QuestionnaireRecordResult,
     QuestionnaireSaveResult,
     QuestionnaireUploadUrlResult,
+    BoardroomAreaListResult,
+    BoardroomDetailResult,
+    BoardroomGradingListResult,
+    BoardroomListResult,
+    BoardroomOpResult,
+    BoardroomReserveDetailResult,
+    BoardroomReserveResult,
+    BoardroomScheduleResult,
     OrgInfoResult,
     PersonalAppCreateResult,
     PersonalAppInfoResult,
@@ -2511,4 +2519,155 @@ class LansengerSyncClient:
         return _run_async(self._ephemeral_call(
             "fetch_questionnaire_upload_url",
             file_name=file_name, md5=md5, size=size, user_token=user_token,
+        ))
+
+    # ── Boardroom (会议室预定 V2) (sync wrappers) ──────────────────────
+
+    def fetch_boardroom_list(
+        self, *, grading_id: str = "", area_office_id: str = "",
+        floor_ids: list | None = None, equipment: list | None = None,
+        reserve_time_start: str = "", reserve_time_end: str = "",
+        query_date: str = "", page: int = 1, limit: int = 10,
+        lx_user_id: str = "", org_id: str = "", user_token: str = "",
+    ) -> BoardroomListResult:
+        """Filter meeting rooms (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_boardroom_list",
+            grading_id=grading_id, area_office_id=area_office_id, floor_ids=floor_ids,
+            equipment=equipment, reserve_time_start=reserve_time_start,
+            reserve_time_end=reserve_time_end, query_date=query_date,
+            page=page, limit=limit, lx_user_id=lx_user_id, org_id=org_id,
+            user_token=user_token,
+        ))
+
+    def fetch_boardroom_detail(
+        self, room_id: str, *, org_id: str = "", user_token: str = "",
+    ) -> BoardroomDetailResult:
+        """Fetch meeting-room detail (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_boardroom_detail", room_id=room_id, org_id=org_id, user_token=user_token,
+        ))
+
+    def fetch_boardroom_schedule(
+        self, room_id: str, query_date: str, grading_id: str, *,
+        reserve_user_id: str = "", org_id: str = "", user_token: str = "",
+    ) -> BoardroomScheduleResult:
+        """Fetch a room's bookings for a date (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_boardroom_schedule", room_id=room_id, query_date=query_date,
+            grading_id=grading_id, reserve_user_id=reserve_user_id, org_id=org_id,
+            user_token=user_token,
+        ))
+
+    def fetch_boardroom_reserve_detail(
+        self, reserve_room_id: str, *, grading_id: str = "", org_id: str = "", user_token: str = "",
+    ) -> BoardroomReserveDetailResult:
+        """Fetch reservation detail (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_boardroom_reserve_detail", reserve_room_id=reserve_room_id,
+            grading_id=grading_id, org_id=org_id, user_token=user_token,
+        ))
+
+    def reserve_boardroom(
+        self, boardroom_id: str, name: str, grading_id: str,
+        reserve_time_start: str, reserve_time_end: str, notice_time: str, *,
+        reserve_user: str = "", org_id: str = "", toastmaster: str = "",
+        leader: str = "", leader_attend: str = "", people_number: str = "",
+        other_demand: str = "", is_video: str = "", video_name: str = "",
+        user_list: list | None = None, invitation_user_list: list | None = None,
+        table_cards: str = "", reserve_type: str = "0", repeat_type: str = "",
+        repeat_days: list | None = None, skip: str = "", repeat_end_date: str = "",
+        user_token: str = "",
+    ) -> BoardroomReserveResult:
+        """Reserve a meeting room (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "reserve_boardroom", boardroom_id=boardroom_id, name=name,
+            grading_id=grading_id, reserve_time_start=reserve_time_start,
+            reserve_time_end=reserve_time_end, notice_time=notice_time,
+            reserve_user=reserve_user, org_id=org_id, toastmaster=toastmaster,
+            leader=leader, leader_attend=leader_attend, people_number=people_number,
+            other_demand=other_demand, is_video=is_video, video_name=video_name,
+            user_list=user_list, invitation_user_list=invitation_user_list,
+            table_cards=table_cards, reserve_type=reserve_type, repeat_type=repeat_type,
+            repeat_days=repeat_days, skip=skip, repeat_end_date=repeat_end_date,
+            user_token=user_token,
+        ))
+
+    def edit_boardroom_reserve(
+        self, reserve_id: str, boardroom_id: str, name: str, grading_id: str,
+        reserve_time_start: str, reserve_time_end: str, notice_time: str, *,
+        edit_type: str = "1", reserve_user: str = "", org_id: str = "",
+        toastmaster: str = "", leader: str = "", leader_attend: str = "",
+        people_number: str = "", other_demand: str = "", is_video: str = "",
+        video_name: str = "", user_list: list | None = None,
+        invitation_user_list: list | None = None, table_cards: str = "",
+        reserve_type: str = "0", repeat_type: str = "", repeat_days: list | None = None,
+        skip: str = "", repeat_end_date: str = "", user_token: str = "",
+    ) -> BoardroomReserveResult:
+        """Edit a reservation (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "edit_boardroom_reserve", reserve_id=reserve_id, boardroom_id=boardroom_id,
+            name=name, grading_id=grading_id, reserve_time_start=reserve_time_start,
+            reserve_time_end=reserve_time_end, notice_time=notice_time,
+            edit_type=edit_type, reserve_user=reserve_user, org_id=org_id,
+            toastmaster=toastmaster, leader=leader, leader_attend=leader_attend,
+            people_number=people_number, other_demand=other_demand, is_video=is_video,
+            video_name=video_name, user_list=user_list,
+            invitation_user_list=invitation_user_list, table_cards=table_cards,
+            reserve_type=reserve_type, repeat_type=repeat_type, repeat_days=repeat_days,
+            skip=skip, repeat_end_date=repeat_end_date, user_token=user_token,
+        ))
+
+    def cancel_boardroom_reserve(
+        self, reserve_id: str, *, cancel_user_id: str = "", org_id: str = "",
+        cancel_reason: str = "", is_send: bool | None = None,
+        notify_user_list: list | None = None, cancel_video: str = "",
+        cancel_type: str = "", user_token: str = "",
+    ) -> BoardroomOpResult:
+        """Cancel a reservation (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "cancel_boardroom_reserve", reserve_id=reserve_id,
+            cancel_user_id=cancel_user_id, org_id=org_id, cancel_reason=cancel_reason,
+            is_send=is_send, notify_user_list=notify_user_list, cancel_video=cancel_video,
+            cancel_type=cancel_type, user_token=user_token,
+        ))
+
+    def confirm_boardroom_sign(
+        self, reserve_id: str, *, org_id: str = "", user_token: str = "",
+    ) -> BoardroomOpResult:
+        """Scan-code confirmation (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "confirm_boardroom_sign", reserve_id=reserve_id, org_id=org_id,
+            user_token=user_token,
+        ))
+
+    def fetch_my_boardroom_reserves(
+        self, grading_id: str, *, keys: str = "", start_time: str = "",
+        end_time: str = "", boardroom_id: str = "", floor_ids: list | None = None,
+        page: int = 1, limit: int = 10, lx_user_id: str = "", org_id: str = "",
+        user_token: str = "",
+    ) -> BoardroomListResult:
+        """Page my reservations (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_my_boardroom_reserves", grading_id=grading_id, keys=keys,
+            start_time=start_time, end_time=end_time, boardroom_id=boardroom_id,
+            floor_ids=floor_ids, page=page, limit=limit, lx_user_id=lx_user_id,
+            org_id=org_id, user_token=user_token,
+        ))
+
+    def fetch_boardroom_gradings(
+        self, *, lx_user_id: str = "", org_id: str = "", user_token: str = "",
+    ) -> BoardroomGradingListResult:
+        """Fetch visible gradings (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_boardroom_gradings", lx_user_id=lx_user_id, org_id=org_id,
+            user_token=user_token,
+        ))
+
+    def fetch_boardroom_area_offices(
+        self, grading_id: str, *, user_token: str = "",
+    ) -> BoardroomAreaListResult:
+        """Fetch office areas under a grading (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_boardroom_area_offices", grading_id=grading_id, user_token=user_token,
         ))

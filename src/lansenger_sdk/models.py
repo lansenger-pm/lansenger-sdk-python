@@ -1560,3 +1560,183 @@ class QuestionnaireUploadUrlResult:
         if self.error is not None:
             d["error"] = self.error
         return d
+
+
+@dataclass
+class BoardroomListResult:
+    """会议室预定 V2 /v2/roomList 与 /v2/myReserveList — PageInfo 结果。"""
+
+    success: bool
+    count: int = 0
+    items: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "count": self.count}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BoardroomDetailResult:
+    """会议室预定 V2 /v2/roomDetail — 会议室详情（字段子集，其余见 raw_response）。"""
+
+    success: bool
+    room_id: str | None = None
+    name: str | None = None
+    status: str | None = None
+    people_num: int | None = None
+    can_reserve_flag: str | None = None
+    address: str | None = None
+    area_name: str | None = None
+    grading_id: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in ("room_id", "name", "status", "people_num", "can_reserve_flag", "address", "area_name", "grading_id"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BoardroomScheduleResult:
+    """会议室预定 V2 /v2/roomSchedule — 当日预订与停用信息。"""
+
+    success: bool
+    room_id: str | None = None
+    name: str | None = None
+    people_num: int | None = None
+    can_reserve_flag: str | None = None
+    reserves: list[dict[str, Any]] | None = None
+    deactivations: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in ("room_id", "name", "people_num", "can_reserve_flag", "reserves", "deactivations"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BoardroomReserveDetailResult:
+    """会议室预定 V2 /v2/reserveDetail — 预订详情（字段子集，参会人/审批流见 raw_response）。"""
+
+    success: bool
+    reserve_id: str | None = None
+    boardroom_name: str | None = None
+    meeting_name: str | None = None
+    status: str | None = None
+    reserve_time_start: str | None = None
+    reserve_time_end: str | None = None
+    reserve_time: str | None = None
+    reserve_user_name: str | None = None
+    people_number: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in ("reserve_id", "boardroom_name", "meeting_name", "status", "reserve_time_start", "reserve_time_end", "reserve_time", "reserve_user_name", "people_number"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BoardroomReserveResult:
+    """会议室预定 V2 /v2/reserveRoom 与 /v2/editReserve — 预订/修改结果。"""
+
+    success: bool
+    reserve_id: str | None = None
+    reserve_code: str | None = None
+    boardroom_name: str | None = None
+    meeting_name: str | None = None
+    status: str | None = None
+    reserve_time_start: str | None = None
+    reserve_time_end: str | None = None
+    reserve_time: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in ("reserve_id", "reserve_code", "boardroom_name", "meeting_name", "status", "reserve_time_start", "reserve_time_end", "reserve_time"):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BoardroomOpResult:
+    """会议室预定 V2 /v2/reserveCancel 与 /v2/confirmSign — Boolean 操作结果。"""
+
+    success: bool
+    done: bool = False
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "done": self.done}
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BoardroomGradingListResult:
+    """会议室预定 V2 /v2/gradingList — 可见分级列表（id 即 gradingId）。"""
+
+    success: bool
+    total: int = 0
+    gradings: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.gradings is not None:
+            d["gradings"] = self.gradings
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class BoardroomAreaListResult:
+    """会议室预定 V2 /v2/areaOfficeList — 分级下办公区列表。"""
+
+    success: bool
+    total: int = 0
+    areas: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.areas is not None:
+            d["areas"] = self.areas
+        if self.error is not None:
+            d["error"] = self.error
+        return d

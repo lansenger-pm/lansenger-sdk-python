@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.10.0] - 2026-09-18
+
+### Added
+
+- **boardrooms**: 会议室预定 V2 `/xtra/boardroom/server/openapi/v2/` 全部 11 个端点 — 会议室检索（`fetch_boardroom_list`，按办公区/楼层/设备/时段筛选）、详情、当日预订与停用信息（`fetch_boardroom_schedule`）、预订详情（含参会人/审批流，raw_response 透传）、预订与修改（`reserve_boardroom` / `edit_boardroom_reserve`，支持单次与重复预订）、取消与扫码确认、我的预订分页、分级与办公区列表。
+- **client**: 11 个 async 方法与 `LansengerSyncClient` 阻塞镜像；`models` 新增 8 个 `Boardroom*` 结果模型。
+- **notes**: `gradingId`（分区ID）多数接口必填（缺失报错或静默空结果）；`user_token` 传入时 body 身份字段被服务端忽略；`Fooler` 为 `Floor` 历史拼写；预订时间格式 `yyyy-MM-dd HH:mm:ss`，roomList 筛选为 `yyyy-MM-dd HH:mm`。
+
+---
+
 ## [1.9.0] - 2026-09-18
 
 ### Added
