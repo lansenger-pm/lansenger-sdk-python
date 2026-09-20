@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.11.0] - 2026-09-20
+
+### Added
+
+- **personal_todos**: 个人待办 `/xtra/tdtask/server/openapi/v3/` 与资源接口 — 创建个人待办、按字段编辑个人待办、分页查询用户待办列表，以及资源上传、下载链接和预签名上传地址，共 6 个端点。
+- **client**: 6 个 async 方法与 `LansengerSyncClient` 阻塞镜像；`models` 新增 `PersonalTodoSaveResult`、`PersonalTodoListResult`、`PersonalTodoResourceResult`、`PersonalTodoUrlResult`。
+- **constants**: 个人待办类型、完成状态、优先级、平台来源，以及 9MB 资源上传上限。
+
+### Notes
+
+- **personal_todos**: 与应用身份的统一待办 `/xtra/task/unified/v1/` 完全分离；`orgId` 必须显式传入，编辑接口的 `orgId` 位于请求体顶层。
+- **personal_todos**: 服务端当前不提供完成/删除能力；文档中的 `status`、`execStatus` 等字段不生效，SDK 不伪装这些能力。
+- **personal_todos**: 兼容新环境成功码 `0` 和旧环境写接口成功码 `200`。
+
+---
+
 ## [1.10.0] - 2026-09-18
 
 ### Added

@@ -6,7 +6,7 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-525-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 530](https://img.shields.io/badge/Tests-530-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
@@ -38,6 +38,7 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Notices (通知系统)** — envoyer des notifications via un compte officiel (texte/lien, ciblage téléphone/staff, indicateurs de confirmation/transfert/réponse, stratégies de rappel, pièces jointes), lister les comptes officiels d'une organisation
 - **Questionnaires (问卷系统)** — créer/mettre à jour/publier/retirer/terminer/supprimer des questionnaires, gestion groupée des questions, listes paginées (comptes officiels, créés, participés), enregistrements et export des réponses, URL de téléversement pré-signée
 - **Boardroom (会议室预定 V2)** — recherche de salles (zone/étage/équipement/créneau), détails et planning journalier, réservation/modification (simple et récurrente), annulation, confirmation par scan, mes réservations (paginées), listes de gradings et zones
+- **Todos personnels (个人待办)** — créer/modifier/lister les todos personnels et gérer les pièces jointes, séparément des todos d'application
 - **Commandes de bot** — créer/gérer les entrées de commande de bot
 - **Applications personnelles** — gérer les bots personnels
 - **Événements de callback** — 25 types d'événements, parsing structuré, décryptage AES (spec 4.10.1.4), vérification de signature SHA1
@@ -563,6 +564,25 @@ print(r.reserve_code, r.status)   # status: 0审批中 1待扫码确认 5预定�
 await client.cancel_boardroom_reserve(r.reserve_id, cancel_reason="改期")
 ```
 
+## 12. Personal Todo (个人待办)
+
+Les todos personnels utilisent `/xtra/tdtask/server/openapi/v3/` et sont séparés
+des todos d'application. ``orgId`` doit être fourni explicitement ; l'API ne
+propose actuellement pas de terminer ou supprimer un todo.
+
+```python
+r = await client.save_personal_todo(
+    subject="Terminer le projet", start_time=1719792000000, due_time=1720195200000,
+    priority=1, create_user_id="staff-001", org_id="org-001", appid="app-001",
+    executors=[{"staffId": "staff-001", "opt": 1}],
+)
+await client.update_personal_todo(
+    r.todo_code, "org-001", ["subject"], subject="Terminer la version finale",
+)
+page = await client.fetch_personal_todo_list("org-001", "staff-001", status=0)
+print(page.total, page.items)
+```
+
 ## Matrice de capacités des types de messages
 
 | msgType | Markdown | @mention | Attachments | Canaux privés | Chat de groupe | Notes |
@@ -713,7 +733,7 @@ lansenger-sdk-python/
 │   ├── oauth.py             # Aides OAuth2
 │   ├── constants.py         # Endpoints API, types de médias, scopes OAuth
 │   ├── exceptions.py        # Hiérarchie LansengerError
-│   ├── models.py            # 38+ types de résultat dataclass
+│   ├── models.py            # 42+ types de résultat dataclass
 │   ├── contacts.py          # API Staff & infos org
 │   ├── departments.py       # API Départements
 │   ├── account_messages.py  # Canal compte officiel
@@ -728,10 +748,11 @@ lansenger-sdk-python/
 │   ├── notices.py           # Notifications (通知系统)
 │   ├── questionnaires.py    # Questionnaires (问卷系统)
 │   ├── boardrooms.py        # Boardroom (会议室预定 V2)
+│   ├── personal_todos.py    # Personal Todo (个人待办)
 │   ├── calendars.py         # Calendrier & Schedule (incluant mise à jour 4.23.12, métadonnées participants 4.23.17)
 │   ├── reminders.py         # Rappels urgents de messages (4.6.14)
 │   └── users.py             # Infos utilisateur
-├── tests/                   # 341 tests, tous passants
+├── tests/                   # 530 tests, tous passants
 ├── pyproject.toml
 └── README*.md               # READMEs en 5 langues
 ```

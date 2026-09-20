@@ -6,7 +6,7 @@ Framework-independent Python SDK for the Lansenger (蓝信) platform — support
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-525-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 530](https://img.shields.io/badge/Tests-530-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zero framework dependencies — only `httpx`. Works with any async or sync Python codebase.
 
@@ -38,6 +38,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Notices (通知系统)** — send official-account notices (text/link content, phone/staff targeting, confirm/forward/reply flags, reminder policies, attachments), query org official accounts
 - **Questionnaires (问卷系统)** — create/update/publish/withdraw/finish/delete questionnaires, batch question management, office-account & created/participated lists (paged), answer records and export, presigned upload URL
 - **Boardroom (会议室预定 V2)** — room lookup with area/floor/equipment/time filters, room detail & daily schedule, reserve/edit (single & repeating), cancel, scan-code confirmation, my reservations (paged), grading & office-area lists
+- **Personal todos (个人待办)** — create/edit/list user-owned personal todos and manage attachments; separate from application-identity todos
 - **Bot slash commands** (4.37) — create/query/delete Command entries for bot interaction menus
 - **Personal apps** (4.38) — create/update/query/delete/list personal bots with user token
 - **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
@@ -562,6 +563,25 @@ print(r.reserve_code, r.status)   # status: 0审批中 1待扫码确认 5预定�
 await client.cancel_boardroom_reserve(r.reserve_id, cancel_reason="改期")
 ```
 
+## 12. Personal Todo (个人待办)
+
+Personal todos use `/xtra/tdtask/server/openapi/v3/` and are separate from the
+application-identity Unified Todo API. ``orgId`` must be supplied explicitly;
+the API currently does not expose complete/delete operations.
+
+```python
+r = await client.save_personal_todo(
+    subject="完成项目方案", start_time=1719792000000, due_time=1720195200000,
+    priority=1, create_user_id="staff-001", org_id="org-001", appid="app-001",
+    executors=[{"staffId": "staff-001", "opt": 1}],
+)
+await client.update_personal_todo(
+    r.todo_code, "org-001", ["subject"], subject="完成项目最终方案",
+)
+page = await client.fetch_personal_todo_list("org-001", "staff-001", status=0)
+print(page.total, page.items)
+```
+
 ## Message Type Capability Matrix
 
 | msgType | Markdown | @mention | Attachments | Private Channels | Group Chat | Notes |
@@ -714,7 +734,7 @@ lansenger-sdk-python/
 │   ├── oauth.py             # OAuth2 helpers
 │   ├── constants.py         # API endpoints, media types, OAuth scopes
 │   ├── exceptions.py        # LansengerError hierarchy
-│   ├── models.py            # 38+ dataclass result types
+│   ├── models.py            # 42+ dataclass result types
 │   ├── contacts.py          # Staff & org info APIs
 │   ├── departments.py       # Department APIs
 │   ├── account_messages.py  # Public account channel
@@ -729,10 +749,11 @@ lansenger-sdk-python/
 │   ├── notices.py           # Notice (通知系统)
 │   ├── questionnaires.py    # Questionnaire (问卷系统)
 │   ├── boardrooms.py        # Boardroom (会议室预定 V2)
+│   ├── personal_todos.py    # Personal Todo (个人待办)
 │   ├── calendars.py         # Calendar & Schedule (including update 4.23.12, attendee-meta 4.23.17)
 │   ├── reminders.py         # Urgent message reminders (4.6.14)
 │   └── users.py             # User info
-├── tests/                   # 341 tests, all passing
+├── tests/                   # 530 tests, all passing
 ├── pyproject.toml
 └── README*.md               # 5-language READMEs
 ```

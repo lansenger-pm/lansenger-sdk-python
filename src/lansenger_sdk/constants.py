@@ -150,6 +150,15 @@ API_ENDPOINTS = {
         "last_answer_record": "/xtra/questionnaire/server/openapi/v1/lastAnswerRecord",
         "upload_url": "/xtra/questionnaire/server/openapi/v1/upload",
     },
+    # personal todo module (个人待办): distinct from the unified application todo API.
+    "personal_todos": {
+        "save": "/xtra/tdtask/server/openapi/v3/taskopt/savePersonalTask",
+        "update": "/xtra/tdtask/server/openapi/v3/taskopt/updatePersonalTask",
+        "user_list": "/xtra/tdtask/server/openapi/v3/user/list",
+        "resource_update": "/xtra/tdtask/server/openapi/resource/update",
+        "resource_download": "/xtra/tdtask/server/openapi/resource/getResourceDownload",
+        "resource_upload_url": "/xtra/tdtask/server/openapi/resource/getUploadUrl",
+    },
     "todo": {
         "create": "/xtra/task/unified/v1/todotask/create",
         "info_update": "/xtra/task/unified/v1/todotask/info/update",

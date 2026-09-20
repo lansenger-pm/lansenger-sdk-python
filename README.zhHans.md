@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 341](https://img.shields.io/badge/Tests-525-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 530](https://img.shields.io/badge/Tests-530-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 零框架依赖 — 仅依赖 `httpx`。兼容任何异步或同步 Python 项目。
 
@@ -38,6 +38,7 @@
 - **通知系统** — 通过官方账号发送通知（文本/链接内容、手机号/staffId 两种投放、确认/转发/回复标志、提醒策略、附件），查询组织官方账号
 - **问卷系统** — 创建/更新/发布/撤回/结束/删除问卷，批量管理题目，官方账号与我创建/我参与的列表（分页），答卷记录与导出，预签名上传地址
 - **会议室预定 V2** — 会议室检索（办公区/楼层/设备/时段筛选），详情与当日预订情况，预订与修改（单次/重复），取消与扫码确认，我的预订（分页），分级与办公区列表
+- **个人待办** — 创建、编辑、查询用户个人待办及附件；与应用身份的统一待办完全分离
 - **机器人命令** — 创建/查询/删除机器人快捷命令
 - **个人应用** — 创建/修改/查询/删除/列表个人机器人应用
 - **回调事件** — 25 种事件类型、结构化解析、AES 解密（按 4.10.1.4 规范）、SHA1 签名验证
@@ -558,6 +559,24 @@ print(r.reserve_code, r.status)   # 状态：0审批中 1待扫码确认 5预定
 await client.cancel_boardroom_reserve(r.reserve_id, cancel_reason="改期")
 ```
 
+## 12. 个人待办
+
+个人待办使用 `/xtra/tdtask/server/openapi/v3/`，与应用身份的统一待办接口完全分离。
+``orgId`` 必须显式传入；当前服务端不提供完成或删除能力。
+
+```python
+r = await client.save_personal_todo(
+    subject="完成项目方案", start_time=1719792000000, due_time=1720195200000,
+    priority=1, create_user_id="staff-001", org_id="org-001", appid="app-001",
+    executors=[{"staffId": "staff-001", "opt": 1}],
+)
+await client.update_personal_todo(
+    r.todo_code, "org-001", ["subject"], subject="完成项目最终方案",
+)
+page = await client.fetch_personal_todo_list("org-001", "staff-001", status=0)
+print(page.total, page.items)
+```
+
 ## 消息类型能力矩阵
 
 | msgType | Markdown | @提及 | 附件 | 私聊通道 | 群聊 | 备注 |
@@ -708,7 +727,7 @@ lansenger-sdk-python/
 │   ├── oauth.py             # OAuth2 工具
 │   ├── constants.py         # API 端点、媒体类型、OAuth 范围
 │   ├── exceptions.py        # LansengerError 异常层级
-│   ├── models.py            # 38+ dataclass 结果类型
+│   ├── models.py            # 42+ dataclass 结果类型
 │   ├── contacts.py          # 员工与组织信息 API
 │   ├── departments.py       # 部门 API
 │   ├── account_messages.py  # 公众号通道
@@ -723,10 +742,11 @@ lansenger-sdk-python/
 │   ├── notices.py           # 通知系统
 │   ├── questionnaires.py    # 问卷系统
 │   ├── boardrooms.py        # 会议室预定 V2
+│   ├── personal_todos.py    # 个人待办
 │   ├── calendars.py         # 日历与日程（含更新 4.23.12、参会人元数据 4.23.17）
 │   ├── reminders.py         # 加急提醒（4.6.14）
 │   └── users.py             # 用户信息
-├── tests/                   # 341 项测试，全部通过
+├── tests/                   # 530 项测试，全部通过
 ├── pyproject.toml
 └── README*.md               # 5 语言 README
 ```

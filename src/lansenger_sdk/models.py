@@ -857,6 +857,96 @@ class TodoTaskExecutorListResult:
 
 
 @dataclass
+class PersonalTodoSaveResult:
+    success: bool
+    todo_code: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.todo_code is not None:
+            d["todo_code"] = self.todo_code
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class PersonalTodoListResult:
+    success: bool
+    page_no: int = 0
+    page_size: int = 0
+    pages: int = 0
+    total: int = 0
+    has_more: bool = False
+    items: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "success": self.success,
+            "page_no": self.page_no,
+            "page_size": self.page_size,
+            "pages": self.pages,
+            "total": self.total,
+            "has_more": self.has_more,
+        }
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class PersonalTodoResourceResult:
+    success: bool
+    file_name: str | None = None
+    mime_type: str | None = None
+    suffix: str | None = None
+    size: int | None = None
+    md5: str | None = None
+    extension_info: str | None = None
+    resource_id: str | None = None
+    download_url: str | None = None
+    image_thumbnail_list: dict[str, Any] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for key in (
+            "file_name", "mime_type", "suffix", "size", "md5",
+            "extension_info", "resource_id", "download_url",
+            "image_thumbnail_list",
+        ):
+            v = getattr(self, key)
+            if v is not None:
+                d[key] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class PersonalTodoUrlResult:
+    success: bool
+    url: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.url is not None:
+            d["url"] = self.url
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
 class CalendarPrimaryResult:
     success: bool
     calendar_id: str | None = None

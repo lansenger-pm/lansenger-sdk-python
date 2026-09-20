@@ -103,3 +103,16 @@ def test_notices_endpoint_paths():
     assert "notices" in API_ENDPOINTS
     assert API_ENDPOINTS["notices"]["send"] == "/xtra/notice/server/openapi/v1/send"
     assert API_ENDPOINTS["notices"]["accounts_fetch"] == "/xtra/notice/server/openapi/v1/notice/account"
+
+
+def test_personal_todos_endpoint_paths():
+    assert "personal_todos" in API_ENDPOINTS
+    assert API_ENDPOINTS["personal_todos"]["save"] == "/xtra/tdtask/server/openapi/v3/taskopt/savePersonalTask"
+    assert API_ENDPOINTS["personal_todos"]["update"] == "/xtra/tdtask/server/openapi/v3/taskopt/updatePersonalTask"
+    assert API_ENDPOINTS["personal_todos"]["user_list"] == "/xtra/tdtask/server/openapi/v3/user/list"
+    assert API_ENDPOINTS["personal_todos"]["resource_update"] == "/xtra/tdtask/server/openapi/resource/update"
+    assert (
+        API_ENDPOINTS["personal_todos"]["resource_download"]
+        == "/xtra/tdtask/server/openapi/resource/getResourceDownload"
+    )
+    assert API_ENDPOINTS["personal_todos"]["resource_upload_url"] == "/xtra/tdtask/server/openapi/resource/getUploadUrl"

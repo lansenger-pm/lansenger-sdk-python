@@ -68,6 +68,10 @@ from .models import (
     PersonalAppCreateResult,
     PersonalAppInfoResult,
     PersonalAppListResult,
+    PersonalTodoListResult,
+    PersonalTodoResourceResult,
+    PersonalTodoSaveResult,
+    PersonalTodoUrlResult,
     QueryGroupsResult,
     ScheduleAttendeeMetaResult,
     ScheduleAttendeesResult,
@@ -2670,4 +2674,153 @@ class LansengerSyncClient:
         """Fetch office areas under a grading (blocking)."""
         return _run_async(self._ephemeral_call(
             "fetch_boardroom_area_offices", grading_id=grading_id, user_token=user_token,
+        ))
+
+    def save_personal_todo(
+        self,
+        subject: str,
+        start_time: int,
+        due_time: int,
+        priority: int,
+        create_user_id: str,
+        org_id: str,
+        appid: str,
+        *,
+        description: str = "",
+        parent_code: str = "",
+        group_id: str = "",
+        group_category_code: str = "",
+        finish_time: int | None = None,
+        status_tag_no: str = "",
+        status_tag_yes: str = "",
+        app_info_id: int | None = None,
+        app_category_id: int | None = None,
+        platform: int | None = None,
+        subscribe_status: int | None = None,
+        user_code: str = "",
+        executors: list | None = None,
+        copys: list | None = None,
+        resources: list | None = None,
+        reminds: list | None = None,
+        user_token: str = "",
+    ) -> PersonalTodoSaveResult:
+        """Create a personal todo (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "save_personal_todo", subject=subject, start_time=start_time,
+            due_time=due_time, priority=priority, create_user_id=create_user_id,
+            org_id=org_id, appid=appid, description=description,
+            parent_code=parent_code, group_id=group_id,
+            group_category_code=group_category_code, finish_time=finish_time,
+            status_tag_no=status_tag_no, status_tag_yes=status_tag_yes,
+            app_info_id=app_info_id, app_category_id=app_category_id,
+            platform=platform, subscribe_status=subscribe_status, user_code=user_code,
+            executors=executors, copys=copys, resources=resources, reminds=reminds,
+            user_token=user_token,
+        ))
+
+    def update_personal_todo(
+        self,
+        todo_code: str,
+        org_id: str,
+        update_fields: list,
+        *,
+        subject: str = "",
+        description: str = "",
+        start_time: int | None = None,
+        due_time: int | None = None,
+        finish_time: int | None = None,
+        priority: int | None = None,
+        status_tag_no: str = "",
+        status_tag_yes: str = "",
+        subscribe_status: int | None = None,
+        create_user_id: str = "",
+        group_id: str = "",
+        group_category_code: str = "",
+        appid: str = "",
+        executors: list | None = None,
+        copys: list | None = None,
+        resources: list | None = None,
+        reminds: list | None = None,
+        user_token: str = "",
+    ) -> PersonalTodoSaveResult:
+        """Edit a personal todo (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "update_personal_todo", todo_code=todo_code, org_id=org_id,
+            update_fields=update_fields, subject=subject, description=description,
+            start_time=start_time, due_time=due_time, finish_time=finish_time,
+            priority=priority, status_tag_no=status_tag_no, status_tag_yes=status_tag_yes,
+            subscribe_status=subscribe_status, create_user_id=create_user_id,
+            group_id=group_id, group_category_code=group_category_code, appid=appid,
+            executors=executors, copys=copys, resources=resources, reminds=reminds,
+            user_token=user_token,
+        ))
+
+    def fetch_personal_todo_list(
+        self,
+        org_id: str,
+        staff_id: str,
+        *,
+        page_no: int = 1,
+        page_size: int = 10,
+        status: int | None = None,
+        app_id: str = "",
+        app_category_name: str = "",
+        user_token: str = "",
+    ) -> PersonalTodoListResult:
+        """Page a user's personal todos (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_personal_todo_list", org_id=org_id, staff_id=staff_id,
+            page_no=page_no, page_size=page_size, status=status, app_id=app_id,
+            app_category_name=app_category_name, user_token=user_token,
+        ))
+
+    def upload_personal_todo_resource(
+        self,
+        app_id: str,
+        size: int,
+        file_name: str,
+        content_type: str,
+        file_data: str,
+        org_id: str,
+        *,
+        extension_info: str = "",
+        thumb: bool = False,
+        user_token: str = "",
+    ) -> PersonalTodoResourceResult:
+        """Upload a personal-todo resource (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "upload_personal_todo_resource", app_id=app_id, size=size,
+            file_name=file_name, content_type=content_type, file_data=file_data,
+            org_id=org_id, extension_info=extension_info, thumb=thumb,
+            user_token=user_token,
+        ))
+
+    def fetch_personal_todo_resource_download_url(
+        self,
+        resource_id: str,
+        org_id: str,
+        *,
+        file_name: str = "",
+        user_token: str = "",
+    ) -> PersonalTodoUrlResult:
+        """Fetch a personal-todo resource download URL (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_personal_todo_resource_download_url",
+            resource_id=resource_id, org_id=org_id, file_name=file_name,
+            user_token=user_token,
+        ))
+
+    def fetch_personal_todo_resource_upload_url(
+        self,
+        file_name: str,
+        md5: str,
+        size: int,
+        org_id: str,
+        *,
+        user_token: str = "",
+    ) -> PersonalTodoUrlResult:
+        """Fetch a presigned personal-todo resource upload URL (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_personal_todo_resource_upload_url", file_name=file_name,
+            md5=md5, size=size, org_id=org_id, user_token=user_token,
         ))

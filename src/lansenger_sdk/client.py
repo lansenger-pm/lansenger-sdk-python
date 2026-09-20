@@ -116,6 +116,10 @@ from .models import (
     PersonalAppCreateResult,
     PersonalAppInfoResult,
     PersonalAppListResult,
+    PersonalTodoListResult,
+    PersonalTodoResourceResult,
+    PersonalTodoSaveResult,
+    PersonalTodoUrlResult,
     QueryGroupsResult,
     ScheduleAttendeeMetaResult,
     ScheduleAttendeesUpdateResult,
@@ -4663,6 +4667,232 @@ class LansengerClient:
         return await fetch_boardroom_area_offices(
             self._config, app_token=app_token, grading_id=grading_id,
             user_token=user_token, http_client=self._http_client,
+        )
+
+    # ── Public API: Personal Todo (个人待办) ─────────────────────────────
+
+    async def save_personal_todo(
+        self,
+        subject: str,
+        start_time: int,
+        due_time: int,
+        priority: int,
+        create_user_id: str,
+        org_id: str,
+        appid: str,
+        *,
+        description: str = "",
+        parent_code: str = "",
+        group_id: str = "",
+        group_category_code: str = "",
+        finish_time: int | None = None,
+        status_tag_no: str = "",
+        status_tag_yes: str = "",
+        app_info_id: int | None = None,
+        app_category_id: int | None = None,
+        platform: int | None = None,
+        subscribe_status: int | None = None,
+        user_code: str = "",
+        executors: list[dict[str, Any]] | None = None,
+        copys: list[dict[str, Any]] | None = None,
+        resources: list[dict[str, Any]] | None = None,
+        reminds: list[dict[str, Any]] | None = None,
+        user_token: str = "",
+    ) -> PersonalTodoSaveResult:
+        """Create a personal todo (个人待办 /v3/taskopt/savePersonalTask)."""
+        if not subject:
+            return PersonalTodoSaveResult(success=False, error="subject is required")
+        if start_time is None:
+            return PersonalTodoSaveResult(success=False, error="start_time is required")
+        if due_time is None:
+            return PersonalTodoSaveResult(success=False, error="due_time is required")
+        if priority not in (0, 1, 2, 3):
+            return PersonalTodoSaveResult(success=False, error="priority must be 0, 1, 2, or 3")
+        if not create_user_id:
+            return PersonalTodoSaveResult(success=False, error="create_user_id is required")
+        if not org_id:
+            return PersonalTodoSaveResult(success=False, error="org_id is required")
+        if not appid:
+            return PersonalTodoSaveResult(success=False, error="appid is required")
+        self._ensure_clients()
+        from .personal_todos import save_personal_todo
+
+        app_token = await self._get_token()
+        return await save_personal_todo(
+            self._config, app_token=app_token, subject=subject,
+            start_time=start_time, due_time=due_time, priority=priority,
+            create_user_id=create_user_id, org_id=org_id, appid=appid,
+            description=description, parent_code=parent_code, group_id=group_id,
+            group_category_code=group_category_code, finish_time=finish_time,
+            status_tag_no=status_tag_no, status_tag_yes=status_tag_yes,
+            app_info_id=app_info_id, app_category_id=app_category_id,
+            platform=platform, subscribe_status=subscribe_status, user_code=user_code,
+            executors=executors, copys=copys, resources=resources, reminds=reminds,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def update_personal_todo(
+        self,
+        todo_code: str,
+        org_id: str,
+        update_fields: list[str],
+        *,
+        subject: str = "",
+        description: str = "",
+        start_time: int | None = None,
+        due_time: int | None = None,
+        finish_time: int | None = None,
+        priority: int | None = None,
+        status_tag_no: str = "",
+        status_tag_yes: str = "",
+        subscribe_status: int | None = None,
+        create_user_id: str = "",
+        group_id: str = "",
+        group_category_code: str = "",
+        appid: str = "",
+        executors: list[dict[str, Any]] | None = None,
+        copys: list[dict[str, Any]] | None = None,
+        resources: list[dict[str, Any]] | None = None,
+        reminds: list[dict[str, Any]] | None = None,
+        user_token: str = "",
+    ) -> PersonalTodoSaveResult:
+        """Edit selected fields of a personal todo (个人待办 /v3/taskopt/updatePersonalTask)."""
+        if not todo_code:
+            return PersonalTodoSaveResult(success=False, error="todo_code is required")
+        if not org_id:
+            return PersonalTodoSaveResult(success=False, error="org_id is required")
+        if not update_fields:
+            return PersonalTodoSaveResult(success=False, error="update_fields is required")
+        self._ensure_clients()
+        from .personal_todos import update_personal_todo
+
+        app_token = await self._get_token()
+        return await update_personal_todo(
+            self._config, app_token=app_token, todo_code=todo_code, org_id=org_id,
+            update_fields=update_fields, subject=subject, description=description,
+            start_time=start_time, due_time=due_time, finish_time=finish_time,
+            priority=priority, status_tag_no=status_tag_no, status_tag_yes=status_tag_yes,
+            subscribe_status=subscribe_status, create_user_id=create_user_id,
+            group_id=group_id, group_category_code=group_category_code, appid=appid,
+            executors=executors, copys=copys, resources=resources, reminds=reminds,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_personal_todo_list(
+        self,
+        org_id: str,
+        staff_id: str,
+        *,
+        page_no: int = 1,
+        page_size: int = 10,
+        status: int | None = None,
+        app_id: str = "",
+        app_category_name: str = "",
+        user_token: str = "",
+    ) -> PersonalTodoListResult:
+        """Page a user's personal todos (个人待办 /v3/user/list)."""
+        if not org_id:
+            return PersonalTodoListResult(success=False, error="org_id is required")
+        if not staff_id:
+            return PersonalTodoListResult(success=False, error="staff_id is required")
+        if status is not None and status not in (0, 1):
+            return PersonalTodoListResult(success=False, error="status must be 0 or 1")
+        self._ensure_clients()
+        from .personal_todos import fetch_personal_todo_list
+
+        app_token = await self._get_token()
+        return await fetch_personal_todo_list(
+            self._config, app_token=app_token, org_id=org_id, staff_id=staff_id,
+            page_no=page_no, page_size=page_size, status=status, app_id=app_id,
+            app_category_name=app_category_name, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def upload_personal_todo_resource(
+        self,
+        app_id: str,
+        size: int,
+        file_name: str,
+        content_type: str,
+        file_data: str,
+        org_id: str,
+        *,
+        extension_info: str = "",
+        thumb: bool = False,
+        user_token: str = "",
+    ) -> PersonalTodoResourceResult:
+        """Upload a personal-todo resource (个人待办 /resource/update)."""
+        if not app_id:
+            return PersonalTodoResourceResult(success=False, error="app_id is required")
+        if size <= 0:
+            return PersonalTodoResourceResult(success=False, error="size is required")
+        if not file_name:
+            return PersonalTodoResourceResult(success=False, error="file_name is required")
+        if not content_type:
+            return PersonalTodoResourceResult(success=False, error="content_type is required")
+        if not file_data:
+            return PersonalTodoResourceResult(success=False, error="file_data is required")
+        if not org_id:
+            return PersonalTodoResourceResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .personal_todos import upload_personal_todo_resource
+
+        app_token = await self._get_token()
+        return await upload_personal_todo_resource(
+            self._config, app_token=app_token, app_id=app_id, size=size,
+            file_name=file_name, content_type=content_type, file_data=file_data,
+            org_id=org_id, extension_info=extension_info, thumb=thumb,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_personal_todo_resource_download_url(
+        self,
+        resource_id: str,
+        org_id: str,
+        *,
+        file_name: str = "",
+        user_token: str = "",
+    ) -> PersonalTodoUrlResult:
+        """Fetch a personal-todo resource download URL (个人待办 /resource/getResourceDownload)."""
+        if not resource_id:
+            return PersonalTodoUrlResult(success=False, error="resource_id is required")
+        if not org_id:
+            return PersonalTodoUrlResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .personal_todos import fetch_personal_todo_resource_download_url
+
+        app_token = await self._get_token()
+        return await fetch_personal_todo_resource_download_url(
+            self._config, app_token=app_token, resource_id=resource_id, org_id=org_id,
+            file_name=file_name, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_personal_todo_resource_upload_url(
+        self,
+        file_name: str,
+        md5: str,
+        size: int,
+        org_id: str,
+        *,
+        user_token: str = "",
+    ) -> PersonalTodoUrlResult:
+        """Fetch a presigned personal-todo resource upload URL (个人待办 /resource/getUploadUrl)."""
+        if not file_name:
+            return PersonalTodoUrlResult(success=False, error="file_name is required")
+        if not md5:
+            return PersonalTodoUrlResult(success=False, error="md5 is required")
+        if size <= 0:
+            return PersonalTodoUrlResult(success=False, error="size is required")
+        if not org_id:
+            return PersonalTodoUrlResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .personal_todos import fetch_personal_todo_resource_upload_url
+
+        app_token = await self._get_token()
+        return await fetch_personal_todo_resource_upload_url(
+            self._config, app_token=app_token, file_name=file_name, md5=md5,
+            size=size, org_id=org_id, user_token=user_token,
+            http_client=self._http_client,
         )
 
     # ── Utility: Callback event parsing ───────────────────────────────
