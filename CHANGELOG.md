@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.8.0] - 2026-09-21
+
+### Added
+
+- **videoconference**: 视频会议开放能力域（`/xtra/videoconference/openapi/v1/*`，20 端点）——会议创建/修改/取消/结束、详情/列表/操作记录/进出记录、固定会议室、批量状态、事件订阅、会议参数、历史与进行中会议、主持人会控、成员邀请与列表、录像列表与下载链接、组织配置。创建会议强制唯一主持人校验；`member/control` 校验 opCode；录像下载链接最多 3 个。前提：组织安装视频会议应用并在开发者中心开通开放能力。文档：developer.lanxin.cn 视频会议模块。
+
 ## [1.7.5] - 2026-09-20
 
 ### Added

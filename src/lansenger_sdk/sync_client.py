@@ -69,6 +69,14 @@ from .models import (
     PersonalAppInfoResult,
     PersonalAppListResult,
     PersonalTodoListResult,
+    VideoconferenceConfResult,
+    VideoconferenceDetailResult,
+    VideoconferenceListResult,
+    VideoconferenceOpResult,
+    VideoconferenceParamResult,
+    VideoconferenceStatusListResult,
+    VideoconferenceVodListResult,
+    VideoconferenceVodUrlResult,
     PersonalTodoResourceResult,
     PersonalTodoSaveResult,
     PersonalTodoUrlResult,
@@ -2824,3 +2832,151 @@ class LansengerSyncClient:
             "fetch_personal_todo_resource_upload_url", file_name=file_name,
             md5=md5, size=size, org_id=org_id, user_token=user_token,
         ))
+
+    # ── Public API: Videoconference (视频会议开放能力) ────────────────────
+
+    def create_meeting(self, *, subject, start_time, members, org_id,
+                       auto_record=0, type=1, group_new=0,
+                       conf_password="", control_password="", mask_type=0,
+                       ext_attr="", join_mute=None, open_mute=None,
+                       enable_pre_join=None, user_stop_time=None,
+                       invite_admin=None, user_token="") -> VideoconferenceDetailResult:
+        """Create a meeting (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "create_meeting", subject=subject, start_time=start_time,
+            members=members, org_id=org_id, auto_record=auto_record, type=type,
+            group_new=group_new, conf_password=conf_password,
+            control_password=control_password, mask_type=mask_type,
+            ext_attr=ext_attr, join_mute=join_mute, open_mute=open_mute,
+            enable_pre_join=enable_pre_join, user_stop_time=user_stop_time,
+            invite_admin=invite_admin, user_token=user_token,
+        ))
+
+    def modify_meeting(self, *, mid, subject, start_time, members, org_id,
+                       operator, auto_record=0, type=1, group_new=0,
+                       conf_password="", control_password="", user_token="") -> VideoconferenceOpResult:
+        """Modify a meeting that has not started (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "modify_meeting", mid=mid, subject=subject, start_time=start_time,
+            members=members, org_id=org_id, operator=operator,
+            auto_record=auto_record, type=type, group_new=group_new,
+            conf_password=conf_password, control_password=control_password,
+            user_token=user_token,
+        ))
+
+    def cancel_meeting(self, *, mid, org_id, operator, user_token="") -> VideoconferenceOpResult:
+        """Cancel a meeting that has not started (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "cancel_meeting", mid=mid, org_id=org_id, operator=operator, user_token=user_token))
+
+    def stop_meeting(self, *, mid, org_id, operator, user_token="") -> VideoconferenceOpResult:
+        """End a running meeting (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "stop_meeting", mid=mid, org_id=org_id, operator=operator, user_token=user_token))
+
+    def fetch_meeting_detail(self, *, mid, org_id, operator, user_token="") -> VideoconferenceDetailResult:
+        """Meeting detail by mid (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_meeting_detail", mid=mid, org_id=org_id, operator=operator, user_token=user_token))
+
+    def fetch_meeting_list(self, *, org_id, start_time, end_time, fetch_range="all",
+                           staff_id="", limit=10, offset=0, user_token="") -> VideoconferenceListResult:
+        """Meeting list by time range (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_meeting_list", org_id=org_id, start_time=start_time,
+            end_time=end_time, fetch_range=fetch_range, staff_id=staff_id,
+            limit=limit, offset=offset, user_token=user_token))
+
+    def fetch_meeting_record_list(self, *, org_id, start_time, end_time, admin="",
+                                  create_source=0, limit=10, offset=0,
+                                  user_token="") -> VideoconferenceListResult:
+        """Meeting operation record list (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_meeting_record_list", org_id=org_id, start_time=start_time,
+            end_time=end_time, admin=admin, create_source=create_source,
+            limit=limit, offset=offset, user_token=user_token))
+
+    def fetch_member_simplerecord(self, *, mid, org_id, operator, limit=10,
+                                  offset=0, user_token="") -> VideoconferenceListResult:
+        """Member join/leave records (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_member_simplerecord", mid=mid, org_id=org_id,
+            operator=operator, limit=limit, offset=offset, user_token=user_token))
+
+    def fetch_fixroom_list(self, *, org_id, operator, limit=10, offset=0,
+                           user_token="") -> VideoconferenceListResult:
+        """Fixed (cloud) meeting-room list (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_fixroom_list", org_id=org_id, operator=operator,
+            limit=limit, offset=offset, user_token=user_token))
+
+    def fetch_meeting_status(self, *, mids, org_id, user_token="") -> VideoconferenceStatusListResult:
+        """Batch meeting status (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_meeting_status", mids=mids, org_id=org_id, user_token=user_token))
+
+    def subscribe_meeting_events(self, *, mid, org_id, events, call_back_info="",
+                                 user_token="") -> VideoconferenceOpResult:
+        """Subscribe meeting status-change events (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "subscribe_meeting_events", mid=mid, org_id=org_id, events=events,
+            call_back_info=call_back_info, user_token=user_token))
+
+    def fetch_meeting_params(self, *, meeting_number, org_id, operator, user_token="") -> VideoconferenceParamResult:
+        """Meeting params by meetingNumber (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_meeting_params", meeting_number=meeting_number, org_id=org_id,
+            operator=operator, user_token=user_token))
+
+    def fetch_history_meetings(self, *, org_id, operator, limit=10, offset=0,
+                               user_token="") -> VideoconferenceListResult:
+        """A person's past meetings (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_history_meetings", org_id=org_id, operator=operator,
+            limit=limit, offset=offset, user_token=user_token))
+
+    def fetch_active_meetings(self, *, org_id, operator, limit=10, offset=0,
+                              user_token="") -> VideoconferenceListResult:
+        """A person's running + reserved meetings (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_active_meetings", org_id=org_id, operator=operator,
+            limit=limit, offset=offset, user_token=user_token))
+
+    def control_member(self, *, mid, staff_id, op_code, operator, org_id,
+                       user_token="") -> VideoconferenceOpResult:
+        """Host controls a member (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "control_member", mid=mid, staff_id=staff_id, op_code=op_code,
+            operator=operator, org_id=org_id, user_token=user_token))
+
+    def invite_members(self, *, meeting_number, members, org_id, operator,
+                       user_token="") -> VideoconferenceOpResult:
+        """Invite members to a running meeting (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "invite_members", meeting_number=meeting_number, members=members,
+            org_id=org_id, operator=operator, user_token=user_token))
+
+    def fetch_member_list(self, *, mid, org_id, operator, limit=10, offset=0,
+                          user_token="") -> VideoconferenceListResult:
+        """Paged member list of a meeting (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_member_list", mid=mid, org_id=org_id, operator=operator,
+            limit=limit, offset=offset, user_token=user_token))
+
+    def fetch_vod_list(self, *, mid, org_id, operator, user_token="") -> VideoconferenceVodListResult:
+        """Recording list of a meeting (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_vod_list", mid=mid, org_id=org_id, operator=operator, user_token=user_token))
+
+    def fetch_vod_download_urls(self, *, vods, org_id, operator, user_token="") -> VideoconferenceVodUrlResult:
+        """Recording download URLs, max 3 vods (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_vod_download_urls", vods=vods, org_id=org_id,
+            operator=operator, user_token=user_token))
+
+    def fetch_org_videoconference_conf(self, *, org_id, meeting_number="",
+                                       operator="", user_token="") -> VideoconferenceConfResult:
+        """Org videoconference config (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_org_videoconference_conf", org_id=org_id,
+            meeting_number=meeting_number, operator=operator, user_token=user_token))

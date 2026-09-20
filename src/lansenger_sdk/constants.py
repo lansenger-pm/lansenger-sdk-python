@@ -47,6 +47,32 @@ API_ENDPOINTS = {
         "grading_list": "/xtra/boardroom/server/openapi/v2/gradingList",
         "area_office_list": "/xtra/boardroom/server/openapi/v2/areaOfficeList",
     },
+    # videoconference module (视频会议开放能力): standard app gateway,
+    # prefix /xtra/videoconference/openapi/v1 (docs: developer.lanxin.cn
+    # 视频会议 module; org needs the app installed + 开放能力 switch on).
+    "videoconferences": {
+        "meeting_create": "/xtra/videoconference/openapi/v1/meeting/create",
+        "meeting_modify": "/xtra/videoconference/openapi/v1/meeting/modify",
+        # server keeps the historical "cancle" spelling
+        "meeting_cancel": "/xtra/videoconference/openapi/v1/meeting/cancle",
+        "meeting_stop": "/xtra/videoconference/openapi/v1/meeting/stop",
+        "meeting_detail": "/xtra/videoconference/openapi/v1/meeting/detail",
+        "meeting_list": "/xtra/videoconference/openapi/v1/meeting/list",
+        "meeting_record_list": "/xtra/videoconference/openapi/v1/meeting/record/list",
+        "member_simplerecord": "/xtra/videoconference/openapi/v1/meeting/member/simplerecord",
+        "fixroom_list": "/xtra/videoconference/openapi/v1/meeting/fixroom/list",
+        "status_fetchmore": "/xtra/videoconference/openapi/v1/meeting/status/fetchmore",
+        "events_subscribe": "/xtra/videoconference/openapi/v1/meeting/events/subscribe",
+        "param_fetch": "/xtra/videoconference/openapi/v1/meeting/param/fetch",
+        "history_fetch": "/xtra/videoconference/openapi/v1/meeting/history/fetch",
+        "active_fetch": "/xtra/videoconference/openapi/v1/meeting/active/fetch",
+        "member_control": "/xtra/videoconference/openapi/v1/meeting/member/control",
+        "member_invite": "/xtra/videoconference/openapi/v1/meeting/member/invite",
+        "member_list": "/xtra/videoconference/openapi/v1/meeting/member/list",
+        "vod_list": "/xtra/videoconference/openapi/v1/meeting/vod/list",
+        "vod_download_url": "/xtra/videoconference/openapi/v1/vod/url/download/fetch",
+        "conf_fetch": "/xtra/videoconference/openapi/v1/conf/fetch",
+    },
     "websocket": {
         "endpoint": "/v1/ws/endpoint/create",
     },

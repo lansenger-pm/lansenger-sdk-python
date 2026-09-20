@@ -1830,3 +1830,170 @@ class BoardroomAreaListResult:
         if self.error is not None:
             d["error"] = self.error
         return d
+
+
+# ── Videoconference (视频会议开放能力) ──────────────────────────────────
+
+
+@dataclass
+class VideoconferenceOpResult:
+    """视频会议 Boolean 操作（create 系列 op 端点：取消/结束/会控/邀请/事件订阅）。"""
+
+    success: bool
+    done: bool = False
+    message: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "done": self.done}
+        if self.message is not None:
+            d["message"] = self.message
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class VideoconferenceDetailResult:
+    """视频会议 /meeting/create、/meeting/detail — 会议详情。"""
+
+    success: bool
+    mid: int | None = None
+    subject: str | None = None
+    meeting_number: str | None = None
+    start_time: int | None = None
+    stop_time: int | None = None
+    type: int | None = None
+    status: int | None = None
+    admin: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for k in ("mid", "subject", "meeting_number", "start_time", "stop_time",
+                  "type", "status", "admin"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class VideoconferenceListResult:
+    """视频会议分页列表（meeting/list、record/list、simplerecord、fixroom、history、active、member/list）。"""
+
+    success: bool
+    offset: int = 0
+    total: int = 0
+    items: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "offset": self.offset, "total": self.total}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class VideoconferenceStatusListResult:
+    """视频会议 /meeting/status/fetchmore — 批量会议状态。"""
+
+    success: bool
+    statuses: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.statuses is not None:
+            d["statuses"] = self.statuses
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class VideoconferenceParamResult:
+    """视频会议 /meeting/param/fetch — 会议参数信息。"""
+
+    success: bool
+    data: dict[str, Any] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.data is not None:
+            d["data"] = self.data
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class VideoconferenceVodListResult:
+    """视频会议 /meeting/vod/list — 会议录像列表。"""
+
+    success: bool
+    items: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class VideoconferenceVodUrlResult:
+    """视频会议 /vod/url/download/fetch — 录像下载链接（最多 3 个）。"""
+
+    success: bool
+    data: dict[str, Any] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.data is not None:
+            d["data"] = self.data
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class VideoconferenceConfResult:
+    """视频会议 /conf/fetch — 组织视频会议配置（PRS ≥3.8）。"""
+
+    success: bool
+    max_person: int | None = None
+    default_max_person: int | None = None
+    allowed_record_flag: int | None = None
+    force_passwd_flag: int | None = None
+    space_size: int | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for k in ("max_person", "default_max_person", "allowed_record_flag",
+                  "force_passwd_flag", "space_size"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d

@@ -117,6 +117,14 @@ from .models import (
     PersonalAppInfoResult,
     PersonalAppListResult,
     PersonalTodoListResult,
+    VideoconferenceConfResult,
+    VideoconferenceDetailResult,
+    VideoconferenceListResult,
+    VideoconferenceOpResult,
+    VideoconferenceParamResult,
+    VideoconferenceStatusListResult,
+    VideoconferenceVodListResult,
+    VideoconferenceVodUrlResult,
     PersonalTodoResourceResult,
     PersonalTodoSaveResult,
     PersonalTodoUrlResult,
@@ -4666,6 +4674,329 @@ class LansengerClient:
         app_token = await self._get_token()
         return await fetch_boardroom_area_offices(
             self._config, app_token=app_token, grading_id=grading_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    # ── Public API: Videoconference (视频会议开放能力) ────────────────────
+
+    async def create_meeting(
+        self, *, subject: str, start_time: int,
+        members: list[dict[str, Any]], org_id: int | str,
+        auto_record: int = 0, type: int = 1, group_new: int = 0,
+        conf_password: str = "", control_password: str = "",
+        mask_type: int = 0, ext_attr: str = "", join_mute: int | None = None,
+        open_mute: int | None = None, enable_pre_join: int | None = None,
+        user_stop_time: int | None = None, invite_admin: int | None = None,
+        user_token: str = "",
+    ) -> VideoconferenceDetailResult:
+        """Create a meeting (视频会议 /meeting/create); exactly one host member."""
+        self._ensure_clients()
+        from .videoconferences import create_meeting
+
+        app_token = await self._get_token()
+        return await create_meeting(
+            self._config, app_token=app_token, subject=subject,
+            start_time=start_time, members=members, org_id=org_id,
+            auto_record=auto_record, type=type, group_new=group_new,
+            conf_password=conf_password, control_password=control_password,
+            mask_type=mask_type, ext_attr=ext_attr, join_mute=join_mute,
+            open_mute=open_mute, enable_pre_join=enable_pre_join,
+            user_stop_time=user_stop_time, invite_admin=invite_admin,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def modify_meeting(
+        self, *, mid: int | str, subject: str, start_time: int,
+        members: list[dict[str, Any]], org_id: int | str, operator: str,
+        auto_record: int = 0, type: int = 1, group_new: int = 0,
+        conf_password: str = "", control_password: str = "",
+        user_token: str = "",
+    ) -> VideoconferenceOpResult:
+        """Modify a meeting that has not started (视频会议 /meeting/modify)."""
+        self._ensure_clients()
+        from .videoconferences import modify_meeting
+
+        app_token = await self._get_token()
+        return await modify_meeting(
+            self._config, app_token=app_token, mid=mid, subject=subject,
+            start_time=start_time, members=members, org_id=org_id,
+            operator=operator, auto_record=auto_record, type=type,
+            group_new=group_new, conf_password=conf_password,
+            control_password=control_password, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def cancel_meeting(
+        self, *, mid: int | str, org_id: int | str, operator: str,
+        user_token: str = "",
+    ) -> VideoconferenceOpResult:
+        """Cancel a meeting that has not started (视频会议 /meeting/cancle)."""
+        self._ensure_clients()
+        from .videoconferences import cancel_meeting
+
+        app_token = await self._get_token()
+        return await cancel_meeting(
+            self._config, app_token=app_token, mid=mid, org_id=org_id,
+            operator=operator, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def stop_meeting(
+        self, *, mid: int | str, org_id: int | str, operator: str,
+        user_token: str = "",
+    ) -> VideoconferenceOpResult:
+        """End a running meeting (视频会议 /meeting/stop)."""
+        self._ensure_clients()
+        from .videoconferences import stop_meeting
+
+        app_token = await self._get_token()
+        return await stop_meeting(
+            self._config, app_token=app_token, mid=mid, org_id=org_id,
+            operator=operator, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_meeting_detail(
+        self, *, mid: int | str, org_id: int | str, operator: str,
+        user_token: str = "",
+    ) -> VideoconferenceDetailResult:
+        """Meeting detail by mid (视频会议 /meeting/detail)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_meeting_detail
+
+        app_token = await self._get_token()
+        return await fetch_meeting_detail(
+            self._config, app_token=app_token, mid=mid, org_id=org_id,
+            operator=operator, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_meeting_list(
+        self, *, org_id: int | str, start_time: int, end_time: int,
+        fetch_range: str = "all", staff_id: str = "", limit: int = 10,
+        offset: int = 0, user_token: str = "",
+    ) -> VideoconferenceListResult:
+        """Meeting list by time range (视频会议 /meeting/list)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_meeting_list
+
+        app_token = await self._get_token()
+        return await fetch_meeting_list(
+            self._config, app_token=app_token, org_id=org_id,
+            start_time=start_time, end_time=end_time, fetch_range=fetch_range,
+            staff_id=staff_id, limit=limit, offset=offset,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_meeting_record_list(
+        self, *, org_id: int | str, start_time: int, end_time: int,
+        admin: str = "", create_source: int = 0, limit: int = 10,
+        offset: int = 0, user_token: str = "",
+    ) -> VideoconferenceListResult:
+        """Meeting operation record list (视频会议 /meeting/record/list)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_meeting_record_list
+
+        app_token = await self._get_token()
+        return await fetch_meeting_record_list(
+            self._config, app_token=app_token, org_id=org_id,
+            start_time=start_time, end_time=end_time, admin=admin,
+            create_source=create_source, limit=limit, offset=offset,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_member_simplerecord(
+        self, *, mid: int | str, org_id: int | str, operator: str,
+        limit: int = 10, offset: int = 0, user_token: str = "",
+    ) -> VideoconferenceListResult:
+        """Member join/leave records (视频会议 /meeting/member/simplerecord)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_member_simplerecord
+
+        app_token = await self._get_token()
+        return await fetch_member_simplerecord(
+            self._config, app_token=app_token, mid=mid, org_id=org_id,
+            operator=operator, limit=limit, offset=offset,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_fixroom_list(
+        self, *, org_id: int | str, operator: str, limit: int = 10,
+        offset: int = 0, user_token: str = "",
+    ) -> VideoconferenceListResult:
+        """Fixed (cloud) meeting-room list (视频会议 /meeting/fixroom/list)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_fixroom_list
+
+        app_token = await self._get_token()
+        return await fetch_fixroom_list(
+            self._config, app_token=app_token, org_id=org_id,
+            operator=operator, limit=limit, offset=offset,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_meeting_status(
+        self, *, mids: list[int | str], org_id: int | str,
+        user_token: str = "",
+    ) -> VideoconferenceStatusListResult:
+        """Batch meeting status (视频会议 /meeting/status/fetchmore)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_meeting_status
+
+        app_token = await self._get_token()
+        return await fetch_meeting_status(
+            self._config, app_token=app_token, mids=mids, org_id=org_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def subscribe_meeting_events(
+        self, *, mid: int | str, org_id: int | str,
+        events: list[dict[str, Any]], call_back_info: str = "",
+        user_token: str = "",
+    ) -> VideoconferenceOpResult:
+        """Subscribe meeting status-change events (视频会议 /meeting/events/subscribe)."""
+        self._ensure_clients()
+        from .videoconferences import subscribe_meeting_events
+
+        app_token = await self._get_token()
+        return await subscribe_meeting_events(
+            self._config, app_token=app_token, mid=mid, org_id=org_id,
+            events=events, call_back_info=call_back_info,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_meeting_params(
+        self, *, meeting_number: str, org_id: int | str, operator: str,
+        user_token: str = "",
+    ) -> VideoconferenceParamResult:
+        """Meeting params by meetingNumber (视频会议 /meeting/param/fetch)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_meeting_params
+
+        app_token = await self._get_token()
+        return await fetch_meeting_params(
+            self._config, app_token=app_token, meeting_number=meeting_number,
+            org_id=org_id, operator=operator, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_history_meetings(
+        self, *, org_id: int | str, operator: str, limit: int = 10,
+        offset: int = 0, user_token: str = "",
+    ) -> VideoconferenceListResult:
+        """A person's past meetings (视频会议 /meeting/history/fetch)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_history_meetings
+
+        app_token = await self._get_token()
+        return await fetch_history_meetings(
+            self._config, app_token=app_token, org_id=org_id,
+            operator=operator, limit=limit, offset=offset,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_active_meetings(
+        self, *, org_id: int | str, operator: str, limit: int = 10,
+        offset: int = 0, user_token: str = "",
+    ) -> VideoconferenceListResult:
+        """A person's running + reserved meetings (视频会议 /meeting/active/fetch)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_active_meetings
+
+        app_token = await self._get_token()
+        return await fetch_active_meetings(
+            self._config, app_token=app_token, org_id=org_id,
+            operator=operator, limit=limit, offset=offset,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def control_member(
+        self, *, mid: int | str, staff_id: str, op_code: str,
+        operator: str, org_id: int | str, user_token: str = "",
+    ) -> VideoconferenceOpResult:
+        """Host controls a member (视频会议 /meeting/member/control)."""
+        self._ensure_clients()
+        from .videoconferences import control_member
+
+        app_token = await self._get_token()
+        return await control_member(
+            self._config, app_token=app_token, mid=mid, staff_id=staff_id,
+            op_code=op_code, operator=operator, org_id=org_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def invite_members(
+        self, *, meeting_number: str, members: list[dict[str, Any]],
+        org_id: int | str, operator: str, user_token: str = "",
+    ) -> VideoconferenceOpResult:
+        """Invite members to a running meeting (视频会议 /meeting/member/invite)."""
+        self._ensure_clients()
+        from .videoconferences import invite_members
+
+        app_token = await self._get_token()
+        return await invite_members(
+            self._config, app_token=app_token, meeting_number=meeting_number,
+            members=members, org_id=org_id, operator=operator,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_member_list(
+        self, *, mid: int | str, org_id: int | str, operator: str,
+        limit: int = 10, offset: int = 0, user_token: str = "",
+    ) -> VideoconferenceListResult:
+        """Paged member list of a meeting (视频会议 /meeting/member/list)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_member_list
+
+        app_token = await self._get_token()
+        return await fetch_member_list(
+            self._config, app_token=app_token, mid=mid, org_id=org_id,
+            operator=operator, limit=limit, offset=offset,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_vod_list(
+        self, *, mid: int | str, org_id: int | str, operator: str,
+        user_token: str = "",
+    ) -> VideoconferenceVodListResult:
+        """Recording list of a meeting (视频会议 /meeting/vod/list)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_vod_list
+
+        app_token = await self._get_token()
+        return await fetch_vod_list(
+            self._config, app_token=app_token, mid=mid, org_id=org_id,
+            operator=operator, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_vod_download_urls(
+        self, *, vods: list[dict[str, Any]], org_id: int | str,
+        operator: str, user_token: str = "",
+    ) -> VideoconferenceVodUrlResult:
+        """Recording download URLs, max 3 vods (视频会议 /vod/url/download/fetch)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_vod_download_urls
+
+        app_token = await self._get_token()
+        return await fetch_vod_download_urls(
+            self._config, app_token=app_token, vods=vods, org_id=org_id,
+            operator=operator, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_org_videoconference_conf(
+        self, *, org_id: int | str, meeting_number: str = "",
+        operator: str = "", user_token: str = "",
+    ) -> VideoconferenceConfResult:
+        """Org videoconference config (视频会议 /conf/fetch; PRS ≥3.8)."""
+        self._ensure_clients()
+        from .videoconferences import fetch_org_conf
+
+        app_token = await self._get_token()
+        return await fetch_org_conf(
+            self._config, app_token=app_token, org_id=org_id,
+            meeting_number=meeting_number, operator=operator,
             user_token=user_token, http_client=self._http_client,
         )
 
