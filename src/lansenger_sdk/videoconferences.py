@@ -64,10 +64,14 @@ from .url_helpers import build_api_url
 VC_MEMBER_ROLE_HOST = "admin"
 VC_MEMBER_ROLE_MEMBER = "participant"
 
-# opCode values for member/control (接口枚举字典)
+# Known opCode values for member/control (会控操作码) —— 仅供参考，不做客户端校验。
+# 服务端才是权威；本表可能不全，control_member 会把调用方的 op_code 原样透传
+# （客户端硬校验曾误挡合法值、又放行服务端不认的值，故移除）。
+# 实测修正 (2026-09-23, /meeting/member/control)：服务端认 "mute"（单人静音，
+# errCode 0），不认 "applyAudio"（errCode 105601 opCode 不存在），据此增删。
 VC_OPS = (
     "kick", "quit", "join", "handup", "openScreenShare", "closeScreenShare",
-    "openVideo", "closeVideo", "applyAudio", "applyVideo", "shareVideo",
+    "openVideo", "closeVideo", "mute", "applyVideo", "shareVideo",
     "cancelShareVideo", "muteall", "unmuteall", "remove", "call",
     "enforceOpenVideo", "setJoinHost", "cancelJoinHost", "inviteOpenAudio",
     "setHost", "grabHost",
@@ -103,8 +107,20 @@ def _page(data: dict | None) -> dict[str, Any]:
 
 
 def _op(data: dict | None) -> dict[str, Any]:
-    d = (data or {}).get("data") or {}
-    return {"done": d.get("code") == 0, "message": d.get("message")}
+    """构造 op 端点结果。
+
+    外层 `errCode` 已由 `_parse_response` 判为成功，所以 `done` 的语义是「请求是否完成」：
+    - 端点返回内层 `{code, message}`（cancel / stop / 会控 一类布尔端点）：按 `code == 0` 判；
+    - 端点返回业务对象（`modify` 返回的就是会议对象，无内层 `code`）：无从判断子状态，
+      即视为完成。此前一律按内层 `code` 判，导致 `modify` 的 `done` 恒为 False，
+      与 `create`（返回会议对象、走 DetailResult）行为不一致。
+    """
+    d = (data or {}).get("data")
+    if not isinstance(d, dict):
+        d = {}
+    if "code" in d:
+        return {"done": d.get("code") == 0, "message": d.get("message")}
+    return {"done": True, "message": d.get("message")}
 
 
 async def create_meeting(
@@ -178,7 +194,8 @@ async def modify_meeting(
     subject: str, start_time: int, members: list[dict[str, Any]],
     org_id: int | str, operator: str, auto_record: int = 0,
     type: int = 1, group_new: int = 0, conf_password: str = "",
-    control_password: str = "", user_token: str = "",
+    control_password: str = "", user_stop_time: int | None = None,
+    user_token: str = "",
     http_client: httpx.AsyncClient | None = None,
 ) -> VideoconferenceOpResult:
     """Modify a meeting that has not started yet (/meeting/modify)."""
@@ -193,6 +210,8 @@ async def modify_meeting(
         "confPassword": conf_password, "controlPassword": control_password,
         "member": _members(members),
     }
+    if user_stop_time is not None:
+        body["userStopTime"] = user_stop_time
     data, http_err = await do_post(config, url, body, http_client)
     if http_err:
         return VideoconferenceOpResult(success=False, error=http_err)
@@ -482,11 +501,11 @@ async def control_member(
     """Host controls a member (/meeting/member/control).
 
     Args:
-        op_code: one of VC_OPS (kick/join/handup/muteall/setHost/...).
+        op_code: the server-side operation code (e.g. mute/kick/handup/
+            setHost/...). Passed through verbatim — the server is
+            authoritative; VC_OPS is only a reference list of known values.
         staff_id: the member the operation applies to.
     """
-    if op_code not in VC_OPS:
-        return VideoconferenceOpResult(success=False, error=f"op_code must be one of {VC_OPS}")
     url = build_api_url(config, "videoconferences", "member_control", app_token, user_token=user_token)
     body: dict[str, Any] = {
         "orgId": int(org_id) if str(org_id).isdigit() else org_id,

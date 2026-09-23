@@ -2854,14 +2854,15 @@ class LansengerSyncClient:
 
     def modify_meeting(self, *, mid, subject, start_time, members, org_id,
                        operator, auto_record=0, type=1, group_new=0,
-                       conf_password="", control_password="", user_token="") -> VideoconferenceOpResult:
+                       conf_password="", control_password="",
+                       user_stop_time=None, user_token="") -> VideoconferenceOpResult:
         """Modify a meeting that has not started (blocking)."""
         return _run_async(self._ephemeral_call(
             "modify_meeting", mid=mid, subject=subject, start_time=start_time,
             members=members, org_id=org_id, operator=operator,
             auto_record=auto_record, type=type, group_new=group_new,
             conf_password=conf_password, control_password=control_password,
-            user_token=user_token,
+            user_stop_time=user_stop_time, user_token=user_token,
         ))
 
     def cancel_meeting(self, *, mid, org_id, operator, user_token="") -> VideoconferenceOpResult:

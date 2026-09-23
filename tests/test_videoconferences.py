@@ -1,5 +1,6 @@
 """Tests for the videoconference (视频会议开放能力) SDK domain."""
 
+import inspect
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -17,11 +18,13 @@ from lansenger_sdk.videoconferences import (
     cancel_meeting,
     control_member,
     create_meeting,
+    modify_meeting,
     fetch_meeting_list,
     fetch_meeting_status,
     fetch_org_conf,
     fetch_vod_download_urls,
     fetch_vod_list,
+    subscribe_meeting_events,
 )
 
 
@@ -98,25 +101,139 @@ async def test_cancel_meeting_uses_cancle_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_control_member_validates_op_code(monkeypatch):
-    c = LansengerClient(_make_config())
-    monkeypatch.setattr(c, "_get_token", AsyncMock(return_value="tok"))
-    r = await c.control_member(mid=1, staff_id="u1", op_code="not_an_op",
-                               operator="u2", org_id="524288")
-    assert r.success is False and "op_code must be one of" in r.error
-    assert "muteall" in VC_OPS
+async def test_control_member_passes_op_code_through():
+    # 不再做客户端硬校验：未知 op_code 也原样透传给服务端（服务端才是权威）
+    mock = _mock_http_client({"errCode": 0, "data": {"code": 0, "message": "success"}})
+    r = await control_member(
+        _make_config(), app_token="tok", mid=1, staff_id="u1", op_code="not_an_op",
+        operator="u2", org_id="524288", user_token="ut1", http_client=mock,
+    )
+    assert r.success is True
+    assert mock.post.call_args.kwargs["json"]["opCode"] == "not_an_op"
+
+
+def test_vc_ops_is_reference_only():
+    # VC_OPS 现在只是「已知取值」参考表，不再用于拦截；保留实测修正
+    assert "mute" in VC_OPS and "applyAudio" not in VC_OPS
 
 
 @pytest.mark.asyncio
 async def test_control_member_body():
     mock = _mock_http_client({"errCode": 0, "data": {"code": 0, "message": "success"}})
     r = await control_member(
-        _make_config(), app_token="tok", mid=1, staff_id="u1", op_code="muteall",
+        _make_config(), app_token="tok", mid=1, staff_id="u1", op_code="mute",
         operator="u2", org_id="524288", user_token="ut1", http_client=mock,
     )
     assert r.success is True and r.done is True
     body = mock.post.call_args.kwargs["json"]
-    assert body["opCode"] == "muteall" and body["mid"] == 1 and body["staffId"] == "u1"
+    assert body["opCode"] == "mute" and body["mid"] == 1 and body["staffId"] == "u1"
+
+
+@pytest.mark.asyncio
+async def test_modify_meeting_passes_user_stop_time():
+    mock = _mock_http_client({"errCode": 0, "data": {"code": 0, "message": "success"}})
+    r = await modify_meeting(
+        _make_config(), app_token="tok", mid=1, subject="更新后的会议",
+        start_time=1700000000000, members=MEMBERS, org_id="524288",
+        operator="u2", user_stop_time=1700003600000, http_client=mock,
+    )
+    assert r.success is True
+    body = mock.post.call_args.kwargs["json"]
+    assert body["userStopTime"] == 1700003600000
+    # 不传 user_stop_time 时，body 里不应出现该字段
+    mock2 = _mock_http_client({"errCode": 0, "data": {"code": 0, "message": "success"}})
+    r2 = await modify_meeting(
+        _make_config(), app_token="tok", mid=1, subject="更新后的会议",
+        start_time=1700000000000, members=MEMBERS, org_id="524288",
+        operator="u2", http_client=mock2,
+    )
+    assert r2.success is True
+    assert "userStopTime" not in mock2.post.call_args.kwargs["json"]
+
+
+@pytest.mark.asyncio
+async def test_modify_meeting_done_true_on_meeting_object_response():
+    """modify 返回的是会议对象（没有内层 code），done 不应恒为 False。
+
+    响应形状取自 2026-09-23 对 /meeting/modify 的实测抓包。
+    """
+    meeting = {
+        "admin": "u2", "adminName": "李四", "autoRecord": 0, "confPassword": "",
+        "controlPassword": "", "createSource": 1, "ctime": 1790145779263,
+        "haveVodRecord": 0, "id": 1380079, "meetingNumber": "", "mtime": 1790148033630,
+        "startTime": 1790233200000, "status": 0, "stopTime": 0,
+        "subject": "测试预约 sdkvfy01 已改", "type": 1,
+    }
+    mock = _mock_http_client({"errCode": 0, "errMsg": "OK", "data": meeting})
+    r = await modify_meeting(
+        _make_config(), app_token="tok", mid=1380079, subject="测试预约 sdkvfy01 已改",
+        start_time=1790233200000, members=MEMBERS, org_id="14803712",
+        operator="u2", http_client=mock,
+    )
+    assert r.success is True
+    assert r.done is True
+
+
+@pytest.mark.asyncio
+async def test_op_done_false_when_inner_code_non_zero():
+    """有内层 code 的端点仍按 code == 0 判 done（保留原语义）。"""
+    mock = _mock_http_client({"errCode": 0, "data": {"code": 105213, "message": "会议未开始或已结束"}})
+    r = await cancel_meeting(
+        _make_config(), app_token="tok", mid=1, org_id="524288",
+        operator="u1", http_client=mock,
+    )
+    assert r.success is True
+    assert r.done is False
+    assert r.message == "会议未开始或已结束"
+
+
+@pytest.mark.asyncio
+async def test_op_done_true_when_no_payload():
+    """成功但完全没有 data 负载：三个 SDK 一致判为完成。
+
+    Go 的 fillVCOp / TS 的 _op 同义（此前 Go 会留下 Done=False）。
+    """
+    mock = _mock_http_client({"errCode": 0, "errMsg": "OK"})
+    r = await cancel_meeting(
+        _make_config(), app_token="tok", mid=1, org_id="524288",
+        operator="u1", http_client=mock,
+    )
+    assert r.success is True
+    assert r.done is True
+
+
+@pytest.mark.asyncio
+async def test_op_done_true_on_subscribe_events_shape():
+    """2026-09-23 实测 /meeting/events/subscribe 抓包：内层带 code，仍按 code == 0 判。"""
+    mock = _mock_http_client({
+        "errCode": 0, "errMsg": "OK",
+        "data": {"code": 0, "errCode": 0, "message": ""},
+    })
+    r = await subscribe_meeting_events(
+        _make_config(), app_token="tok", mid=1, org_id="524288",
+        events=[{"eventType": "meeting.start"}], http_client=mock,
+    )
+    assert r.success is True
+    assert r.done is True
+
+
+@pytest.mark.asyncio
+async def test_client_modify_meeting_forwards_user_stop_time(monkeypatch):
+    c = LansengerClient(_make_config())
+    monkeypatch.setattr(c, "_get_token", AsyncMock(return_value="tok"))
+    captured = {}
+
+    async def _fake_modify(config, app_token, **kwargs):
+        captured.update(kwargs)
+        return VideoconferenceOpResult(success=True)
+
+    monkeypatch.setattr("lansenger_sdk.videoconferences.modify_meeting", _fake_modify)
+    r = await c.modify_meeting(
+        mid=1, subject="更新后的会议", start_time=1700000000000, members=MEMBERS,
+        org_id="524288", operator="u2", user_stop_time=1700003600000,
+    )
+    assert r.success is True
+    assert captured["user_stop_time"] == 1700003600000
 
 
 @pytest.mark.asyncio
@@ -177,9 +294,12 @@ async def test_fetch_org_conf_maps_fields():
 def test_sync_client_exposes_videoconference():
     sync = LansengerSyncClient(_make_config())
     assert hasattr(sync, "create_meeting")
+    assert hasattr(sync, "modify_meeting")
     assert hasattr(sync, "fetch_meeting_list")
     assert hasattr(sync, "control_member")
     assert hasattr(sync, "fetch_org_videoconference_conf")
+    # sync 封装的 modify_meeting 必须接受 user_stop_time（与 create_meeting 一致）
+    assert "user_stop_time" in inspect.signature(sync.modify_meeting).parameters
 
 
 @pytest.mark.asyncio

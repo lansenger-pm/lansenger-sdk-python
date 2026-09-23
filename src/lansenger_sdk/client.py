@@ -4710,6 +4710,7 @@ class LansengerClient:
         members: list[dict[str, Any]], org_id: int | str, operator: str,
         auto_record: int = 0, type: int = 1, group_new: int = 0,
         conf_password: str = "", control_password: str = "",
+        user_stop_time: int | None = None,
         user_token: str = "",
     ) -> VideoconferenceOpResult:
         """Modify a meeting that has not started (视频会议 /meeting/modify)."""
@@ -4722,7 +4723,8 @@ class LansengerClient:
             start_time=start_time, members=members, org_id=org_id,
             operator=operator, auto_record=auto_record, type=type,
             group_new=group_new, conf_password=conf_password,
-            control_password=control_password, user_token=user_token,
+            control_password=control_password, user_stop_time=user_stop_time,
+            user_token=user_token,
             http_client=self._http_client,
         )
 
