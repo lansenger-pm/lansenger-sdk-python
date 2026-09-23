@@ -1687,6 +1687,10 @@ class LansengerClient:
 
         Returns:
             Path to the saved file.
+
+        Note: unlike most SDK methods (which return a *Result with a success
+        field), this raises LansengerFileError on failure and returns the path
+        string on success.
         """
         self._ensure_clients()
         from .media import download_media_to_file

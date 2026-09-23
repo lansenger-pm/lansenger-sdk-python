@@ -137,7 +137,7 @@ async def test_create_schedule_no_attendees():
 
 @pytest.mark.asyncio
 async def test_create_schedule_auto_fill_attendees_with_user_id():
-    """Empty attendees + user_id → auto-fills [{staffId: user_id, attendeeFlag: "required"}]."""
+    """Empty attendees + user_id → auto-fills [{staffId: user_id, attendeeFlag: "yes"}]."""
     config = _make_config()
     mock_client = _mock_http_client({"errCode": 0, "data": {"scheduleId": "sch_auto"}})
     result = await create_schedule(
@@ -153,7 +153,7 @@ async def test_create_schedule_auto_fill_attendees_with_user_id():
     # Verify the auto-filled attendees were sent in the POST body
     sent_body = mock_client.post.call_args.kwargs.get("json", {})
     assert "attendees" in sent_body
-    assert sent_body["attendees"] == [{"staffId": "user456", "attendeeFlag": "required"}]
+    assert sent_body["attendees"] == [{"staffId": "user456", "attendeeFlag": "yes"}]
 
 
 @pytest.mark.asyncio
@@ -161,7 +161,7 @@ async def test_create_schedule_preserves_provided_attendees_with_user_id():
     """Explicit attendees + user_id → provided attendees are used as-is (no override)."""
     config = _make_config()
     mock_client = _mock_http_client({"errCode": 0, "data": {"scheduleId": "sch1"}})
-    custom_attendees = [{"staffId": "staff1", "attendeeFlag": "optional"}]
+    custom_attendees = [{"staffId": "staff1", "attendeeFlag": "option"}]
     result = await create_schedule(
         config, app_token="tok", calendar_id="cal1", summary="Meeting",
         start_time={"date": "2024-01-01", "time": "10:00", "timeZone": "Asia/Shanghai"},
@@ -199,7 +199,7 @@ async def test_create_schedule_success():
         config, app_token="tok", calendar_id="cal1", summary="Meeting",
         start_time={"date": "2024-01-01", "time": "10:00", "timeZone": "Asia/Shanghai"},
         end_time={"date": "2024-01-01", "time": "11:00", "timeZone": "Asia/Shanghai"},
-        attendees=[{"staffId": "staff1", "attendeeFlag": "required"}],
+        attendees=[{"staffId": "staff1", "attendeeFlag": "yes"}],
         http_client=mock_client,
     )
     assert result.success is True
@@ -486,3 +486,38 @@ async def test_client_fetch_schedule_validation():
     assert result.success is False
     assert "calendar_id is required" in result.error
     await client.close()
+
+
+@pytest.mark.asyncio
+async def test_create_schedule_rejects_invalid_attendee_flag_locally():
+    """attendeeFlag not in server enum → local error, no HTTP call (LXBUGS-128487)."""
+    config = _make_config()
+    mock_client = AsyncMock()
+    result = await create_schedule(
+        config, app_token="tok", calendar_id="cal1", summary="Meeting",
+        start_time={"time": 1656468000, "timeZone": "Asia/Shanghai"},
+        end_time={"time": 1656475200, "timeZone": "Asia/Shanghai"},
+        attendees=[{"staffId": "staff1", "attendeeFlag": "required"}],
+        http_client=mock_client,
+    )
+    assert result.success is False
+    assert "attendeeFlag" in result.error
+    assert "yes" in result.error
+    mock_client.post.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_create_schedule_attendees_without_flag_pass():
+    """attendeeFlag omitted → allowed (server default)."""
+    config = _make_config()
+    mock_client = _mock_http_client({"errCode": 0, "data": {"scheduleId": "sch1"}})
+    result = await create_schedule(
+        config, app_token="tok", calendar_id="cal1", summary="Meeting",
+        start_time={"time": 1656468000, "timeZone": "Asia/Shanghai"},
+        end_time={"time": 1656475200, "timeZone": "Asia/Shanghai"},
+        attendees=[{"staffId": "staff1"}],
+        http_client=mock_client,
+    )
+    assert result.success is True
+    sent_body = mock_client.post.call_args.kwargs.get("json", {})
+    assert sent_body["attendees"] == [{"staffId": "staff1"}]

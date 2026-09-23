@@ -314,3 +314,40 @@ async def test_fetch_staff_basic_info_http_error():
     )
     assert result.success is False
     assert "HTTP error" in result.error
+
+
+@pytest.mark.asyncio
+async def test_search_staff_page_size_only_gets_default_page():
+    """page_size alone must still be sent (server requires page+page_size together) — LXBUGS-128510."""
+    config = _make_config()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = MagicMock(return_value={"errCode": 0, "data": {"hasMore": True, "total": 247, "staffInfo": []}})
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    result = await search_staff(config, app_token="tok", keyword="测试", user_token="ut1",
+                                page_size=5, http_client=mock_client)
+    assert result.success is True
+    url = mock_client.post.call_args.args[0]
+    assert "page=1" in url
+    assert "page_size=5" in url
+
+
+@pytest.mark.asyncio
+async def test_search_staff_page_and_page_size_sent_together():
+    config = _make_config()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = MagicMock(return_value={"errCode": 0, "data": {"hasMore": True, "total": 247, "staffInfo": []}})
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+
+    result = await search_staff(config, app_token="tok", keyword="测试", user_token="ut1",
+                                page=2, page_size=5, http_client=mock_client)
+    assert result.success is True
+    url = mock_client.post.call_args.args[0]
+    assert "page=2" in url
+    assert "page_size=5" in url

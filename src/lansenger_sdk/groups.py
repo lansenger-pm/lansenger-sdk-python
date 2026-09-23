@@ -285,6 +285,12 @@ async def check_is_in_group(
 
     ok, api_err = parse_api_response(data)
     if not ok:
+        # Server returns errCode=10000 "API服务 不可得" for a staff member who
+        # is not in the group (LXBUGS-128498) instead of isInGroup=false. Do
+        # NOT map it to is_in_group=False: the same code may also mean a real
+        # query failure — surface the ambiguity instead.
+        if api_err and "errCode=10000" in api_err:
+            api_err += " (the server returns this code both for query failures and for non-members; membership could not be determined)"
         return IsInGroupResult(success=False, error=api_err)
 
     d = data.get("data", {})

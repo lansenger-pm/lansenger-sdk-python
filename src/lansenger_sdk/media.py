@@ -367,6 +367,10 @@ async def download_media_to_file(
     Returns:
         Path to the saved file.
 
+    Note: unlike most SDK methods (which return a *Result with a success
+    field), this raises LansengerFileError on failure and returns the path
+    string on success.
+
     Raises:
         LansengerFileError if download or save fails.
     """

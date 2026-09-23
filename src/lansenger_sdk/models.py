@@ -1260,6 +1260,39 @@ class ChatListResult:
         return d
 
 
+# Keys whose string values are human-readable message text; used by
+# ChatMessageInfo.plain_text as a fallback for card payloads not covered by
+# the explicit branches above.
+_TEXT_KEYS = frozenset({"text", "content", "title", "summary", "description", "headTitle", "bodyTitle", "bodyContent"})
+_TEXT_SCAN_MAX_DEPTH = 4
+
+
+def _scan_message_text(obj: Any, depth: int = 0) -> str:
+    """Depth-limited scan for known text keys inside a message payload."""
+    if depth > _TEXT_SCAN_MAX_DEPTH:
+        return ""
+    parts: list[str] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k in _TEXT_KEYS:
+                if isinstance(v, str) and v.strip():
+                    parts.append(v.strip())
+                elif isinstance(v, (dict, list)):
+                    nested = _scan_message_text(v, depth + 1)
+                    if nested:
+                        parts.append(nested)
+            elif isinstance(v, (dict, list)):
+                nested = _scan_message_text(v, depth + 1)
+                if nested:
+                    parts.append(nested)
+    elif isinstance(obj, list):
+        for item in obj:
+            nested = _scan_message_text(item, depth + 1)
+            if nested:
+                parts.append(nested)
+    return " | ".join(parts)
+
+
 @dataclass
 class ChatMessageInfo:
     send_time: str = ""
@@ -1279,12 +1312,41 @@ class ChatMessageInfo:
         if isinstance(self.content, str):
             return self.content
         if isinstance(self.content, dict):
-            format_text = self.content.get("formatText")
+            c = self.content
+            format_text = c.get("formatText")
             if isinstance(format_text, dict):
-                return format_text.get("content", "")
-            text = self.content.get("text")
+                # OpenAPI 4.6.4 documents the body key as "text"; some
+                # writer paths use "content" — accept both.
+                ft = format_text.get("text") or format_text.get("content")
+                return ft if isinstance(ft, str) else ""
+            text = c.get("text")
             if isinstance(text, str):
                 return text
+            if isinstance(text, dict):
+                inner = text.get("content")
+                if isinstance(inner, str):
+                    return inner
+            card = c.get("appCard") or c.get("i18nAppCard")
+            if isinstance(card, dict):
+                parts = [card.get(k) for k in ("headTitle", "bodyTitle", "bodyContent")]
+                parts = [p for p in parts if isinstance(p, str) and p]
+                if parts:
+                    return " | ".join(parts)
+            link = c.get("linkCard")
+            if isinstance(link, dict):
+                parts = [link.get(k) for k in ("title", "description")]
+                parts = [p for p in parts if isinstance(p, str) and p]
+                if parts:
+                    return " | ".join(parts)
+            articles = c.get("appArticles")
+            if isinstance(articles, dict) and isinstance(articles.get("articles"), list):
+                titles = [
+                    a.get("title") for a in articles["articles"]
+                    if isinstance(a, dict) and isinstance(a.get("title"), str)
+                ]
+                if titles:
+                    return " | ".join(titles)
+            return _scan_message_text(c)
         return ""
 
 

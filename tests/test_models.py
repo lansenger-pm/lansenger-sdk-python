@@ -1,6 +1,7 @@
 """Tests for Lansenger SDK models."""
 
 from lansenger_sdk.models import (
+    ChatMessageInfo,
     SendMessageResult,
     QueryGroupsResult,
     UploadMediaResult,
@@ -254,3 +255,37 @@ def test_notice_account_list_result():
     assert d["success"] is True
     assert d["total"] == 2
     assert d["accounts"][1]["code"] == "ACC002"
+
+
+def _msg(message_type, content):
+    return ChatMessageInfo(send_time="", sender="s1", message_type=message_type, content=content)
+
+
+def test_plain_text_app_card():
+    m = _msg("other", {"appCard": {"headTitle": "构建通知", "bodyTitle": "状态", "bodyContent": "全部通过", "fields": [{"key": "k", "value": "v"}]}})
+    assert m.plain_text() == "构建通知 | 状态 | 全部通过"
+
+
+def test_plain_text_link_card():
+    m = _msg("other", {"linkCard": {"title": "标题", "description": "描述", "link": "https://x"}})
+    assert m.plain_text() == "标题 | 描述"
+
+
+def test_plain_text_app_articles():
+    m = _msg("other", {"appArticles": {"articles": [{"title": "A", "url": "u"}, {"title": "B", "url": "v"}]}})
+    assert m.plain_text() == "A | B"
+
+
+def test_plain_text_format_text_documented_key():
+    m = _msg("other", {"formatText": {"text": "md 正文", "formatType": 1}})
+    assert m.plain_text() == "md 正文"
+
+
+def test_plain_text_fallback_scan():
+    m = _msg("other", {"customType": {"nested": {"bodyContent": "兜底内容"}}})
+    assert m.plain_text() == "兜底内容"
+
+
+def test_plain_text_text_object_shape():
+    m = _msg("text", {"text": {"content": "hello"}})
+    assert m.plain_text() == "hello"

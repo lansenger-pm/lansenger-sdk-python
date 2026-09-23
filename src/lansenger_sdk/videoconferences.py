@@ -65,6 +65,10 @@ VC_MEMBER_ROLE_HOST = "admin"
 VC_MEMBER_ROLE_MEMBER = "participant"
 
 # opCode values for member/control (接口枚举字典)
+# Verified live (LXBUGS-128490): "kick" works; "muteall"/"unmuteall" are
+# rejected by the meeting server (errCode=105601 opCode不存在) in the tested
+# environment. They are kept here pending server-side confirmation — treat
+# 105601 as "value unsupported in this environment".
 VC_OPS = (
     "kick", "quit", "join", "handup", "openScreenShare", "closeScreenShare",
     "openVideo", "closeVideo", "applyAudio", "applyVideo", "shareVideo",
@@ -482,7 +486,9 @@ async def control_member(
     """Host controls a member (/meeting/member/control).
 
     Args:
-        op_code: one of VC_OPS (kick/join/handup/muteall/setHost/...).
+        op_code: one of VC_OPS (kick/join/handup/setHost/...). Some values
+            (e.g. muteall/unmuteall) may be rejected with errCode=105601
+            depending on the meeting server build.
         staff_id: the member the operation applies to.
     """
     if op_code not in VC_OPS:
