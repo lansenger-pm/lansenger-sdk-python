@@ -37,6 +37,32 @@ from .models import (
 )
 from .url_helpers import build_api_url
 
+# Server-accepted attendeeFlag values (OpenAPI 4.23.10). Values like
+# "required"/"optional"/"attendee"/"host" are NOT accepted — the server
+# rejects the whole request with errCode=40060.
+ATTENDEE_FLAG_YES = "yes"        # must attend
+ATTENDEE_FLAG_OPTION = "option"  # optional attendance
+ATTENDEE_FLAG_NO = "no"          # does not attend
+ATTENDEE_FLAGS = (ATTENDEE_FLAG_YES, ATTENDEE_FLAG_OPTION, ATTENDEE_FLAG_NO)
+
+# Time field structure (OpenAPI 4.23.10):
+#   {"time": 1656468000, "timeZone": "Asia/Shanghai"}  — time is Unix SECONDS
+#   all_day="yes": {"date": "2006-01-02", "timeZone": "UTC"} — date replaces time
+
+
+def _validate_attendees(attendees: list[dict[str, str]]) -> str | None:
+    """Return an error message for invalid attendee dicts, else None."""
+    for i, a in enumerate(attendees):
+        if not isinstance(a, dict) or "staffId" not in a:
+            return f"attendees[{i}] must be a dict with a 'staffId' key"
+        flag = a.get("attendeeFlag")
+        if flag is not None and flag not in ATTENDEE_FLAGS:
+            return (
+                f"attendees[{i}].attendeeFlag={flag!r} is not accepted by the server; "
+                f"valid values: {ATTENDEE_FLAGS}"
+            )
+    return None
+
 
 async def fetch_primary_calendar(
     config: LansengerConfig,
@@ -106,9 +132,9 @@ async def create_schedule(
     Args:
         calendar_id: Calendar openId.
         summary: Schedule title (max 1000 chars).
-        start_time: Dict with time/date/timeZone.
-        end_time: Dict with time/date/timeZone.
-        attendees: List of dicts with staffId + attendeeFlag.
+        start_time: Dict {"time": <unix seconds>, "timeZone": "IANA name"}; for all_day="yes" use {"date": "YYYY-MM-DD", "timeZone": "UTC"}.
+        end_time: Same structure as start_time.
+        attendees: List of dicts with staffId + optional attendeeFlag ("yes"/"option"/"no", default "yes").
         description: Optional description (max 6000 chars).
         all_day: "yes" or "no". Defaults to "no" if omitted.
         repeat_type: "no"/"day"/"week"/"month"/"year"/"work_day"/"custom". Defaults to "no" if omitted.
@@ -128,7 +154,9 @@ async def create_schedule(
     if not attendees and not user_id:
         return ScheduleCreateResult(success=False, error="attendees is required (or provide user_id to auto-fill creator)")
     if not attendees and user_id:
-        attendees = [{"staffId": user_id, "attendeeFlag": "required"}]
+        attendees = [{"staffId": user_id, "attendeeFlag": ATTENDEE_FLAG_YES}]
+    if (err := _validate_attendees(attendees)) is not None:
+        return ScheduleCreateResult(success=False, error=err)
 
     url = build_api_url(config, "calendars", "schedule_create", app_token, user_token=user_token, user_id=user_id, calendar_id=calendar_id)
 
@@ -292,8 +320,8 @@ async def update_schedule(
         expire_date_type: "no" or "yes".
         all_day: "yes" or "no".
         attendee_permissions: "can_modify"/"can_invite"/"can_see"/"none".
-        start_time: Dict with time/date/timeZone.
-        end_time: Dict with time/date/timeZone.
+        start_time: Dict {"time": <unix seconds>, "timeZone": "IANA name"}; for all_day="yes" use {"date": "YYYY-MM-DD", "timeZone": "UTC"}.
+        end_time: Same structure as start_time.
     """
     if not calendar_id:
         return ScheduleUpdateResult(success=False, error="calendar_id is required")

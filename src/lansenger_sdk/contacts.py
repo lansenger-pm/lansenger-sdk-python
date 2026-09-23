@@ -316,8 +316,12 @@ async def search_staff(
         return StaffSearchResult(success=False, error="user_token or user_id is required")
 
     url = build_api_url(config, "staffs", "search", app_token, user_token=user_token, user_id=user_id)
-    if page is not None and page_size is not None:
-        url += f"&page={page}&page_size={page_size}"
+    # Server requires page and page_size together (doc 4.1.16 v2); sending only
+    # one is silently ignored, so default page=1 when only page_size is given.
+    if page is not None or page_size is not None:
+        url += f"&page={page if page is not None else 1}&page_size={page_size if page_size is not None else 20}"
+    # NOTE: has_more may be unreliable (observed always true, LXBUGS-128510);
+    # prefer comparing len(staff_info) against total for pagination termination.
 
     body: dict[str, Any] = {
         "keyword": keyword,

@@ -61,9 +61,19 @@ async def create_stream_message(
         return StreamMessageResult(success=False, error=api_err)
 
     d = data.get("data", {})
+    msg_id = d.get("msgId")
+    # Server has been observed returning success with an empty payload
+    # (LXBUGS-128497); without a msgId the fetch step is unusable, so treat
+    # it as a failure instead of reporting success.
+    if not msg_id:
+        return StreamMessageResult(
+            success=False,
+            error="server returned success but no msgId; stream message is unusable",
+            raw_response=data,
+        )
     return StreamMessageResult(
         success=True,
-        message_id=d.get("msgId"),
+        message_id=msg_id,
         raw_response=data,
     )
 

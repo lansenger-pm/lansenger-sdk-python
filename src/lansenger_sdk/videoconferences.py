@@ -69,6 +69,9 @@ VC_MEMBER_ROLE_MEMBER = "participant"
 # （客户端硬校验曾误挡合法值、又放行服务端不认的值，故移除）。
 # 实测修正 (2026-09-23, /meeting/member/control)：服务端认 "mute"（单人静音，
 # errCode 0），不认 "applyAudio"（errCode 105601 opCode 不存在），据此增删。
+# Verified live (LXBUGS-128490): "kick" works；"muteall"/"unmuteall" 在测试环境
+# 被会议服务端拒绝（errCode=105601 opCode不存在），保留待服务端确认——把 105601
+# 当作「本环境不支持该取值」。
 VC_OPS = (
     "kick", "quit", "join", "handup", "openScreenShare", "closeScreenShare",
     "openVideo", "closeVideo", "mute", "applyVideo", "shareVideo",
@@ -504,6 +507,8 @@ async def control_member(
         op_code: the server-side operation code (e.g. mute/kick/handup/
             setHost/...). Passed through verbatim — the server is
             authoritative; VC_OPS is only a reference list of known values.
+            Some values (e.g. muteall/unmuteall) may be rejected with
+            errCode=105601 depending on the meeting server build.
         staff_id: the member the operation applies to.
     """
     url = build_api_url(config, "videoconferences", "member_control", app_token, user_token=user_token)
