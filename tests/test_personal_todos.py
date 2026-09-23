@@ -22,6 +22,8 @@ from lansenger_sdk.personal_todos import (
     fetch_personal_todo_list,
     fetch_personal_todo_resource_download_url,
     fetch_personal_todo_resource_upload_url,
+    build_personal_todo_resource_entry,
+    resource_entry_from_upload,
     save_personal_todo,
     update_personal_todo,
     upload_personal_todo_resource,
@@ -241,3 +243,86 @@ def test_sync_personal_todo_methods_exist():
         "fetch_personal_todo_resource_upload_url",
     ):
         assert callable(getattr(LansengerSyncClient, name))
+
+
+# ---------------------------------------------------------------------------
+# 附件条目构造（resources）
+# ---------------------------------------------------------------------------
+
+_UPLOAD_RAW = {
+    "errCode": 0,
+    "data": {
+        "fileName": "a.pdf",
+        "mimeType": "application/pdf",
+        "size": 10,
+        "resourceId": "res1",
+    },
+}
+
+_EXPECTED_ENTRY = {
+    "fileName": "a.pdf",
+    "resourceId": "res1",
+    "fileType": "application/pdf",  # 上传响应用 mimeType，挂附件必须叫 fileType
+    "fileSize": 10,                 # 上传响应用 size，挂附件必须叫 fileSize
+    "opt": 1,
+}
+
+
+def test_resource_entry_from_upload_accepts_raw_response():
+    """传 /resource/update 的原始响应（外层带 errCode）。"""
+    assert resource_entry_from_upload(_UPLOAD_RAW) == _EXPECTED_ENTRY
+
+
+def test_resource_entry_from_upload_accepts_inner_data():
+    """传已经剥掉外层的 data。"""
+    assert resource_entry_from_upload(_UPLOAD_RAW["data"]) == _EXPECTED_ENTRY
+
+
+def test_resource_entry_from_upload_accepts_result_object():
+    """传上传结果对象：参数名就叫 upload_result，但早期实现只认 dict，会 AttributeError。"""
+    result = PersonalTodoResourceResult(
+        success=True, file_name="a.pdf", mime_type="application/pdf",
+        size=10, resource_id="res1",
+    )
+    assert resource_entry_from_upload(result) == _EXPECTED_ENTRY
+
+
+@pytest.mark.asyncio
+async def test_resource_entry_from_upload_object_matches_raw_response():
+    """端到端：真实上传一次，两条入口必须产出同一个条目。"""
+    mock = _mock_http_client(_UPLOAD_RAW)
+    result = await upload_personal_todo_resource(
+        _make_config(), app_token="tok", app_id="app1", size=10,
+        file_name="a.pdf", content_type="application/pdf", file_data="YWJj",
+        org_id="org1", http_client=mock,
+    )
+    assert result.to_resource_entry() == _EXPECTED_ENTRY
+    assert resource_entry_from_upload(result) == _EXPECTED_ENTRY
+    assert resource_entry_from_upload(result.raw_response) == _EXPECTED_ENTRY
+
+
+def test_to_resource_entry_delegates_to_build_entry():
+    """结果类方法与显式构造函数必须同构（否则条目结构会在两处漂移）。"""
+    result = PersonalTodoResourceResult(
+        success=True, file_name="a.pdf", mime_type="application/pdf",
+        size=10, resource_id="res1",
+    )
+    assert result.to_resource_entry() == build_personal_todo_resource_entry(
+        resource_id="res1", file_name="a.pdf",
+        file_type="application/pdf", file_size=10,
+    )
+
+
+def test_resource_entry_opt_and_missing_fields():
+    """opt=0 表示移除；字段缺失时回落为空串/0 而不是抛错。"""
+    empty = PersonalTodoResourceResult(success=True)
+    assert empty.to_resource_entry(opt=0) == {
+        "fileName": "", "resourceId": "", "fileType": "", "fileSize": 0, "opt": 0,
+    }
+    assert resource_entry_from_upload(empty, opt=0)["opt"] == 0
+
+
+def test_resource_entry_from_upload_rejects_unusable_input():
+    """既不是 dict、也没有可用字段/raw_response 的入参要显式报错，不能静默产出残缺条目。"""
+    with pytest.raises(TypeError):
+        resource_entry_from_upload(object())

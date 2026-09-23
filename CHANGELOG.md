@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **personal_todos**: 挂附件条目构造助手。上传接口返回 `mimeType`/`size`，而挂附件写体的条目必须叫 `fileType`/`fileSize`，直接把上传响应塞进 `resources` 会被后端以 errCode 500 打回——三个入口统一做这层映射：
+  - `PersonalTodoResourceResult.to_resource_entry(opt=1)`：结果类方法，推荐写法；
+  - `build_personal_todo_resource_entry(...)`：显式构造（条目结构的唯一定义处）；
+  - `resource_entry_from_upload(upload_result, opt=1)`：从上传结果构造，`upload_result` 接受**结果对象或原始响应 dict**（含内层 `data`）两种形态；无法解析时抛 `TypeError`，不会静默产出缺 `resourceId` 的条目。
+
 ### Fixed
 
 - **videoconference**: `modify_meeting` 补齐 `user_stop_time`（自动结束时间）透传，与 `create_meeting` 对齐。此前该参数只在创建时可传——修改时不生效，且会把会议结束时间重置为开始时间 +24 小时。

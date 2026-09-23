@@ -26,6 +26,9 @@ from .models import (
     PersonalTodoResourceResult,
     PersonalTodoSaveResult,
     PersonalTodoUrlResult,
+    # 定义在 models（与结果类的 to_resource_entry 共用一份组装逻辑），
+    # 这里保持同名导出，调用方从 personal_todos 导入的路径不变。
+    build_personal_todo_resource_entry,
 )
 from .url_helpers import build_api_url
 
@@ -43,6 +46,49 @@ PERSONAL_TODO_PLATFORM_WEB = 2
 PERSONAL_TODO_PLATFORM_API = 3
 
 PERSONAL_TODO_RESOURCE_MAX_SIZE = 9 * 1024 * 1024
+
+
+def resource_entry_from_upload(
+    upload_result: dict[str, Any] | PersonalTodoResourceResult, opt: int = 1
+) -> dict[str, Any]:
+    """从上传结果构造 resources 条目。
+
+    上传响应用 `mimeType`/`size`，挂附件写体用 `fileType`/`fileSize`，这里统一映射，
+    避免直接把上传响应塞进 resources 触发 errCode 500。
+
+    入参两种都收（参数名虽叫 upload_result，但早期实现只认 dict，传结果对象会
+    `AttributeError`）：
+    - `upload_personal_todo_resource()` 的返回对象 → 直接用它已解析好的字段；
+    - 原始响应 dict（`/resource/update` 的响应体，或其内层 `data`）→ 按字段取。
+    """
+    if hasattr(upload_result, "resource_id"):
+        return build_personal_todo_resource_entry(
+            resource_id=upload_result.resource_id or "",
+            file_name=upload_result.file_name or "",
+            file_type=upload_result.mime_type or "",
+            file_size=upload_result.size or 0,
+            opt=opt,
+        )
+
+    raw = upload_result
+    if not isinstance(raw, dict):
+        # 结果对象但字段未解析：退回其原始响应。拿不到就报错，绝不退化成空条目——
+        # 缺 resourceId 的条目会被后端以 errCode 500 打回，静默比抛错难查得多。
+        raw = getattr(raw, "raw_response", None)
+    if not isinstance(raw, dict):
+        raise TypeError(
+            "upload_result must be a response dict, the upload result object, "
+            "or an object carrying a raw_response dict"
+        )
+
+    d = raw.get("data") if isinstance(raw.get("data"), dict) else raw
+    return build_personal_todo_resource_entry(
+        resource_id=d.get("resourceId") or "",
+        file_name=d.get("fileName") or raw.get("fileName") or "",
+        file_type=d.get("mimeType") or raw.get("mimeType") or "",
+        file_size=d.get("size") or raw.get("size") or 0,
+        opt=opt,
+    )
 
 
 def _parse_response(data: dict[str, Any]) -> tuple[bool, str | None]:

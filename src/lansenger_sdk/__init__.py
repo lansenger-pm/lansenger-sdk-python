@@ -352,6 +352,8 @@ from .personal_todos import (
     save_personal_todo,
     update_personal_todo,
     upload_personal_todo_resource,
+    build_personal_todo_resource_entry,
+    resource_entry_from_upload,
 )
 from .oauth import (
     build_authorize_url,

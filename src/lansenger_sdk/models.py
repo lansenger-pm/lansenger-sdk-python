@@ -900,6 +900,30 @@ class PersonalTodoListResult:
         return d
 
 
+def build_personal_todo_resource_entry(
+    *,
+    resource_id: str,
+    file_name: str,
+    file_type: str,
+    file_size: int,
+    opt: int = 1,
+) -> dict[str, Any]:
+    """拼装「挂到待办」用的 resources 条目（写接口必填 fileName/resourceId/fileType/fileSize）。
+
+    opt: 1=添加（默认），0=移除。
+
+    放在 models 里是为了让 `PersonalTodoResourceResult.to_resource_entry()` 与它共用同一份
+    组装逻辑——条目结构只在这里定义一次，不会两处漂移。
+    """
+    return {
+        "fileName": file_name,
+        "resourceId": resource_id,
+        "fileType": file_type,
+        "fileSize": file_size,
+        "opt": opt,
+    }
+
+
 @dataclass
 class PersonalTodoResourceResult:
     success: bool
@@ -928,6 +952,25 @@ class PersonalTodoResourceResult:
         if self.error is not None:
             d["error"] = self.error
         return d
+
+    def to_resource_entry(self, opt: int = 1) -> dict[str, Any]:
+        """拼装「挂到待办」用的 resources 条目。
+
+        关键陷阱：上传接口（/resource/update）返回的字段名是
+        `mimeType` / `size`，而挂附件时更新体的 resources 条目
+        必须叫 `fileType` / `fileSize`。直接把上传响应塞进 resources
+        会缺这两个必填字段，被后端以 errCode 500 打回。这里做一次映射，
+        调用方拿上传结果直接 `result.to_resource_entry()` 即可，避免踩坑。
+
+        条目结构由 `build_personal_todo_resource_entry()` 统一产出。
+        """
+        return build_personal_todo_resource_entry(
+            resource_id=self.resource_id or "",
+            file_name=self.file_name or "",
+            file_type=self.mime_type or "",
+            file_size=self.size or 0,
+            opt=opt,
+        )
 
 
 @dataclass
