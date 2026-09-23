@@ -332,7 +332,7 @@ schedule = await client.create_schedule(
     calendar_id=cal.calendar_id, summary="团队会议",
     start_time={"date": "2024-01-15", "time": "10:00", "timeZone": "Asia/Shanghai"},
     end_time={"date": "2024-01-15", "time": "11:00", "timeZone": "Asia/Shanghai"},
-    attendees=[{"staffId": "staff1", "attendeeFlag": "required"}],
+    attendees=[{"staffId": "staff1", "attendeeFlag": "yes"}],  # yes/option/no — "required" is rejected by the server
     user_token="ut",
 )
 

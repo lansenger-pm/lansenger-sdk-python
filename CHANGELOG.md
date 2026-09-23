@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.9.0] - 2026-09-23
+
+### Fixed
+
+- **calendars**: default `attendeeFlag` changed from `"required"` to `"yes"` — `"required"` is not in the server enum (`yes`/`option`/`no`) and made the auto-fill path fail 100% of the time with errCode 40060 (LXBUGS-128487). Added `ATTENDEE_FLAGS` with local validation: invalid values now raise a clear error before any HTTP call.
+- **calendars**: docstrings corrected — time fields are `{"time": <unix SECONDS>, "timeZone": "IANA name"}`; `date` is only used for all-day schedules with UTC timezone.
+- **contacts**: `search_staff` now applies `page_size` alone by defaulting `page=1` (the server silently drops a lone `page_size` — LXBUGS-128510). Documented that `has_more` is unreliable; paginate by comparing result count with `total`.
+- **models**: `ChatMessageInfo.plain_text()` now extracts text from appCard/i18nAppCard, linkCard, appArticles and formatText (both the documented `text` key and the legacy `content` key), supports `{"text": {"content": ...}}` object shapes, and falls back to a depth-limited scan for known text keys (LXBUGS-128493).
+- **streaming**: `create_stream_message` downgrades a success response with an empty `msgId` to a failure — the server has been observed returning success without a usable handle (LXBUGS-128497).
+- **groups**: `check_is_in_group` error message now explains the errCode=10000 ambiguity (the server returns it both for query failures and for non-members — LXBUGS-128498).
+- **videoconferences**: `VC_OPS` annotated — `muteall`/`unmuteall` were rejected live with 105601; values kept pending server confirmation (LXBUGS-128490).
+- **media/client**: documented the return shapes of `download_media_to_file` (path string, raises on failure) and `health_check` (bare bool) — LXBUGS-128494.
+- READMEs: attendee example now uses a server-accepted `attendeeFlag` value.
+
+---
+
 ## [1.8.0] - 2026-09-21
 
 ### Added
