@@ -36,6 +36,8 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Notices (通知系统)** — send official-account notices (text/link content, phone/staff targeting, confirm/forward/reply flags, reminder policies, attachments), query org official accounts
 - **Questionnaires (问卷系统)** — create/update/publish/withdraw/finish/delete questionnaires, batch question management, office-account & created/participated lists (paged), answer records and export, presigned upload URL
 - **Boardroom (会议室预定 V2)** — room lookup with area/floor/equipment/time filters, room detail & daily schedule, reserve/edit (single & repeating), cancel, scan-code confirmation, my reservations (paged), grading & office-area lists
+- **Qingjia (请假 V2)** — attendance-group rule configs, leave duration for a time range, presigned attachment upload URL, submit application, my applications (paged), staff leave balance, attendance-group list, enabled leave types
+- **Jiaban (加班 V2)** — attendance-group rule configs, presigned attachment upload URL (followed by a PUT carrying Content-MD5), submit application, my applications (paged), the staff member's attendance group, overtime duration calculation
 - **Personal todos (个人待办)** — create/edit/list user-owned personal todos and manage attachments; separate from application-identity todos
 - **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
 
@@ -690,11 +692,13 @@ lansenger-sdk-python/
 │   ├── notices.py           # Notice (通知系统)
 │   ├── questionnaires.py    # Questionnaire (问卷系统)
 │   ├── boardrooms.py        # Boardroom (会议室预定 V2)
+│   ├── qingjia.py           # Qingjia (请假 V2)
+│   ├── jiaban.py            # Jiaban (加班 V2)
 │   ├── personal_todos.py    # Personal Todo (个人待办)
 │   ├── calendars.py         # Calendar & Schedule (including update 4.23.12, attendee-meta 4.23.17)
 │   ├── reminders.py         # Urgent message reminders (4.6.14)
 │   └── users.py             # User info
-├── tests/                   # 530 tests, all passing
+├── tests/                   # 601 tests, all passing
 ├── pyproject.toml
 └── README*.md               # 5-language READMEs
 ```

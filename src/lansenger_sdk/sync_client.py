@@ -64,6 +64,20 @@ from .models import (
     BoardroomReserveDetailResult,
     BoardroomReserveResult,
     BoardroomScheduleResult,
+    QingjiaRuleConfigListResult,
+    QingjiaTimesResult,
+    QingjiaUploadUrlResult,
+    QingjiaSaveApplyResult,
+    QingjiaMyApplyPageResult,
+    QingjiaPersonBalanceResult,
+    QingjiaAttendanceGroupListResult,
+    QingjiaEnableLeaveTypeListResult,
+    JiabanMaxVersionConfigListResult,
+    JiabanUploadUrlResult,
+    JiabanSubmitApproveResult,
+    JiabanMyApplyPageResult,
+    JiabanAttendanceGroupListResult,
+    JiabanCalculateDurationResult,
     OrgInfoResult,
     PersonalAppCreateResult,
     PersonalAppInfoResult,
@@ -2985,3 +2999,118 @@ class LansengerSyncClient:
         return _run_async(self._ephemeral_call(
             "fetch_org_videoconference_conf", org_id=org_id,
             meeting_number=meeting_number, operator=operator, user_token=user_token))
+
+    # ── Qingjia (请假 V2) (sync wrappers) ──────────────────────────────
+
+    def fetch_qingjia_max_version_config_list(self, *, org_id="", staff_id="",
+                                              user_token="") -> QingjiaRuleConfigListResult:
+        """考勤组规则配置列表 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_max_version_config_list", org_id=org_id,
+            staff_id=staff_id, user_token=user_token))
+
+    def fetch_qingjia_times(self, *, cmc_code, times_vo, staff_id="",
+                            user_token="") -> QingjiaTimesResult:
+        """按时间段计算请假时长 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_times", cmc_code=cmc_code, times_vo=times_vo,
+            staff_id=staff_id, user_token=user_token))
+
+    def fetch_qingjia_upload_url(self, *, file_name, md5, size, org_id="",
+                                 staff_id="", user_token="") -> QingjiaUploadUrlResult:
+        """取请假附件预签名上传地址 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_upload_url", file_name=file_name, md5=md5, size=size,
+            org_id=org_id, staff_id=staff_id, user_token=user_token))
+
+    def fetch_qingjia_save_apply(self, *, cmc_code, is_leave_back, apply_vo,
+                                 staff_id="", user_token="") -> QingjiaSaveApplyResult:
+        """提交请假申请 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_save_apply", cmc_code=cmc_code,
+            is_leave_back=is_leave_back, apply_vo=apply_vo, staff_id=staff_id,
+            user_token=user_token))
+
+    def fetch_qingjia_my_apply_page_info(self, *, cmc_code, query_vo, is_diss=None,
+                                         staff_id="", user_token="") -> QingjiaMyApplyPageResult:
+        """我的请假申请分页 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_my_apply_page_info", cmc_code=cmc_code,
+            query_vo=query_vo, is_diss=is_diss, staff_id=staff_id,
+            user_token=user_token))
+
+    def fetch_qingjia_person_balance(self, *, org_id, cmc_code, type_code="",
+                                     staff_id="", user_token="") -> QingjiaPersonBalanceResult:
+        """人员假期余额 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_person_balance", org_id=org_id, cmc_code=cmc_code,
+            type_code=type_code, staff_id=staff_id, user_token=user_token))
+
+    def fetch_qingjia_attendance_group_list(self, *, org_id="", staff_id="",
+                                            user_token="") -> QingjiaAttendanceGroupListResult:
+        """考勤组列表 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_attendance_group_list", org_id=org_id,
+            staff_id=staff_id, user_token=user_token))
+
+    def fetch_qingjia_enable_leave_type_list(self, *, cmc_code,
+                                             user_token="") -> QingjiaEnableLeaveTypeListResult:
+        """启用的假期类型 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_qingjia_enable_leave_type_list", cmc_code=cmc_code,
+            user_token=user_token))
+
+    # ── Jiaban (加班 V2) (sync wrappers) ───────────────────────────────
+
+    def fetch_jiaban_get_max_version_config_list(self, *, org_id, staff_id,
+                                                 user_token="") -> JiabanMaxVersionConfigListResult:
+        """考勤组规则配置列表 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_jiaban_get_max_version_config_list", org_id=org_id,
+            staff_id=staff_id, user_token=user_token))
+
+    def fetch_jiaban_upload_url(self, *, file_name, md5, size, org_id,
+                                user_token="") -> JiabanUploadUrlResult:
+        """取加班附件预签名上传地址 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_jiaban_upload_url", file_name=file_name, md5=md5, size=size,
+            org_id=org_id, user_token=user_token))
+
+    def put_jiaban_file(self, url, content, md5, timeout=60.0):
+        """PUT 文件到加班附件预签名地址，带 Content-MD5 头 (blocking)."""
+        return _run_async(self._ephemeral_call_with_positional(
+            "put_jiaban_file", [url, content, md5], {"timeout": timeout}))
+
+    def fetch_jiaban_submit_approve(self, *, cmc_code, applyer_id, start_time,
+                                    end_time, memo, approve_ids, overtime_type,
+                                    apply_type, apply_vo=None,
+                                    user_token="") -> JiabanSubmitApproveResult:
+        """提交加班申请 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_jiaban_submit_approve", cmc_code=cmc_code,
+            applyer_id=applyer_id, start_time=start_time, end_time=end_time,
+            memo=memo, approve_ids=approve_ids, overtime_type=overtime_type,
+            apply_type=apply_type, apply_vo=apply_vo, user_token=user_token))
+
+    def fetch_jiaban_get_my_apply_page_info(self, *, cmc_code, page_vo,
+                                            user_token="") -> JiabanMyApplyPageResult:
+        """我的加班申请分页 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_jiaban_get_my_apply_page_info", cmc_code=cmc_code,
+            page_vo=page_vo, user_token=user_token))
+
+    def fetch_jiaban_get_group_info(self, *, staff_id, org_id,
+                                    user_token="") -> JiabanAttendanceGroupListResult:
+        """员工所在考勤组 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_jiaban_get_group_info", staff_id=staff_id, org_id=org_id,
+            user_token=user_token))
+
+    def fetch_jiaban_calculate_duration(self, *, cmc_code, begin_time, end_time,
+                                        group_code="",
+                                        user_token="") -> JiabanCalculateDurationResult:
+        """计算加班时长 (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "fetch_jiaban_calculate_duration", cmc_code=cmc_code,
+            begin_time=begin_time, end_time=end_time, group_code=group_code,
+            user_token=user_token))

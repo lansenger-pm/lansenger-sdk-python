@@ -2108,3 +2108,306 @@ class VideoconferenceConfResult:
         if self.error is not None:
             d["error"] = self.error
         return d
+
+
+# ── Qingjia / Jiaban (请假 V2 / 加班 V2) ────────────────────────────────
+
+
+@dataclass
+class QingjiaRuleConfigListResult:
+    """请假 V2 /maxVersionConfigList — 考勤组规则配置列表。"""
+
+    success: bool
+    items: list[dict[str, Any]] | None = None
+    total: int = 0
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QingjiaTimesResult:
+    """请假 V2 /times — 按请假时间段算出的时长。"""
+
+    success: bool
+    type_code: str | None = None
+    apply_start_time: int | None = None
+    apply_end_time: int | None = None
+    effective_hours: float | None = None
+    effective_days: float | None = None
+    effective_timestamp: int | None = None
+    time_str: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for k in ("type_code", "apply_start_time", "apply_end_time",
+                  "effective_hours", "effective_days", "effective_timestamp",
+                  "time_str"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QingjiaUploadUrlResult:
+    """请假 V2 /upload — 预签名上传地址。"""
+
+    success: bool
+    value: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.value is not None:
+            d["value"] = self.value
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QingjiaSaveApplyResult:
+    """请假 V2 /saveApply — 提交请假申请。"""
+
+    success: bool
+    value: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.value is not None:
+            d["value"] = self.value
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QingjiaMyApplyPageResult:
+    """请假 V2 /myApplyPageInfo — 我的请假申请分页。"""
+
+    success: bool
+    page_no: int = 0
+    page_size: int = 0
+    pages: int = 0
+    total: int = 0
+    items: list[dict[str, Any]] | None = None
+    has_next_page: bool = False
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "success": self.success,
+            "page_no": self.page_no,
+            "page_size": self.page_size,
+            "pages": self.pages,
+            "total": self.total,
+            "has_next_page": self.has_next_page,
+        }
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QingjiaPersonBalanceResult:
+    """请假 V2 /personBalance — 人员假期余额。"""
+
+    success: bool
+    staff_id: str | None = None
+    name: str | None = None
+    phone: str | None = None
+    employee_code: str | None = None
+    staff_no: str | None = None
+    dep_name: str | None = None
+    balance_list: list[dict[str, Any]] | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        for k in ("staff_id", "name", "phone", "employee_code", "staff_no",
+                  "dep_name", "balance_list"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QingjiaAttendanceGroupListResult:
+    """请假 V2 /attendanceGroupList — 考勤组列表。"""
+
+    success: bool
+    items: list[dict[str, Any]] | None = None
+    total: int = 0
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class QingjiaEnableLeaveTypeListResult:
+    """请假 V2 /enableLeaveTypeList — 启用的假期类型。"""
+
+    success: bool
+    items: list[dict[str, Any]] | None = None
+    total: int = 0
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class JiabanMaxVersionConfigListResult:
+    """加班 V2 /getMaxVersionConfigList — 考勤组规则配置列表。"""
+
+    success: bool
+    items: list[dict[str, Any]] | None = None
+    total: int = 0
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class JiabanUploadUrlResult:
+    """加班 V2 /upload — 预签名上传地址。"""
+
+    success: bool
+    value: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.value is not None:
+            d["value"] = self.value
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class JiabanSubmitApproveResult:
+    """加班 V2 /submitApprove — 提交加班申请。"""
+
+    success: bool
+    value: str | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.value is not None:
+            d["value"] = self.value
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class JiabanMyApplyPageResult:
+    """加班 V2 /getMyApplyPageInfo — 我的加班申请分页。"""
+
+    success: bool
+    page_no: int = 0
+    page_size: int = 0
+    pages: int = 0
+    total: int = 0
+    items: list[dict[str, Any]] | None = None
+    has_next_page: bool = False
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "success": self.success,
+            "page_no": self.page_no,
+            "page_size": self.page_size,
+            "pages": self.pages,
+            "total": self.total,
+            "has_next_page": self.has_next_page,
+        }
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class JiabanAttendanceGroupListResult:
+    """加班 V2 /getGroupInfo — 员工所在考勤组。"""
+
+    success: bool
+    items: list[dict[str, Any]] | None = None
+    total: int = 0
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success, "total": self.total}
+        if self.items is not None:
+            d["items"] = self.items
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
+class JiabanCalculateDurationResult:
+    """加班 V2 /calculateDuration — 加班时长计算结果。"""
+
+    success: bool
+    value: float | None = None
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.value is not None:
+            d["value"] = self.value
+        if self.error is not None:
+            d["error"] = self.error
+        return d

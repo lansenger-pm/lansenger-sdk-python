@@ -38,6 +38,8 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Notices (通知系统)** — envoyer des notifications via un compte officiel (texte/lien, ciblage téléphone/staff, indicateurs de confirmation/transfert/réponse, stratégies de rappel, pièces jointes), lister les comptes officiels d'une organisation
 - **Questionnaires (问卷系统)** — créer/mettre à jour/publier/retirer/terminer/supprimer des questionnaires, gestion groupée des questions, listes paginées (comptes officiels, créés, participés), enregistrements et export des réponses, URL de téléversement pré-signée
 - **Boardroom (会议室预定 V2)** — recherche de salles (zone/étage/équipement/créneau), détails et planning journalier, réservation/modification (simple et récurrente), annulation, confirmation par scan, mes réservations (paginées), listes de gradings et zones
+- **Qingjia (请假 V2)** — configurations de règles des groupes d'assiduité, durée de congé pour une plage horaire, URL de téléversement présignée, dépôt de demande, mes demandes (paginées), solde de congé, liste des groupes d'assiduité, types de congé activés
+- **Jiaban (加班 V2)** — configurations de règles des groupes d'assiduité, URL de téléversement présignée (suivie d'un PUT avec Content-MD5), dépôt de demande, mes demandes (paginées), groupe d'assiduité de l'employé, calcul de la durée des heures supplémentaires
 - **Todos personnels (个人待办)** — créer/modifier/lister les todos personnels et gérer les pièces jointes, séparément des todos d'application
 - **Commandes de bot** — créer/gérer les entrées de commande de bot
 - **Applications personnelles** — gérer les bots personnels
@@ -748,11 +750,13 @@ lansenger-sdk-python/
 │   ├── notices.py           # Notifications (通知系统)
 │   ├── questionnaires.py    # Questionnaires (问卷系统)
 │   ├── boardrooms.py        # Boardroom (会议室预定 V2)
+│   ├── qingjia.py           # Qingjia (请假 V2)
+│   ├── jiaban.py            # Jiaban (加班 V2)
 │   ├── personal_todos.py    # Personal Todo (个人待办)
 │   ├── calendars.py         # Calendrier & Schedule (incluant mise à jour 4.23.12, métadonnées participants 4.23.17)
 │   ├── reminders.py         # Rappels urgents de messages (4.6.14)
 │   └── users.py             # Infos utilisateur
-├── tests/                   # 530 tests, tous passants
+├── tests/                   # 601 tests, tous passants
 ├── pyproject.toml
 └── README*.md               # READMEs en 5 langues
 ```

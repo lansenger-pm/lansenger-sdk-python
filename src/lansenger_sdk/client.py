@@ -112,6 +112,20 @@ from .models import (
     BoardroomReserveDetailResult,
     BoardroomReserveResult,
     BoardroomScheduleResult,
+    QingjiaRuleConfigListResult,
+    QingjiaTimesResult,
+    QingjiaUploadUrlResult,
+    QingjiaSaveApplyResult,
+    QingjiaMyApplyPageResult,
+    QingjiaPersonBalanceResult,
+    QingjiaAttendanceGroupListResult,
+    QingjiaEnableLeaveTypeListResult,
+    JiabanMaxVersionConfigListResult,
+    JiabanUploadUrlResult,
+    JiabanSubmitApproveResult,
+    JiabanMyApplyPageResult,
+    JiabanAttendanceGroupListResult,
+    JiabanCalculateDurationResult,
     OrgInfoResult,
     PersonalAppCreateResult,
     PersonalAppInfoResult,
@@ -5383,6 +5397,335 @@ class LansengerClient:
         from .callbacks import CALLBACK_EVENT_TYPES
 
         return CALLBACK_EVENT_TYPES
+
+    # ── Public API: Qingjia (请假 V2) ──────────────────────────────────
+
+    async def fetch_qingjia_max_version_config_list(
+        self, *, org_id: str = "", staff_id: str = "", user_token: str = "",
+    ) -> QingjiaRuleConfigListResult:
+        """考勤组规则配置列表 (请假 V2 /maxVersionConfigList)."""
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_max_version_config_list
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_max_version_config_list(
+            self._config, app_token=app_token, org_id=org_id,
+            staff_id=staff_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_qingjia_times(
+        self,
+        *,
+        cmc_code: str,
+        times_vo: dict,
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> QingjiaTimesResult:
+        """按时间段计算请假时长 (请假 V2 /times)."""
+        if not cmc_code:
+            return QingjiaTimesResult(success=False, error="cmc_code is required")
+        if not times_vo:
+            return QingjiaTimesResult(success=False, error="times_vo is required")
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_times
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_times(
+            self._config, app_token=app_token, cmc_code=cmc_code,
+            times_vo=times_vo, staff_id=staff_id, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_qingjia_upload_url(
+        self,
+        *,
+        file_name: str,
+        md5: str,
+        size: int,
+        org_id: str = "",
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> QingjiaUploadUrlResult:
+        """取请假附件预签名上传地址 (请假 V2 /upload)."""
+        if not file_name:
+            return QingjiaUploadUrlResult(success=False, error="file_name is required")
+        if not md5:
+            return QingjiaUploadUrlResult(success=False, error="md5 is required")
+        if size is None:
+            return QingjiaUploadUrlResult(success=False, error="size is required")
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_upload_url
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_upload_url(
+            self._config, app_token=app_token, file_name=file_name, md5=md5,
+            size=size, org_id=org_id, staff_id=staff_id, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_qingjia_save_apply(
+        self,
+        *,
+        cmc_code: str,
+        is_leave_back: bool,
+        apply_vo: dict,
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> QingjiaSaveApplyResult:
+        """提交请假申请 (请假 V2 /saveApply)."""
+        if not cmc_code:
+            return QingjiaSaveApplyResult(success=False, error="cmc_code is required")
+        if is_leave_back is None:
+            return QingjiaSaveApplyResult(success=False, error="is_leave_back is required")
+        if not apply_vo:
+            return QingjiaSaveApplyResult(success=False, error="apply_vo is required")
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_save_apply
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_save_apply(
+            self._config, app_token=app_token, cmc_code=cmc_code,
+            is_leave_back=is_leave_back, apply_vo=apply_vo, staff_id=staff_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_qingjia_my_apply_page_info(
+        self,
+        *,
+        cmc_code: str,
+        query_vo: dict,
+        is_diss: bool | None = None,
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> QingjiaMyApplyPageResult:
+        """我的请假申请分页 (请假 V2 /myApplyPageInfo)."""
+        if not cmc_code:
+            return QingjiaMyApplyPageResult(success=False, error="cmc_code is required")
+        if not query_vo:
+            return QingjiaMyApplyPageResult(success=False, error="query_vo is required")
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_my_apply_page_info
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_my_apply_page_info(
+            self._config, app_token=app_token, cmc_code=cmc_code,
+            query_vo=query_vo, is_diss=is_diss, staff_id=staff_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_qingjia_person_balance(
+        self,
+        *,
+        org_id: str,
+        cmc_code: str,
+        type_code: str = "",
+        staff_id: str = "",
+        user_token: str = "",
+    ) -> QingjiaPersonBalanceResult:
+        """人员假期余额 (请假 V2 /personBalance)."""
+        if not org_id:
+            return QingjiaPersonBalanceResult(success=False, error="org_id is required")
+        if not cmc_code:
+            return QingjiaPersonBalanceResult(success=False, error="cmc_code is required")
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_person_balance
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_person_balance(
+            self._config, app_token=app_token, org_id=org_id, cmc_code=cmc_code,
+            type_code=type_code, staff_id=staff_id, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_qingjia_attendance_group_list(
+        self, *, org_id: str = "", staff_id: str = "", user_token: str = "",
+    ) -> QingjiaAttendanceGroupListResult:
+        """考勤组列表 (请假 V2 /attendanceGroupList)."""
+        if not org_id:
+            return QingjiaAttendanceGroupListResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_attendance_group_list
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_attendance_group_list(
+            self._config, app_token=app_token, org_id=org_id,
+            staff_id=staff_id, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_qingjia_enable_leave_type_list(
+        self, *, cmc_code: str, user_token: str = "",
+    ) -> QingjiaEnableLeaveTypeListResult:
+        """启用的假期类型 (请假 V2 /enableLeaveTypeList)."""
+        if not cmc_code:
+            return QingjiaEnableLeaveTypeListResult(success=False, error="cmc_code is required")
+        self._ensure_clients()
+        from .qingjia import fetch_qingjia_enable_leave_type_list
+
+        app_token = await self._get_token()
+        return await fetch_qingjia_enable_leave_type_list(
+            self._config, app_token=app_token, cmc_code=cmc_code,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    # ── Public API: Jiaban (加班 V2) ───────────────────────────────────
+
+    async def fetch_jiaban_get_max_version_config_list(
+        self, *, org_id: str, staff_id: str, user_token: str = "",
+    ) -> JiabanMaxVersionConfigListResult:
+        """考勤组规则配置列表 (加班 V2 /getMaxVersionConfigList)."""
+        if not org_id:
+            return JiabanMaxVersionConfigListResult(success=False, error="org_id is required")
+        if not staff_id:
+            return JiabanMaxVersionConfigListResult(success=False, error="staff_id is required")
+        self._ensure_clients()
+        from .jiaban import fetch_jiaban_get_max_version_config_list
+
+        app_token = await self._get_token()
+        return await fetch_jiaban_get_max_version_config_list(
+            self._config, app_token=app_token, org_id=org_id, staff_id=staff_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_jiaban_upload_url(
+        self,
+        *,
+        file_name: str,
+        md5: str,
+        size: int,
+        org_id: str,
+        user_token: str = "",
+    ) -> JiabanUploadUrlResult:
+        """取加班附件预签名上传地址 (加班 V2 /upload)."""
+        if not file_name:
+            return JiabanUploadUrlResult(success=False, error="file_name is required")
+        if not md5:
+            return JiabanUploadUrlResult(success=False, error="md5 is required")
+        if size is None:
+            return JiabanUploadUrlResult(success=False, error="size is required")
+        if not org_id:
+            return JiabanUploadUrlResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .jiaban import fetch_jiaban_upload_url
+
+        app_token = await self._get_token()
+        return await fetch_jiaban_upload_url(
+            self._config, app_token=app_token, file_name=file_name, md5=md5,
+            size=size, org_id=org_id, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def put_jiaban_file(
+        self, url: str, content: str | bytes, md5: str, *, timeout: float = 60.0,
+    ) -> tuple[bool, str | None]:
+        """PUT 文件到加班附件预签名地址（带 Content-MD5 头）。"""
+        from .jiaban import put_jiaban_file
+
+        return await put_jiaban_file(
+            url, content, md5, http_client=self._http_client, timeout=timeout,
+        )
+
+    async def fetch_jiaban_submit_approve(
+        self,
+        *,
+        cmc_code: str,
+        applyer_id: str,
+        start_time: int,
+        end_time: int,
+        memo: str,
+        approve_ids: list[str],
+        overtime_type: int,
+        apply_type: int,
+        apply_vo: dict | None = None,
+        user_token: str = "",
+    ) -> JiabanSubmitApproveResult:
+        """提交加班申请 (加班 V2 /submitApprove)."""
+        if not cmc_code:
+            return JiabanSubmitApproveResult(success=False, error="cmc_code is required")
+        if not applyer_id:
+            return JiabanSubmitApproveResult(success=False, error="applyer_id is required")
+        if start_time is None:
+            return JiabanSubmitApproveResult(success=False, error="start_time is required")
+        if end_time is None:
+            return JiabanSubmitApproveResult(success=False, error="end_time is required")
+        if not memo:
+            return JiabanSubmitApproveResult(success=False, error="memo is required")
+        if not approve_ids:
+            return JiabanSubmitApproveResult(success=False, error="approve_ids is required")
+        if overtime_type is None:
+            return JiabanSubmitApproveResult(success=False, error="overtime_type is required")
+        if apply_type is None:
+            return JiabanSubmitApproveResult(success=False, error="apply_type is required")
+        self._ensure_clients()
+        from .jiaban import fetch_jiaban_submit_approve
+
+        app_token = await self._get_token()
+        return await fetch_jiaban_submit_approve(
+            self._config, app_token=app_token, cmc_code=cmc_code,
+            applyer_id=applyer_id, start_time=start_time, end_time=end_time,
+            memo=memo, approve_ids=approve_ids, overtime_type=overtime_type,
+            apply_type=apply_type, apply_vo=apply_vo, user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def fetch_jiaban_get_my_apply_page_info(
+        self, *, cmc_code: str, page_vo: dict, user_token: str = "",
+    ) -> JiabanMyApplyPageResult:
+        """我的加班申请分页 (加班 V2 /getMyApplyPageInfo)."""
+        if not cmc_code:
+            return JiabanMyApplyPageResult(success=False, error="cmc_code is required")
+        if not page_vo:
+            return JiabanMyApplyPageResult(success=False, error="page_vo is required")
+        self._ensure_clients()
+        from .jiaban import fetch_jiaban_get_my_apply_page_info
+
+        app_token = await self._get_token()
+        return await fetch_jiaban_get_my_apply_page_info(
+            self._config, app_token=app_token, cmc_code=cmc_code,
+            page_vo=page_vo, user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_jiaban_get_group_info(
+        self, *, staff_id: str, org_id: str, user_token: str = "",
+    ) -> JiabanAttendanceGroupListResult:
+        """员工所在考勤组 (加班 V2 /getGroupInfo)."""
+        if not staff_id:
+            return JiabanAttendanceGroupListResult(success=False, error="staff_id is required")
+        if not org_id:
+            return JiabanAttendanceGroupListResult(success=False, error="org_id is required")
+        self._ensure_clients()
+        from .jiaban import fetch_jiaban_get_group_info
+
+        app_token = await self._get_token()
+        return await fetch_jiaban_get_group_info(
+            self._config, app_token=app_token, staff_id=staff_id, org_id=org_id,
+            user_token=user_token, http_client=self._http_client,
+        )
+
+    async def fetch_jiaban_calculate_duration(
+        self,
+        *,
+        cmc_code: str,
+        begin_time: int,
+        end_time: int,
+        group_code: str = "",
+        user_token: str = "",
+    ) -> JiabanCalculateDurationResult:
+        """计算加班时长 (加班 V2 /calculateDuration)."""
+        if not cmc_code:
+            return JiabanCalculateDurationResult(success=False, error="cmc_code is required")
+        if begin_time is None:
+            return JiabanCalculateDurationResult(success=False, error="begin_time is required")
+        if end_time is None:
+            return JiabanCalculateDurationResult(success=False, error="end_time is required")
+        self._ensure_clients()
+        from .jiaban import fetch_jiaban_calculate_duration
+
+        app_token = await self._get_token()
+        return await fetch_jiaban_calculate_duration(
+            self._config, app_token=app_token, cmc_code=cmc_code,
+            begin_time=begin_time, end_time=end_time, group_code=group_code,
+            user_token=user_token, http_client=self._http_client,
+        )
 
     # ── Public API: Chat list & messages (4.24 MCP) ──────────────────
 

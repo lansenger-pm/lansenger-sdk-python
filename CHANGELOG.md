@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.10.2] - 2026-09-24
+
+### Added
+
+- **qingjia**: 请假 V2（`/xtra/qingjia/server/openapi/v2/*`，8 端点）——考勤组规则配置列表、按时间段算时长、附件预签名上传地址、提交申请、我的申请分页、人员假期余额、考勤组列表、启用的假期类型。身份字段是 `staffId`/`orgId`（不是 boardrooms 的 `lxUserId`）。
+- **jiaban**: 加班 V2（`/xtra/jiaban/server/openapi/v2/*`，6 端点）——考勤组规则配置列表、附件预签名上传地址、提交申请、我的申请分页、员工所在考勤组、计算加班时长。
+- **jiaban.put_jiaban_file**: 加班附件上传的第二步——把文件内容 PUT 到 `fetch_jiaban_upload_url()` 返回的预签名地址，并带 `Content-MD5` 头（值为文件 MD5）。这一步单独建模，避免只拿到预签名地址就以为上传已完成。同步客户端 `LansengerSyncClient` 同样提供。
+- **pagination**: `parse_v2_page_info()` 统一解析请假/加班的 V2 分页（`pageNo`/`pageSize`/`pages`/`total`/`result`/`hasNextPage`）——boardrooms 用的是 `{count, data}`，两者不可混用。
+
+### Notes
+
+- 路径 = 网关（可配）+ 固定路径；`/server` 是非通版部署带的服务标识段，位于 `/openapi` **之前**，与 boardrooms / questionnaires / personal_todos 一致。
+
 ## [1.10.1] - 2026-09-24
 
 ### Fixed

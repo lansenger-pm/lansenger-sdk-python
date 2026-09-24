@@ -176,6 +176,27 @@ API_ENDPOINTS = {
         "last_answer_record": "/xtra/questionnaire/server/openapi/v1/lastAnswerRecord",
         "upload_url": "/xtra/questionnaire/server/openapi/v1/upload",
     },
+    # qingjia module (请假 V2): /server 服务标识段在 /openapi 之前，与 boardroom /
+    # questionnaire 一致。网关（域名）由调用方配置，其后整段固定。
+    "qingjia": {
+        "max_version_config_list": "/xtra/qingjia/server/openapi/v2/maxVersionConfigList",
+        "times": "/xtra/qingjia/server/openapi/v2/times",
+        "upload": "/xtra/qingjia/server/openapi/v2/upload",
+        "save_apply": "/xtra/qingjia/server/openapi/v2/saveApply",
+        "my_apply_page_info": "/xtra/qingjia/server/openapi/v2/myApplyPageInfo",
+        "person_balance": "/xtra/qingjia/server/openapi/v2/personBalance",
+        "attendance_group_list": "/xtra/qingjia/server/openapi/v2/attendanceGroupList",
+        "enable_leave_type_list": "/xtra/qingjia/server/openapi/v2/enableLeaveTypeList",
+    },
+    # jiaban module (加班 V2): 同上，/server 服务标识段在 /openapi 之前。
+    "jiaban": {
+        "get_max_version_config_list": "/xtra/jiaban/server/openapi/v2/getMaxVersionConfigList",
+        "upload": "/xtra/jiaban/server/openapi/v2/upload",
+        "submit_approve": "/xtra/jiaban/server/openapi/v2/submitApprove",
+        "get_my_apply_page_info": "/xtra/jiaban/server/openapi/v2/getMyApplyPageInfo",
+        "get_group_info": "/xtra/jiaban/server/openapi/v2/getGroupInfo",
+        "calculate_duration": "/xtra/jiaban/server/openapi/v2/calculateDuration",
+    },
     # personal todo module (个人待办): distinct from the unified application todo API.
     "personal_todos": {
         "save": "/xtra/tdtask/server/openapi/v3/taskopt/savePersonalTask",
