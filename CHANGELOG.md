@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.10.0] - 2026-09-24
+
+### Fixed
+
+- **dynamic-card**: `update_dynamic_card` / `update_dynamic_card_with_params` / `DynamicCardUpdateParams` now accept `user_token` (query) and `user_id` (body `userId`) — the update must carry the identity that originally SENT the card. Bot-sent cards (1:1 app push, channel personal-bot) update with the app identity alone; human-sent cards (e.g. group messages) require the sender identity; a mismatch fails with 10005 无权限 (LXBUGS-128492, verified live by 李川 lxtest).
+
+### Fixed (videoconference)
+
+- **invite_members**: member items require `staffId`/`employeeName`/`type` per the interface doc — the SDK now validates them locally with a clear error (naming the missing fields) instead of a blind 105263 成员数据错误, and defaults `audio`/`video` to 0 (开启, the doc example default) (LXBUGS-128491; live-verified errCode=0 for full shape).
+- **VC_OPS**: removed `muteall`/`unmuteall` — `/meeting/member/control` is per-member only (backend confirmation 邹治会 2026-09-24); `mute` (per-member mute) verified live errCode=0 (LXBUGS-128490).
+
+
 ## [1.9.1] - 2026-09-23
 
 ### Added
