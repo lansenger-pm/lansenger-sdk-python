@@ -23,6 +23,7 @@ from lansenger_sdk.models import (
     JiabanMyApplyPageResult,
     JiabanSubmitApproveResult,
     JiabanUploadUrlResult,
+    JiabanUploadFileResult,
 )
 
 
@@ -122,11 +123,12 @@ async def test_upload_url_returns_value():
 @pytest.mark.asyncio
 async def test_put_jiaban_file_sends_content_md5():
     mock = _mock_put_client()
-    ok, err = await put_jiaban_file(
+    r = await put_jiaban_file(
         "https://s3/upload", b"hello", "5d41402abc4b2a76b9719d911017c592",
         http_client=mock,
     )
-    assert ok is True and err is None
+    assert isinstance(r, JiabanUploadFileResult)
+    assert r.success is True and r.error is None
     kwargs = mock.put.call_args[1]
     assert kwargs["headers"]["Content-MD5"] == "5d41402abc4b2a76b9719d911017c592"
     assert kwargs["headers"]["Content-Type"] == "application/octet-stream"
@@ -135,25 +137,25 @@ async def test_put_jiaban_file_sends_content_md5():
 
 @pytest.mark.asyncio
 async def test_put_jiaban_file_requires_args():
-    ok, err = await put_jiaban_file("", b"hello", "m1")
-    assert ok is False and err == "url is required"
+    r = await put_jiaban_file("", b"hello", "m1")
+    assert r.success is False and r.error == "url is required"
 
-    ok, err = await put_jiaban_file("https://s3/upload", b"hello", "")
-    assert ok is False and err == "md5 is required"
+    r = await put_jiaban_file("https://s3/upload", b"hello", "")
+    assert r.success is False and r.error == "md5 is required"
 
 
 @pytest.mark.asyncio
 async def test_put_jiaban_file_http_error():
     mock = _mock_put_client(status_code=400)
-    ok, err = await put_jiaban_file("https://s3/upload", b"hello", "m1", http_client=mock)
-    assert ok is False and "HTTP error 400" in err
+    r = await put_jiaban_file("https://s3/upload", b"hello", "m1", http_client=mock)
+    assert r.success is False and "HTTP error 400" in (r.error or "")
 
 
 @pytest.mark.asyncio
 async def test_put_jiaban_file_network_error():
     mock = _mock_put_client(raises=RuntimeError("connection reset"))
-    ok, err = await put_jiaban_file("https://s3/upload", b"hello", "m1", http_client=mock)
-    assert ok is False and "network error" in err
+    r = await put_jiaban_file("https://s3/upload", b"hello", "m1", http_client=mock)
+    assert r.success is False and "network error" in (r.error or "")
 
 
 @pytest.mark.asyncio

@@ -74,6 +74,7 @@ from .models import (
     QingjiaEnableLeaveTypeListResult,
     JiabanMaxVersionConfigListResult,
     JiabanUploadUrlResult,
+    JiabanUploadFileResult,
     JiabanSubmitApproveResult,
     JiabanMyApplyPageResult,
     JiabanGroupListResult,
@@ -3076,7 +3077,7 @@ class LansengerSyncClient:
             "fetch_jiaban_upload_url", file_name=file_name, md5=md5, size=size,
             org_id=org_id, user_token=user_token))
 
-    def put_jiaban_file(self, url, content, md5, timeout=60.0):
+    def put_jiaban_file(self, url, content, md5, timeout=60.0) -> JiabanUploadFileResult:
         """PUT 文件到加班附件预签名地址，带 Content-MD5 头 (blocking)."""
         return _run_async(self._ephemeral_call_with_positional(
             "put_jiaban_file", [url, content, md5], {"timeout": timeout}))

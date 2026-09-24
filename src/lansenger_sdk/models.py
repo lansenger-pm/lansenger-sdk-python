@@ -2329,6 +2329,24 @@ class JiabanUploadUrlResult:
 
 
 @dataclass
+class JiabanUploadFileResult:
+    """加班 V2 预签名地址 PUT 上传结果。
+
+    对齐 TS `putJiabanFile` 的 ``{success, error}``。PUT 的响应体是对象存储
+    的空响应，没有可建模的字段，所以只回 success/error。
+    """
+
+    success: bool
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
 class JiabanSubmitApproveResult:
     """加班 V2 /submitApprove — 提交加班申请。"""
 

@@ -41,6 +41,7 @@ from .models import (
     JiabanMyApplyPageResult,
     JiabanSubmitApproveResult,
     JiabanUploadUrlResult,
+    JiabanUploadFileResult,
 )
 from .pagination import parse_v2_page_info
 from .url_helpers import build_api_url
@@ -127,16 +128,16 @@ async def put_jiaban_file(
     *,
     http_client: httpx.AsyncClient | None = None,
     timeout: float = JIABAN_UPLOAD_TIMEOUT,
-) -> tuple[bool, str | None]:
+) -> JiabanUploadFileResult:
     """PUT 文件内容到 fetch_jiaban_upload_url 返回的预签名地址。
 
     加班附件上传必须带 Content-MD5 头（值为文件 MD5），这一步单独建模，
     避免调用方只取到预签名 URL 就以为上传完成。
     """
     if not url:
-        return False, "url is required"
+        return JiabanUploadFileResult(success=False, error="url is required")
     if not md5:
-        return False, "md5 is required"
+        return JiabanUploadFileResult(success=False, error="md5 is required")
 
     headers = {"Content-MD5": md5, "Content-Type": "application/octet-stream"}
     owns_client = http_client is None
@@ -145,14 +146,17 @@ async def put_jiaban_file(
     try:
         response = await http_client.put(url, content=content, headers=headers)
     except Exception as exc:  # network-level failure
-        return False, f"network error: {exc}"
+        return JiabanUploadFileResult(success=False, error=f"network error: {exc}")
     finally:
         if owns_client:
             await http_client.aclose()
 
     if response.status_code >= 400:
-        return False, f"HTTP error {response.status_code} {response.reason_phrase or ''}".strip()
-    return True, None
+        return JiabanUploadFileResult(
+            success=False,
+            error=f"HTTP error {response.status_code} {response.reason_phrase or ''}".strip(),
+        )
+    return JiabanUploadFileResult(success=True)
 
 
 async def fetch_jiaban_submit_approve(
