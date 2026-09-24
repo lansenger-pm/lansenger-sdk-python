@@ -1394,17 +1394,28 @@ class LansengerClient:
         head_status_info: dict[str, str] | None = None,
         links: list[dict[str, str]] | None = None,
         is_last_update: bool = False,
+        user_token: str = "",
+        user_id: str = "",
     ) -> SendMessageResult:
         """Update a dynamic appCard's status in-place.
 
         The card must have been sent with is_dynamic=True.
         Uses POST /v1/messages/dynamic/update.
 
+        Identity rule (OpenAPI 4.6.5/4.6.13): the update must carry the
+        identity that originally SENT the card. Bot-sent cards (1:1 app
+        push, channel personal-bot) update with the app identity alone;
+        human-sent cards (e.g. group messages sent as the user) require
+        `user_token` (query) or `user_id` (body userId). A mismatch fails
+        with 10005 无权限 (LXBUGS-128492).
+
         Args:
             msg_id: The message ID from the original send_app_card response.
             head_status_info: Updated status dict (description/colour/iconLink).
             links: Updated link entries (max 3).
             is_last_update: True = final state, card becomes static after this.
+            user_token: Sender's user token (for human-sent cards).
+            user_id: Sender's openId — body userId, alternative to user_token.
         """
         self._ensure_clients()
 
@@ -1413,6 +1424,8 @@ class LansengerClient:
 
         token = await self._get_token()
         url = build_api_url(self._config, "message", "dynamic_update", token)
+        if user_token:
+            url += f"&user_token={quote(user_token)}"
 
         app_card_update: dict[str, Any] = {"isLastUpdate": is_last_update}
         if head_status_info:
@@ -1425,6 +1438,8 @@ class LansengerClient:
             "msgType": "appCard",
             "msgData": {"appCardUpdateMsg": app_card_update},
         }
+        if user_id:
+            payload["userId"] = user_id
 
         try:
             response = await self._http_client.post(url, json=payload)
@@ -1445,6 +1460,8 @@ class LansengerClient:
             head_status_info=params.head_status_info,
             links=params.links,
             is_last_update=params.is_last_update,
+            user_token=params.user_token,
+            user_id=params.user_id,
         )
 
     # ── Public API: Message management ──────────────────────────────────

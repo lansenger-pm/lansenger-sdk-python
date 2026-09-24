@@ -337,6 +337,12 @@ class DynamicCardUpdateParams:
     head_status_info: dict[str, str] | None = None
     links: list[dict[str, str]] | None = None
     is_last_update: bool = False
+    # The update must carry the identity that SENT the card (OpenAPI 4.6.5/4.6.13):
+    # bot-sent cards update with the app identity alone; human-sent cards
+    # (e.g. group messages) need user_token (query) or user_id (body) —
+    # a mismatch fails with 10005 无权限 (LXBUGS-128492).
+    user_token: str = ""
+    user_id: str = ""
 
 
 @dataclass

@@ -69,13 +69,13 @@ VC_MEMBER_ROLE_MEMBER = "participant"
 # （客户端硬校验曾误挡合法值、又放行服务端不认的值，故移除）。
 # 实测修正 (2026-09-23, /meeting/member/control)：服务端认 "mute"（单人静音，
 # errCode 0），不认 "applyAudio"（errCode 105601 opCode 不存在），据此增删。
-# Verified live (LXBUGS-128490): "kick" works；"muteall"/"unmuteall" 在测试环境
-# 被会议服务端拒绝（errCode=105601 opCode不存在），保留待服务端确认——把 105601
-# 当作「本环境不支持该取值」。
+# Verified live (LXBUGS-128490) + 后端确认 (邹治会 2026-09-24)：/meeting/member/control
+# 只针对单人操作，muteall/unmuteall（全员禁言/取消全员禁言）接口不支持——
+# 从本表移除，勿再使用。服务端认 "mute"（单人静音），不认 "applyAudio"。
 VC_OPS = (
     "kick", "quit", "join", "handup", "openScreenShare", "closeScreenShare",
     "openVideo", "closeVideo", "mute", "applyVideo", "shareVideo",
-    "cancelShareVideo", "muteall", "unmuteall", "remove", "call",
+    "cancelShareVideo", "remove", "call",
     "enforceOpenVideo", "setJoinHost", "cancelJoinHost", "inviteOpenAudio",
     "setHost", "grabHost",
 )
@@ -533,16 +533,33 @@ async def invite_members(
     """Invite members to a running meeting (/meeting/member/invite).
 
     Args:
-        members: [{staffId, employeeName, type, audio, video, typeMask?}];
-            type 0=platform member, 1=小鱼 device (typeMask: 1=PSTN, 2=小鱼, 3=H323).
+        members: REQUIRED fields per item — {staffId, employeeName, type,
+            audio, video} (接口文档必填：audio/video int，0=开启 1=关闭；type
+            0=当前平台成员，1=小鱼成员)。Missing audio/video or employeeName
+            fails with 105263 成员数据错误 (LXBUGS-128491). SDK defaults
+            audio/video to 0 (开启) when absent. typeMask optional (type=1
+            小鱼设备子类型：1-PSTN 2-小鱼 3-H323). Note: `role` is a
+            create_meeting field — invite has no role.
     """
     if not members:
         return VideoconferenceOpResult(success=False, error="member is required")
+    normalized: list[dict[str, Any]] = []
+    for i, m in enumerate(members):
+        m = dict(m or {})
+        missing = [k for k in ("staffId", "employeeName", "type") if m.get(k) in (None, "")]
+        if missing:
+            return VideoconferenceOpResult(
+                success=False,
+                error=f"members[{i}] missing required fields: {', '.join(missing)} (105263 otherwise)",
+            )
+        m.setdefault("audio", 0)  # 0=开启 (接口文档示例默认)
+        m.setdefault("video", 0)
+        normalized.append(m)
     url = build_api_url(config, "videoconferences", "member_invite", app_token, user_token=user_token)
     body: dict[str, Any] = {
         "orgId": int(org_id) if str(org_id).isdigit() else org_id,
         "operator": operator, "meetingNumber": meeting_number,
-        "member": members,
+        "member": normalized,
     }
     data, http_err = await do_post(config, url, body, http_client)
     if http_err:

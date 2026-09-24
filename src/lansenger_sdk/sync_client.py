@@ -650,6 +650,8 @@ class LansengerSyncClient:
         head_status_info: dict[str, str] | None = None,
         links: list[dict[str, str]] | None = None,
         is_last_update: bool = False,
+        user_token: str = "",
+        user_id: str = "",
     ) -> SendMessageResult:
         """Update a dynamic appCard status (blocking)."""
         return _run_async(self._ephemeral_call(
@@ -658,6 +660,8 @@ class LansengerSyncClient:
             head_status_info=head_status_info,
             links=links,
             is_last_update=is_last_update,
+            user_token=user_token,
+            user_id=user_id,
         ))
 
     def update_dynamic_card_with_params(self, params: DynamicCardUpdateParams) -> SendMessageResult:

@@ -334,3 +334,47 @@ def test_sync_client_passthrough_mode_no_app_id_secret():
     assert client._app_id == ""
     assert client._app_secret == ""
     assert client._app_token == "at"
+
+
+@pytest.mark.asyncio
+async def test_update_dynamic_card_user_token_passthrough():
+    """Group-sent cards are owned by the human sender — user_token must reach
+    the update URL (LXBUGS-128492)."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    client = LansengerClient(app_id="id", app_secret="secret")
+    client._http_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = MagicMock(return_value={"errCode": 0, "errMsg": "ok", "data": {"msgId": "m1"}})
+    client._http_client.post = AsyncMock(return_value=mock_response)
+
+    with patch.object(client, "_get_token", AsyncMock(return_value="app-tok")):
+        result = await client.update_dynamic_card(
+            "msg-1", head_status_info={"description": "done"}, user_token="ut-1"
+        )
+    assert result.success is True
+    url = client._http_client.post.call_args.args[0]
+    assert "user_token=ut-1" in url
+
+@pytest.mark.asyncio
+async def test_update_dynamic_card_user_id_body():
+    """Identity via body userId (OpenAPI 4.6.5: user_token OR userId)."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    client = LansengerClient(app_id="id", app_secret="secret")
+    client._http_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = MagicMock(return_value={"errCode": 0, "errMsg": "ok", "data": {"msgId": "m1"}})
+    client._http_client.post = AsyncMock(return_value=mock_response)
+
+    with patch.object(client, "_get_token", AsyncMock(return_value="app-tok")):
+        result = await client.update_dynamic_card("msg-1", user_id="sender-open-id")
+    assert result.success is True
+    kwargs = client._http_client.post.call_args.kwargs
+    assert kwargs["json"]["userId"] == "sender-open-id"
+    url = client._http_client.post.call_args.args[0]
+    assert "user_token=" not in url
