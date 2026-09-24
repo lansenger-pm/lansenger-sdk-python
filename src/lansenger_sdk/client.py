@@ -118,13 +118,13 @@ from .models import (
     QingjiaSaveApplyResult,
     QingjiaMyApplyPageResult,
     QingjiaPersonBalanceResult,
-    QingjiaAttendanceGroupListResult,
+    QingjiaGroupListResult,
     QingjiaEnableLeaveTypeListResult,
     JiabanMaxVersionConfigListResult,
     JiabanUploadUrlResult,
     JiabanSubmitApproveResult,
     JiabanMyApplyPageResult,
-    JiabanAttendanceGroupListResult,
+    JiabanGroupListResult,
     JiabanCalculateDurationResult,
     OrgInfoResult,
     PersonalAppCreateResult,
@@ -5539,10 +5539,10 @@ class LansengerClient:
 
     async def fetch_qingjia_attendance_group_list(
         self, *, org_id: str = "", staff_id: str = "", user_token: str = "",
-    ) -> QingjiaAttendanceGroupListResult:
+    ) -> QingjiaGroupListResult:
         """考勤组列表 (请假 V2 /attendanceGroupList)."""
         if not org_id:
-            return QingjiaAttendanceGroupListResult(success=False, error="org_id is required")
+            return QingjiaGroupListResult(success=False, error="org_id is required")
         self._ensure_clients()
         from .qingjia import fetch_qingjia_attendance_group_list
 
@@ -5686,12 +5686,12 @@ class LansengerClient:
 
     async def fetch_jiaban_get_group_info(
         self, *, staff_id: str, org_id: str, user_token: str = "",
-    ) -> JiabanAttendanceGroupListResult:
+    ) -> JiabanGroupListResult:
         """员工所在考勤组 (加班 V2 /getGroupInfo)."""
         if not staff_id:
-            return JiabanAttendanceGroupListResult(success=False, error="staff_id is required")
+            return JiabanGroupListResult(success=False, error="staff_id is required")
         if not org_id:
-            return JiabanAttendanceGroupListResult(success=False, error="org_id is required")
+            return JiabanGroupListResult(success=False, error="org_id is required")
         self._ensure_clients()
         from .jiaban import fetch_jiaban_get_group_info
 

@@ -35,7 +35,7 @@ import httpx
 from .api_utils import do_post, parse_api_response
 from .config import LansengerConfig
 from .models import (
-    JiabanAttendanceGroupListResult,
+    JiabanGroupListResult,
     JiabanCalculateDurationResult,
     JiabanMaxVersionConfigListResult,
     JiabanMyApplyPageResult,
@@ -255,25 +255,25 @@ async def fetch_jiaban_get_group_info(
     org_id: str,
     user_token: str = "",
     http_client: httpx.AsyncClient | None = None,
-) -> JiabanAttendanceGroupListResult:
+) -> JiabanGroupListResult:
     """员工所在考勤组 (加班 V2 /getGroupInfo)."""
     if not staff_id:
-        return JiabanAttendanceGroupListResult(success=False, error="staff_id is required")
+        return JiabanGroupListResult(success=False, error="staff_id is required")
     if not org_id:
-        return JiabanAttendanceGroupListResult(success=False, error="org_id is required")
+        return JiabanGroupListResult(success=False, error="org_id is required")
 
     url = build_api_url(config, "jiaban", "get_group_info", app_token, user_token=user_token)
     body: dict[str, Any] = {"staffId": staff_id, "orgId": org_id}
 
     data, http_err = await do_post(config, url, body, http_client)
     if http_err:
-        return JiabanAttendanceGroupListResult(success=False, error=http_err)
+        return JiabanGroupListResult(success=False, error=http_err)
     ok, api_err = parse_api_response(data or {})
     if not ok:
-        return JiabanAttendanceGroupListResult(success=False, error=api_err)
+        return JiabanGroupListResult(success=False, error=api_err)
 
     items = (data or {}).get("data") or []
-    return JiabanAttendanceGroupListResult(
+    return JiabanGroupListResult(
         success=True, items=items, total=len(items), raw_response=data,
     )
 

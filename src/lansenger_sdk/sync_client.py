@@ -70,13 +70,13 @@ from .models import (
     QingjiaSaveApplyResult,
     QingjiaMyApplyPageResult,
     QingjiaPersonBalanceResult,
-    QingjiaAttendanceGroupListResult,
+    QingjiaGroupListResult,
     QingjiaEnableLeaveTypeListResult,
     JiabanMaxVersionConfigListResult,
     JiabanUploadUrlResult,
     JiabanSubmitApproveResult,
     JiabanMyApplyPageResult,
-    JiabanAttendanceGroupListResult,
+    JiabanGroupListResult,
     JiabanCalculateDurationResult,
     OrgInfoResult,
     PersonalAppCreateResult,
@@ -3047,7 +3047,7 @@ class LansengerSyncClient:
             type_code=type_code, staff_id=staff_id, user_token=user_token))
 
     def fetch_qingjia_attendance_group_list(self, *, org_id="", staff_id="",
-                                            user_token="") -> QingjiaAttendanceGroupListResult:
+                                            user_token="") -> QingjiaGroupListResult:
         """考勤组列表 (blocking)."""
         return _run_async(self._ephemeral_call(
             "fetch_qingjia_attendance_group_list", org_id=org_id,
@@ -3100,7 +3100,7 @@ class LansengerSyncClient:
             page_vo=page_vo, user_token=user_token))
 
     def fetch_jiaban_get_group_info(self, *, staff_id, org_id,
-                                    user_token="") -> JiabanAttendanceGroupListResult:
+                                    user_token="") -> JiabanGroupListResult:
         """员工所在考勤组 (blocking)."""
         return _run_async(self._ephemeral_call(
             "fetch_jiaban_get_group_info", staff_id=staff_id, org_id=org_id,

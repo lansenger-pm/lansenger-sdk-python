@@ -32,7 +32,7 @@ import httpx
 from .api_utils import do_post, parse_api_response
 from .config import LansengerConfig
 from .models import (
-    QingjiaAttendanceGroupListResult,
+    QingjiaGroupListResult,
     QingjiaEnableLeaveTypeListResult,
     QingjiaMyApplyPageResult,
     QingjiaPersonBalanceResult,
@@ -286,10 +286,10 @@ async def fetch_qingjia_attendance_group_list(
     staff_id: str = "",
     user_token: str = "",
     http_client: httpx.AsyncClient | None = None,
-) -> QingjiaAttendanceGroupListResult:
+) -> QingjiaGroupListResult:
     """考勤组列表 (请假 V2 /attendanceGroupList)."""
     if not org_id:
-        return QingjiaAttendanceGroupListResult(success=False, error="org_id is required")
+        return QingjiaGroupListResult(success=False, error="org_id is required")
 
     url = build_api_url(config, "qingjia", "attendance_group_list", app_token, user_token=user_token)
     body: dict[str, Any] = {"orgId": org_id}
@@ -298,13 +298,13 @@ async def fetch_qingjia_attendance_group_list(
 
     data, http_err = await do_post(config, url, body, http_client)
     if http_err:
-        return QingjiaAttendanceGroupListResult(success=False, error=http_err)
+        return QingjiaGroupListResult(success=False, error=http_err)
     ok, api_err = parse_api_response(data or {})
     if not ok:
-        return QingjiaAttendanceGroupListResult(success=False, error=api_err)
+        return QingjiaGroupListResult(success=False, error=api_err)
 
     items = (data or {}).get("data") or []
-    return QingjiaAttendanceGroupListResult(
+    return QingjiaGroupListResult(
         success=True, items=items, total=len(items), raw_response=data,
     )
 

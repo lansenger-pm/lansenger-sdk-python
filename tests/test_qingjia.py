@@ -8,7 +8,7 @@ import pytest
 from lansenger_sdk.constants import API_ENDPOINTS
 from lansenger_sdk.config import LansengerConfig
 from lansenger_sdk.models import (
-    QingjiaAttendanceGroupListResult,
+    QingjiaGroupListResult,
     QingjiaEnableLeaveTypeListResult,
     QingjiaMyApplyPageResult,
     QingjiaPersonBalanceResult,
@@ -256,7 +256,7 @@ async def test_attendance_group_list():
     r = await fetch_qingjia_attendance_group_list(
         _make_config(), app_token="tok", org_id="org1", http_client=mock,
     )
-    assert isinstance(r, QingjiaAttendanceGroupListResult)
+    assert isinstance(r, QingjiaGroupListResult)
     assert r.success is True and r.total == 1
     assert "/xtra/qingjia/server/openapi/v2/attendanceGroupList" in mock.post.call_args[0][0]
 

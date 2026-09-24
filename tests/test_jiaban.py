@@ -17,7 +17,7 @@ from lansenger_sdk.jiaban import (
     put_jiaban_file,
 )
 from lansenger_sdk.models import (
-    JiabanAttendanceGroupListResult,
+    JiabanGroupListResult,
     JiabanCalculateDurationResult,
     JiabanMaxVersionConfigListResult,
     JiabanMyApplyPageResult,
@@ -232,7 +232,7 @@ async def test_get_group_info():
         _make_config(), app_token="tok", staff_id="s1", org_id="org1",
         http_client=mock,
     )
-    assert isinstance(r, JiabanAttendanceGroupListResult)
+    assert isinstance(r, JiabanGroupListResult)
     assert r.success is True and r.total == 1
     assert "/xtra/jiaban/server/openapi/v2/getGroupInfo" in mock.post.call_args[0][0]
     assert mock.post.call_args[1]["json"] == {"staffId": "s1", "orgId": "org1"}

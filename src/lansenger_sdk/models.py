@@ -2254,7 +2254,7 @@ class QingjiaPersonBalanceResult:
 
 
 @dataclass
-class QingjiaAttendanceGroupListResult:
+class QingjiaGroupListResult:
     """请假 V2 /attendanceGroupList — 考勤组列表。"""
 
     success: bool
@@ -2377,7 +2377,7 @@ class JiabanMyApplyPageResult:
 
 
 @dataclass
-class JiabanAttendanceGroupListResult:
+class JiabanGroupListResult:
     """加班 V2 /getGroupInfo — 员工所在考勤组。"""
 
     success: bool
