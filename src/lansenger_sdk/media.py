@@ -7,6 +7,7 @@ Two upload endpoints exist:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import tempfile
@@ -16,7 +17,10 @@ import httpx
 from .auth import TokenManager
 from .config import LansengerConfig
 from .constants import (
+    APP_MEDIA_TYPE_AUDIO,
     APP_MEDIA_TYPE_FILE,
+    APP_MEDIA_TYPE_IMAGE,
+    APP_MEDIA_TYPE_VIDEO,
     MEDIA_TYPE_IMAGE,
 )
 from .exceptions import LansengerFileError
@@ -207,6 +211,20 @@ async def upload_app_media_v2(
     if not os.path.isfile(file_path):
         return UploadMediaResult(success=False, error=f"File not found: {file_path}")
 
+    # OpenAPI 4.5.5 用字符串枚举 file/video/image/audio；数字 1/2/3 是旧
+    # 4.5.1 端点的约定，传数字会 50052「缺少上传media类型」——就地拦截并指路。
+    if not isinstance(media_type, str) or media_type not in (
+        APP_MEDIA_TYPE_FILE, APP_MEDIA_TYPE_VIDEO, APP_MEDIA_TYPE_IMAGE, APP_MEDIA_TYPE_AUDIO,
+    ):
+        return UploadMediaResult(
+            success=False,
+            error=(
+                f"media_type must be one of 'file'/'video'/'image'/'audio' "
+                f"(strings per OpenAPI 4.5.5); got {media_type!r}. The numeric "
+                f"1/2/3 convention belongs to the legacy 4.5.1 upload_media endpoint."
+            ),
+        )
+
     try:
         token = await token_manager.get_token()
     except Exception as e:
@@ -341,9 +359,29 @@ async def download_media(
     try:
         response = await http_client.get(url)
         response.raise_for_status()
-        return DownloadMediaResult(success=True, data=response.content)
     except httpx.HTTPError as e:
         return DownloadMediaResult(success=False, error=f"Download HTTP error: {e}")
+
+    body = response.content
+    # 网关在 media 不存在/无权限时会返回 200 + JSON 错误体（如 errCode=10003）
+    # 而非文件流；不校验会把错误 JSON 静默写成目标文件（数据损坏级）。
+    content_type = (response.headers.get("content-type") or "").lower()
+    if "json" in content_type or body[:1] in (b"{", b"["):
+        try:
+            parsed = json.loads(body)
+        except Exception:
+            parsed = None
+        if isinstance(parsed, dict) and "errCode" in parsed:
+            return DownloadMediaResult(
+                success=False,
+                error=(
+                    f"Download returned an API error instead of a file "
+                    f"(errCode={parsed.get('errCode')}): {parsed.get('errMsg') or parsed.get('message') or ''} — "
+                    f"media may not exist or the identity lacks access; "
+                    f"the chat-history fileUrls signed link (~1h validity) is a reliable fallback"
+                ),
+            )
+    return DownloadMediaResult(success=True, data=body)
 
 
 async def download_media_to_file(

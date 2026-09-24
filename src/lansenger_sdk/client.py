@@ -65,7 +65,7 @@ from .questionnaires import (
     QUESTIONNAIRE_SCOPE_INTERNAL,
     QUESTIONNAIRE_SCOPE_PUBLIC,
 )
-from .media import download_media, upload_app_media, upload_media
+from .media import download_media, upload_app_media, upload_app_media_v2, upload_media
 from .models import (
     AccountMessageResult,
     AppCardParams,
@@ -719,9 +719,18 @@ class LansengerClient:
 
         mt = media_type or guess_app_media_type(file_path) or APP_MEDIA_TYPE_FILE
 
-        upload_result = await upload_app_media(
-            self._config, self._token_manager, self._http_client, file_path, mt
-        )
+        # assistant 身份（带 user_token）走 v1 上传通道会被 10005 invalid
+        # appCategory 拒绝——统一收敛到 v2 通道（4.5.5，user_token 鉴权，
+        # 已实测可用）；bot 身份仍走 v1（LXBUGS-128492 测试轮）。
+        if user_token:
+            upload_result = await upload_app_media_v2(
+                self._config, self._token_manager, self._http_client,
+                file_path, mt, user_token=user_token,
+            )
+        else:
+            upload_result = await upload_app_media(
+                self._config, self._token_manager, self._http_client, file_path, mt
+            )
         if not upload_result.success or not upload_result.media_id:
             return SendMessageResult(
                 success=False,
@@ -730,10 +739,16 @@ class LansengerClient:
 
         media_ids = [upload_result.media_id]
         if cover_image_path and mt == APP_MEDIA_TYPE_VIDEO:
-            cover_upload = await upload_app_media(
-                self._config, self._token_manager, self._http_client,
-                cover_image_path, APP_MEDIA_TYPE_IMAGE,
-            )
+            if user_token:
+                cover_upload = await upload_app_media_v2(
+                    self._config, self._token_manager, self._http_client,
+                    cover_image_path, APP_MEDIA_TYPE_IMAGE, user_token=user_token,
+                )
+            else:
+                cover_upload = await upload_app_media(
+                    self._config, self._token_manager, self._http_client,
+                    cover_image_path, APP_MEDIA_TYPE_IMAGE,
+                )
             if cover_upload.success and cover_upload.media_id:
                 media_ids.append(cover_upload.media_id)
 
