@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.10.1] - 2026-09-24
+
+### Fixed
+
+- **media.download**: the gateway returns 200 + a JSON error body (e.g. errCode 10003 无效的请求) when the media is missing or the identity lacks access — `download_media` no longer silently writes that error body as the target file; it fails with the server message and points to the chat-history `fileUrls` signed-link fallback (data-corruption-grade pit, found in the 128492 test round).
+- **media.upload_app_media_v2**: non-string / out-of-enum `media_type` is rejected locally with guidance (the numeric 1/2/3 convention belongs to the legacy 4.5.1 endpoint; strings per 4.5.5) — prevents errCode 50052 缺少上传media类型.
+
+### Changed
+
+- **client.send_file**: when `user_token` is provided (assistant identity) the upload routes through the v2 app-media channel (4.5.5) — the v1 channel rejected the assistant identity with 10005 invalid appCategory; bot identity keeps the v1 path.
+
 ## [1.10.0] - 2026-09-24
 
 ### Fixed
