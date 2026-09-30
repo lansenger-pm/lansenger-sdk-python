@@ -33,20 +33,6 @@ API_ENDPOINTS = {
         "fetch": "/v1/org/{org_id}/fetch",
         "extra_field_ids": "/v1/org/{org_id}/extrafieldids/fetch",
     },
-    # boardroom module (会议室预定 V2): same /server convention as notice.
-    "boardrooms": {
-        "room_list": "/xtra/boardroom/server/openapi/v2/roomList",
-        "room_detail": "/xtra/boardroom/server/openapi/v2/roomDetail",
-        "room_schedule": "/xtra/boardroom/server/openapi/v2/roomSchedule",
-        "reserve_detail": "/xtra/boardroom/server/openapi/v2/reserveDetail",
-        "reserve_room": "/xtra/boardroom/server/openapi/v2/reserveRoom",
-        "edit_reserve": "/xtra/boardroom/server/openapi/v2/editReserve",
-        "reserve_cancel": "/xtra/boardroom/server/openapi/v2/reserveCancel",
-        "confirm_sign": "/xtra/boardroom/server/openapi/v2/confirmSign",
-        "my_reserve_list": "/xtra/boardroom/server/openapi/v2/myReserveList",
-        "grading_list": "/xtra/boardroom/server/openapi/v2/gradingList",
-        "area_office_list": "/xtra/boardroom/server/openapi/v2/areaOfficeList",
-    },
     # videoconference module (视频会议开放能力): standard app gateway,
     # prefix /xtra/videoconference/openapi/v1 (docs: developer.lanxin.cn
     # 视频会议 module; org needs the app installed + 开放能力 switch on).
@@ -144,82 +130,6 @@ API_ENDPOINTS = {
         "fetch": "/v1/personal/apps/{app_id}/fetch",
         "delete": "/v1/personal/apps/{app_id}/delete",
         "list_fetch": "/v1/personal/apps/list/fetch",
-    },
-    # notice module (通知系统): paths carry a /server segment — production
-    # stage; dev/test environments serve the same API without it.
-    "notices": {
-        "send": "/xtra/notice/server/openapi/v1/send",
-        "accounts_fetch": "/xtra/notice/server/openapi/v1/notice/account",
-    },
-    # questionnaire module (问卷系统): same /server convention as notice.
-    "questionnaires": {
-        "save": "/xtra/questionnaire/server/openapi/v1/saveQuestionnaire",
-        "questions_save": "/xtra/questionnaire/server/openapi/v1/saveQuestionList",
-        "question_delete": "/xtra/questionnaire/server/openapi/v1/deleteQuestion",
-        "publish": "/xtra/questionnaire/server/openapi/v1/publish",
-        "withdraw": "/xtra/questionnaire/server/openapi/v1/withdraw",
-        "finish": "/xtra/questionnaire/server/openapi/v1/finish",
-        "delete": "/xtra/questionnaire/server/openapi/v1/delete",
-        "detail": "/xtra/questionnaire/server/openapi/v1/detail",
-        "answer_url": "/xtra/questionnaire/server/openapi/v1/getAnswerUrl",
-        "copy": "/xtra/questionnaire/server/openapi/v1/copy",
-        "detail_no_auth": "/xtra/questionnaire/server/openapi/v1/detailWithoutAuth",
-        "query_list": "/xtra/questionnaire/server/openapi/v1/queryList",
-        "user_accounts": "/xtra/questionnaire/server/openapi/v1/userOfficeAccountList",
-        "create_list": "/xtra/questionnaire/server/openapi/v1/createList",
-        "my_create_list": "/xtra/questionnaire/server/openapi/v1/myCreateList",
-        "participation_list": "/xtra/questionnaire/server/openapi/v1/participationList",
-        "answer_list": "/xtra/questionnaire/server/openapi/v1/answerList",
-        "answer_detail": "/xtra/questionnaire/server/openapi/v1/answerDetail",
-        "last_answer_detail": "/xtra/questionnaire/server/openapi/v1/lastAnswerDetail",
-        "answer_data": "/xtra/questionnaire/server/openapi/v1/answerData",
-        "last_answer_record": "/xtra/questionnaire/server/openapi/v1/lastAnswerRecord",
-        "upload_url": "/xtra/questionnaire/server/openapi/v1/upload",
-    },
-    # qingjia module (请假 V2): /server 服务标识段在 /openapi 之前，与 boardroom /
-    # questionnaire 一致。网关（域名）由调用方配置，其后整段固定。
-    "qingjia": {
-        "max_version_config_list": "/xtra/qingjia/server/openapi/v2/maxVersionConfigList",
-        "times": "/xtra/qingjia/server/openapi/v2/times",
-        "upload": "/xtra/qingjia/server/openapi/v2/upload",
-        "save_apply": "/xtra/qingjia/server/openapi/v2/saveApply",
-        "my_apply_page_info": "/xtra/qingjia/server/openapi/v2/myApplyPageInfo",
-        "person_balance": "/xtra/qingjia/server/openapi/v2/personBalance",
-        "attendance_group_list": "/xtra/qingjia/server/openapi/v2/attendanceGroupList",
-        "enable_leave_type_list": "/xtra/qingjia/server/openapi/v2/enableLeaveTypeList",
-    },
-    # jiaban module (加班 V2): 同上，/server 服务标识段在 /openapi 之前。
-    "jiaban": {
-        "get_max_version_config_list": "/xtra/jiaban/server/openapi/v2/getMaxVersionConfigList",
-        "upload": "/xtra/jiaban/server/openapi/v2/upload",
-        "submit_approve": "/xtra/jiaban/server/openapi/v2/submitApprove",
-        "get_my_apply_page_info": "/xtra/jiaban/server/openapi/v2/getMyApplyPageInfo",
-        "get_group_info": "/xtra/jiaban/server/openapi/v2/getGroupInfo",
-        "calculate_duration": "/xtra/jiaban/server/openapi/v2/calculateDuration",
-    },
-    # personal todo module (个人待办): distinct from the unified application todo API.
-    "personal_todos": {
-        "save": "/xtra/tdtask/server/openapi/v3/taskopt/savePersonalTask",
-        "update": "/xtra/tdtask/server/openapi/v3/taskopt/updatePersonalTask",
-        "user_list": "/xtra/tdtask/server/openapi/v3/user/list",
-        "resource_update": "/xtra/tdtask/server/openapi/resource/update",
-        "resource_download": "/xtra/tdtask/server/openapi/resource/getResourceDownload",
-        "resource_upload_url": "/xtra/tdtask/server/openapi/resource/getUploadUrl",
-    },
-    "todo": {
-        "create": "/xtra/task/unified/v1/todotask/create",
-        "info_update": "/xtra/task/unified/v1/todotask/info/update",
-        "status_update": "/xtra/task/unified/v1/todotask/status/update",
-        "sender_delete": "/xtra/task/unified/v1/sender/todotask/delete",
-        "list_fetch": "/xtra/task/unified/v1/todotask/list/fetch",
-        "info_fetch_by_source_id": "/xtra/task/unified/v1/todotask/info/fetchbysourceid",
-        "info_fetch": "/xtra/task/unified/v1/todotask/info/fetch",
-        "status_count_list_fetch": "/xtra/task/unified/v1/todotask/status/countList/fetch",
-        "executor_status_update": "/xtra/task/unified/v1/todotask/executor/status/update",
-        "executor_create": "/xtra/task/unified/v1/todotask/executor/create",
-        "executor_delete": "/xtra/task/unified/v1/todotask/executor/delete",
-        "executor_list_fetch": "/xtra/task/unified/v1/todotask/executor/list/fetch",
-        "staff_application_fetch": "/xtra/task/unified/v1/staff/application/fetch",  # not yet implemented
     },
 }
 

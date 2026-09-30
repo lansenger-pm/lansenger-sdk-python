@@ -6,7 +6,7 @@ SDK Python indépendant du framework pour la plateforme Lansenger (蓝信) — p
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 530](https://img.shields.io/badge/Tests-530-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 452](https://img.shields.io/badge/Tests-452-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 Zéro dépendance de framework — uniquement `httpx`. Fonctionne avec tout codebase Python async ou sync.
 
@@ -34,13 +34,6 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Gestion des messages** — révocation, mise à jour dynamique de carte
 - **Groups** — créer, infos, membres, liste, vérification de membership, mise à jour des paramètres & membres, dissoudre
 - **Calendrier & Schedule** — calendrier principal, CRUD de schedule + mise à jour, gestion des participants + métadonnées participants, update_schedule_attendees()
-- **Todo unifié** — créer, mettre à jour, supprimer, interroger, gestion d'exécuteur, comptes de statut
-- **Notices (通知系统)** — envoyer des notifications via un compte officiel (texte/lien, ciblage téléphone/staff, indicateurs de confirmation/transfert/réponse, stratégies de rappel, pièces jointes), lister les comptes officiels d'une organisation
-- **Questionnaires (问卷系统)** — créer/mettre à jour/publier/retirer/terminer/supprimer des questionnaires, gestion groupée des questions, listes paginées (comptes officiels, créés, participés), enregistrements et export des réponses, URL de téléversement pré-signée
-- **Boardroom (会议室预定 V2)** — recherche de salles (zone/étage/équipement/créneau), détails et planning journalier, réservation/modification (simple et récurrente), annulation, confirmation par scan, mes réservations (paginées), listes de gradings et zones
-- **Qingjia (请假 V2)** — configurations de règles des groupes d'assiduité, durée de congé pour une plage horaire, URL de téléversement présignée, dépôt de demande, mes demandes (paginées), solde de congé, liste des groupes d'assiduité, types de congé activés
-- **Jiaban (加班 V2)** — configurations de règles des groupes d'assiduité, URL de téléversement présignée (suivie d'un PUT avec Content-MD5), dépôt de demande, mes demandes (paginées), groupe d'assiduité de l'employé, calcul de la durée des heures supplémentaires
-- **Todos personnels (个人待办)** — créer/modifier/lister les todos personnels et gérer les pièces jointes, séparément des todos d'application
 - **Commandes de bot** — créer/gérer les entrées de commande de bot
 - **Applications personnelles** — gérer les bots personnels
 - **Événements de callback** — 25 types d'événements, parsing structuré, décryptage AES (spec 4.10.1.4), vérification de signature SHA1
@@ -367,43 +360,7 @@ await client.update_schedule_attendee_meta(
 )
 ```
 
-## 7. Todo unifié
-
-```python
-from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
-
-# Créer une tâche todo
-todo = await client.create_todo_task(
-    title="Demande d'approbation", link="https://app.com/a/1", pc_link="https://pc.app.com/a/1",
-    executor_ids=["staff1"], org_id="org1", type=TODO_TYPE_APPROVAL,
-)
-
-# Mettre à jour le statut (11=à lire, 12=lu, 21=à faire, 22=fait)
-await client.update_todo_task_status(todotask_id="taskId", status=TODO_TODO_STATUS_DONE, org_id="org1")
-
-# Mettre à jour le contenu
-await client.update_todo_task(todotask_id="taskId", title="Mis à jour", link="l", pc_link="p", org_id="org1")
-
-# Supprimer (envoyeur uniquement)
-await client.delete_todo_task(todotask_id="taskId", org_id="org1")
-
-# Interroger
-list_result = await client.fetch_todo_task_list(org_id="org1")
-task = await client.fetch_todo_task_by_id(todotask_id="taskId", org_id="org1")
-task = await client.fetch_todo_task_by_source_id(source_id="src1", org_id="org1")
-counts = await client.fetch_todo_task_status_counts(staff_id="staff1", org_id="org1")
-
-# Gestion des exécuteurs
-await client.add_executors(executor_ids=["staff2"], org_id="org1", todotask_id="taskId")
-await client.delete_executors(executor_ids=["staff2"], org_id="org1", todotask_id="taskId")
-executors = await client.fetch_executor_list(todotask_id="taskId", org_id="org1")
-await client.update_executor_status(
-    executor_status_list=[{"executorId": "staff1", "todotaskId": "taskId", "status": "22"}],
-    org_id="org1",
-)
-```
-
-## 8. Événements de callback
+## 7. Événements de callback
 
 Le SDK prend en charge les payloads de callback en JSON brut et en AES chiffré (selon la spec API Lansenger 4.10.1.4).
 
@@ -464,126 +421,6 @@ types = client.get_callback_event_types()  # 25 types d'événements sur 13 cat�
 ```
 
 Le décryptage AES nécessite le package `pycryptodome` ou `cryptography` (auto-détecté).
-
-## 9. Notifications (通知系统)
-
-Envoyer des notifications via un compte officiel et lister les comptes officiels d'une organisation.
-
-> Les chemins contiennent un segment `/server` (stage de production ; les environnements
-> dev/test s'en passent). Ce module n'offre pas d'interface de révocation/suppression.
-> Au moins un des champs `create_mobile` / `create_user_id` est requis ;
-> `user_token` ne remplace pas l'identité du créateur.
-
-```python
-# 1) Trouver les comptes officiels — le champ "code" est le accountCode d'envoi
-accounts = await client.fetch_notice_accounts(org_id="org-001")
-account_code = accounts.accounts[0]["code"]
-
-# 2) Envoyer une notification texte ciblée par téléphone (max 10 destinataires / 10 en copie)
-result = await client.send_notice(
-    title="关于系统升级的通知",
-    content_type=1,                        # 1=texte (content requis), 2=lien (notice_link requis)
-    account_code=account_code,
-    user_type=1,                           # 1=téléphone, 2=staffId/département
-    content="系统将于本周六进行升级维护",
-    release_phones=["13800138000", "13800138001"],
-    cc_phones=["13800138002"],
-    create_mobile="13800138000",           # requis : create_mobile ou create_user_id
-    confirm_flag=1,                        # confirmation de lecture requise (1=oui, 0=non)
-    remind_status=1, remind_msg_type="mobile", at_once_flag=1,
-)
-print(result.success, result.notice_code, result.notice_status)  # statut : 1=brouillon, 2=envoyé, 3=retiré
-
-# 3) Ou cibler staff/départements (max 200)
-result = await client.send_notice(
-    title="部门通知", content_type=1, account_code=account_code,
-    user_type=2,
-    content="请及时填写本周周报",
-    release_range=[{"objId": "dept-1", "objName": "研发部", "objType": 2}],  # objType : 1=staff, 2=département
-    cc_staff_ids=["staff-002"],
-    create_user_id="staff-001",
-)
-```
-
-## 10. Questionnaire (问卷系统)
-
-Create, publish, and analyze questionnaires. Create/publish endpoints require a valid
-official-account ``accountCode`` (missing → errCode 3104); question structures are
-passed through as camelCase dicts; validation errors may arrive concatenated.
-
-```python
-# 1) Find manageable office accounts — the "code" field is the accountCode
-accounts = await client.fetch_questionnaire_office_accounts()
-account_code = accounts.accounts[0]["code"]
-
-# 2) Create a questionnaire, add questions, publish
-r = await client.save_questionnaire(
-    title="2026年度员工满意度调查", account_code=account_code,
-    welcome_speech="欢迎参加本次调查",
-)
-qn = r.questionnaire_code
-await client.save_questionnaire_questions(qn, [
-    {
-        "questionName": "您对当前工作环境是否满意？",
-        "questionType": "radio",          # 16 types: radio/checkbox/fillblank/multiScore/...
-        "requiredFlag": 1,
-        "questionOptionList": [{"optionName": "非常满意", "optionOrder": 1}],
-    },
-])
-await client.publish_questionnaire(qn, scope_type=1, staff_ids=["U10001"])
-
-# 3) Analyze answers
-page = await client.fetch_answer_records(account_code, qn)
-detail = await client.fetch_questionnaire_answer_detail(account_code, page.items[0]["code"])
-print(detail.answer_user_name, detail.answers)   # answers: {questionCode: {context}}
-```
-
-## 11. Boardroom (会议室预定 V2)
-
-Meeting-room lookup and reservation. ``gradingId`` (分区ID) is required by most
-endpoints — fetch visible gradings first. Several doc fields use the historical
-spelling ``Fooler`` (= Floor). Reserve times use ``yyyy-MM-dd HH:mm:ss``.
-
-```python
-# 1) Find visible gradings, then office areas, then rooms
-gradings = await client.fetch_boardroom_gradings()
-grading_id = gradings.gradings[0]["id"]
-areas = await client.fetch_boardroom_area_offices(grading_id)
-rooms = await client.fetch_boardroom_list(grading_id=grading_id, query_date="2026-07-22")
-
-# 2) Check a room's schedule for the day, then reserve
-schedule = await client.fetch_boardroom_schedule(rooms.items[0]["id"], "2026-07-22", grading_id)
-print(schedule.reserves, schedule.deactivations)
-
-r = await client.reserve_boardroom(
-    boardroom_id=rooms.items[0]["id"], name="项目周会", grading_id=grading_id,
-    reserve_time_start="2026-07-22 09:00:00", reserve_time_end="2026-07-22 10:00:00",
-    notice_time="会前15分钟", people_number="10",
-)
-print(r.reserve_code, r.status)   # status: 0审批中 1待扫码确认 5预定成功 ...
-
-# 3) Cancel (status 0/1/5 only) or confirm
-await client.cancel_boardroom_reserve(r.reserve_id, cancel_reason="改期")
-```
-
-## 12. Personal Todo (个人待办)
-
-Les todos personnels utilisent `/xtra/tdtask/server/openapi/v3/` et sont séparés
-des todos d'application. ``orgId`` doit être fourni explicitement ; l'API ne
-propose actuellement pas de terminer ou supprimer un todo.
-
-```python
-r = await client.save_personal_todo(
-    subject="Terminer le projet", start_time=1719792000000, due_time=1720195200000,
-    priority=1, create_user_id="staff-001", org_id="org-001", appid="app-001",
-    executors=[{"staffId": "staff-001", "opt": 1}],
-)
-await client.update_personal_todo(
-    r.todo_code, "org-001", ["subject"], subject="Terminer la version finale",
-)
-page = await client.fetch_personal_todo_list("org-001", "staff-001", status=0)
-print(page.total, page.items)
-```
 
 ## Matrice de capacités des types de messages
 
@@ -673,7 +510,6 @@ La plateforme Lansenger propose trois types d'identité avec des accès API diff
 | `staff *` (contacts lecture seule) | N | **Y** | **Y** | `search` nécessite en plus userToken |
 | `department *` | N | **Y** | **Y** | Applications niveau organisation uniquement |
 | `calendar *` | N | **Y** | **Y** | Avec userToken = identité utilisateur ; sans = identité robot |
-| `todo *` | N | **Y** | **Y** | Applications niveau organisation uniquement |
 | `chat list/messages` | N | **Y** | **Y** | Applications niveau organisation uniquement |
 | `group *` (gestion de groupes V2) | N | N | **Y** | Nécessite que le robot soit dans le groupe |
 | `media upload` | **Y** | **Y** | **Y** | Upload général |
@@ -687,7 +523,7 @@ La plateforme Lansenger propose trois types d'identité avec des accès API diff
 
 > **Robot personnel** peut uniquement envoyer/recevoir des messages et uploader/télécharger des fichiers. Ne peut pas accéder aux contacts, calendriers ou OAuth2.
 >
-> **App Org vs App Org + Robot** : Même appID/appSecret. La seule différence réside dans les canaux de messagerie — seuls les robots peuvent envoyer des DM robot et des messages de groupe (car seuls les robots peuvent rejoindre des groupes). Toutes les autres API (contacts, calendrier, todo, chat, OAuth2, streaming) fonctionnent de manière identique pour les deux. Actuellement, seules les applications auto-hébergées supportent la capacité robot.
+> **App Org vs App Org + Robot** : Même appID/appSecret. La seule différence réside dans les canaux de messagerie — seuls les robots peuvent envoyer des DM robot et des messages de groupe (car seuls les robots peuvent rejoindre des groupes). Toutes les autres API (contacts, calendrier, chat, OAuth2, streaming) fonctionnent de manière identique pour les deux. Actuellement, seules les applications auto-hébergées supportent la capacité robot.
 
 ### Permissions du Centre Développeur
 
@@ -746,13 +582,6 @@ lansenger-sdk-python/
 │   ├── persistence.py       # CredentialStore — persistance fichier des identifiants & tokens
 │   ├── callbacks.py         # Événements de callback — 25 types d'événements, parsing structuré, décryptage AES (4.10.1.4), vérification de signature SHA1
 │   ├── groups.py            # API Groups (incluant dissoudre 4.28.6)
-│   ├── todos.py             # Todo unifié
-│   ├── notices.py           # Notifications (通知系统)
-│   ├── questionnaires.py    # Questionnaires (问卷系统)
-│   ├── boardrooms.py        # Boardroom (会议室预定 V2)
-│   ├── qingjia.py           # Qingjia (请假 V2)
-│   ├── jiaban.py            # Jiaban (加班 V2)
-│   ├── personal_todos.py    # Personal Todo (个人待办)
 │   ├── calendars.py         # Calendrier & Schedule (incluant mise à jour 4.23.12, métadonnées participants 4.23.17)
 │   ├── reminders.py         # Rappels urgents de messages (4.6.14)
 │   └── users.py             # Infos utilisateur

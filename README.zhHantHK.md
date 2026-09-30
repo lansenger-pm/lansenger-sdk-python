@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![Tests: 530](https://img.shields.io/badge/Tests-530-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
+[![Tests: 452](https://img.shields.io/badge/Tests-452-green)](https://github.com/lansenger-pm/lansenger-sdk-python)
 
 > 💠 零框架依賴——僅依賴 `httpx`。可適配任何非同步或同步 Python 專案。
 
@@ -34,13 +34,6 @@
 - **訊息管理** — 撤回、動態卡片更新
 - **群組** — 建立、查詢資訊/成員/列表、成員檢查、更新設定與成員、解散
 - **日曆日程** — 主日曆、日程 CRUD + 更新、參會人管理 + 參會人元資料、update_schedule_attendees()
-- **統一待辦** — 建立、更新、刪除、查詢、執行人管理、狀態統計
-- **通知系統** — 透過官方帳號發送通知（文字/連結內容、手機號/staffId 兩種投放、確認/轉發/回覆標誌、提醒策略、附件），查詢組織官方帳號
-- **問卷系統** — 建立/更新/發布/撤回/結束/刪除問卷，批次管理題目，官方帳號與我建立/我參與的列表（分頁），答卷記錄與匯出，預簽名上傳地址
-- **會議室預訂 V2** — 會議室檢索（辦公區/樓層/設備/時段篩選），詳情與當日預訂情況，預訂與修改（單次/重複），取消與掃碼確認，我的預訂（分頁），分級與辦公區列表
-- **請假 V2** — 考勤組規則配置、按時間段計算請假時長、附件預簽名上傳地址、提交申請、我的申請（分頁）、人員假期餘額、考勤組列表、啟用的假期類型
-- **加班 V2** — 考勤組規則配置、附件預簽名上傳地址（隨後 PUT 上傳並帶 Content-MD5）、提交申請、我的申請（分頁）、員工所在考勤組、加班時長計算
-- **個人待辦** — 建立、編輯、查詢使用者個人待辦及附件；與應用身分的統一待辦完全分離
 - **機械人命令** — 創建/查詢/刪除機械人快捷命令
 - **個人應用** — 創建/修改/查詢/刪除/列表個人機械人應用
 - **回呼事件** — 25 種事件類型、結構化訊息解析、AES 解密（按 4.10.1.4規範）、SHA1 簽名驗證
@@ -367,43 +360,7 @@ await client.update_schedule_attendee_meta(
 )
 ```
 
-## 7. 統一待辦
-
-```python
-from lansenger_sdk import TODO_TYPE_APPROVAL, TODO_TODO_STATUS_DONE
-
-# 建立待辦任務
-todo = await client.create_todo_task(
-    title="審批請求", link="https://app.com/a/1", pc_link="https://pc.app.com/a/1",
-    executor_ids=["staff1"], org_id="org1", type=TODO_TYPE_APPROVAL,
-)
-
-# 更新狀態（11=待閱, 12=已閱, 21=待辦, 22=已辦）
-await client.update_todo_task_status(todotask_id="taskId", status=TODO_TODO_STATUS_DONE, org_id="org1")
-
-# 更新內容
-await client.update_todo_task(todotask_id="taskId", title="已更新", link="l", pc_link="p", org_id="org1")
-
-# 刪除（僅發送者可操作）
-await client.delete_todo_task(todotask_id="taskId", org_id="org1")
-
-# 查詢
-list_result = await client.fetch_todo_task_list(org_id="org1")
-task = await client.fetch_todo_task_by_id(todotask_id="taskId", org_id="org1")
-task = await client.fetch_todo_task_by_source_id(source_id="src1", org_id="org1")
-counts = await client.fetch_todo_task_status_counts(staff_id="staff1", org_id="org1")
-
-# 執行人管理
-await client.add_executors(executor_ids=["staff2"], org_id="org1", todotask_id="taskId")
-await client.delete_executors(executor_ids=["staff2"], org_id="org1", todotask_id="taskId")
-executors = await client.fetch_executor_list(todotask_id="taskId", org_id="org1")
-await client.update_executor_status(
-    executor_status_list=[{"executorId": "staff1", "todotaskId": "taskId", "status": "22"}],
-    org_id="org1",
-)
-```
-
-## 8. 回呼事件
+## 7. 回呼事件
 
 SDK 同時支援明文 JSON 和 AES 加密回呼載荷（按藍信接口規範 4.10.1.4）。
 
@@ -464,120 +421,6 @@ types = client.get_callback_event_types()  # 13 個類別共 25 種事件類型
 ```
 
 AES 解密需安裝 `pycryptodome` 或 `cryptography` 包（自動檢測）。
-
-## 9. 通知系统
-
-透過官方帳號發送通知，查詢組織的官方帳號列表。
-
-> 路径带 `/server` 段（生产 stage；开发/测试环境无此段）。本模块无撤回/删除接口。
-> 服務端要求 `create_mobile` / `create_user_id` 至少填一個；`user_token` 不替代建立人欄位。
-
-```python
-# 1) 查詢官方帳號 —— code 欄位即發送所需的 accountCode
-accounts = await client.fetch_notice_accounts(org_id="org-001")
-account_code = accounts.accounts[0]["code"]
-
-# 2) 發送文字通知，按手機號投放（接收/抄送各最多 10 個）
-result = await client.send_notice(
-    title="關於系統升級的通知",
-    content_type=1,                        # 1=文字（content 必填），2=連結（notice_link 必填）
-    account_code=account_code,
-    user_type=1,                           # 1=手機號，2=staffId/部門
-    content="系統將於本週六進行升級維護",
-    release_phones=["13800138000", "13800138001"],
-    cc_phones=["13800138002"],
-    create_mobile="13800138000",           # 必填：create_mobile / create_user_id 至少一個
-    confirm_flag=1,                        # 需要確認（1=是，0=否）
-    remind_status=1, remind_msg_type="mobile", at_once_flag=1,
-)
-print(result.success, result.notice_code, result.notice_status)  # 狀態：1=草稿，2=已發送，3=已撤回
-
-# 3) 或按 staffId/部門投放（最多 200 個）
-result = await client.send_notice(
-    title="部门通知", content_type=1, account_code=account_code,
-    user_type=2,
-    content="請及時填寫本週週報",
-    release_range=[{"objId": "dept-1", "objName": "研发部", "objType": 2}],  # objType：1=人，2=部門
-    cc_staff_ids=["staff-002"],
-    create_user_id="staff-001",
-)
-```
-
-## 10. 问卷系统
-
-创建、发布并分析问卷。创建/发布类接口需要有效的官方账号 ``accountCode``（缺失报 errCode 3104）；题目结构以 camelCase dict 透传；校验错误信息可能无分隔符拼接。
-
-```python
-# 1) 查询我有管理权限的官方账号 —— code 字段即 accountCode
-accounts = await client.fetch_questionnaire_office_accounts()
-account_code = accounts.accounts[0]["code"]
-
-# 2) 创建问卷、存题、发布
-r = await client.save_questionnaire(
-    title="2026年度员工满意度调查", account_code=account_code,
-    welcome_speech="欢迎参加本次调查",
-)
-qn = r.questionnaire_code
-await client.save_questionnaire_questions(qn, [
-    {
-        "questionName": "您对当前工作环境是否满意？",
-        "questionType": "radio",          # 16 types: radio/checkbox/fillblank/multiScore/...
-        "requiredFlag": 1,
-        "questionOptionList": [{"optionName": "非常满意", "optionOrder": 1}],
-    },
-])
-await client.publish_questionnaire(qn, scope_type=1, staff_ids=["U10001"])
-
-# 3) 分析答卷
-page = await client.fetch_answer_records(account_code, qn)
-detail = await client.fetch_questionnaire_answer_detail(account_code, page.items[0]["code"])
-print(detail.answer_user_name, detail.answers)   # answers: {questionCode: {context}}
-```
-
-## 11. 会议室预定（会议室预定 V2）
-
-会议室检索与预订。多数接口需要 ``gradingId``（分区ID）—— 先查可见分级。
-文档部分字段使用历史拼写 ``Fooler``（= Floor）。预订时间格式 ``yyyy-MM-dd HH:mm:ss``。
-
-```python
-# 1) 查可见分级 → 办公区 → 会议室
-gradings = await client.fetch_boardroom_gradings()
-grading_id = gradings.gradings[0]["id"]
-areas = await client.fetch_boardroom_area_offices(grading_id)
-rooms = await client.fetch_boardroom_list(grading_id=grading_id, query_date="2026-07-22")
-
-# 2) 查当日预订情况，然后预订
-schedule = await client.fetch_boardroom_schedule(rooms.items[0]["id"], "2026-07-22", grading_id)
-print(schedule.reserves, schedule.deactivations)
-
-r = await client.reserve_boardroom(
-    boardroom_id=rooms.items[0]["id"], name="项目周会", grading_id=grading_id,
-    reserve_time_start="2026-07-22 09:00:00", reserve_time_end="2026-07-22 10:00:00",
-    notice_time="会前15分钟", people_number="10",
-)
-print(r.reserve_code, r.status)   # 状态：0审批中 1待扫码确认 5预定成功 ...
-
-# 3) 取消（仅状态 0/1/5）或扫码确认
-await client.cancel_boardroom_reserve(r.reserve_id, cancel_reason="改期")
-```
-
-## 12. 個人待辦
-
-個人待辦使用 `/xtra/tdtask/server/openapi/v3/`，與應用身分的統一待辦介面完全分離。
-``orgId`` 必須明確傳入；目前服務端不提供完成或刪除能力。
-
-```python
-r = await client.save_personal_todo(
-    subject="完成專案方案", start_time=1719792000000, due_time=1720195200000,
-    priority=1, create_user_id="staff-001", org_id="org-001", appid="app-001",
-    executors=[{"staffId": "staff-001", "opt": 1}],
-)
-await client.update_personal_todo(
-    r.todo_code, "org-001", ["subject"], subject="完成專案最終方案",
-)
-page = await client.fetch_personal_todo_list("org-001", "staff-001", status=0)
-print(page.total, page.items)
-```
 
 ## 訊息類型能力矩陣
 
@@ -667,7 +510,6 @@ org = client.fetch_org_info(org_id="orgId")
 | `staff *` (通訊錄唯讀) | N | **Y** | **Y** | `search` 額外需要 userToken |
 | `department *` | N | **Y** | **Y** | 僅組織級應用 |
 | `calendar *` | N | **Y** | **Y** | 攜帶 userToken = 用戶身份；不攜帶 = 機械人身份 |
-| `todo *` | N | **Y** | **Y** | 僅組織級應用 |
 | `chat list/messages` | N | **Y** | **Y** | 僅組織級應用 |
 | `group *` (群組管理 V2) | N | N | **Y** | 需要機械人在群內 |
 | `media upload` | **Y** | **Y** | **Y** | 通用上載 |
@@ -681,7 +523,7 @@ org = client.fetch_org_info(org_id="orgId")
 
 > **個人機械人**只能收發訊息和上載/下載檔案。無法訪問通訊錄、日曆或 OAuth2。
 >
-> **組織應用 vs 組織應用+機械人**：相同的 appID/appSecret。唯一區別是訊息通道——只有機械人可以傳送機械人私聊和群聊訊息（因為只有機械人可以加入群）。所有其他 API（通訊錄、日曆、待辦、聊天、OAuth2、流式訊息）對於兩者完全相同。目前僅自建應用支援機械人能力。
+> **組織應用 vs 組織應用+機械人**：相同的 appID/appSecret。唯一區別是訊息通道——只有機械人可以傳送機械人私聊和群聊訊息（因為只有機械人可以加入群）。所有其他 API（通訊錄、日曆、聊天、OAuth2、流式訊息）對於兩者完全相同。目前僅自建應用支援機械人能力。
 
 ### 開發者中心權限
 
@@ -740,13 +582,6 @@ lansenger-sdk-python/
 │   ├── persistence.py       # CredentialStore — 憑證與令牌檔案持久化
 │   ├── callbacks.py         # 回呼事件 — 25 種事件類型、結構化解析、AES 解密（4.10.1.4）、SHA1 簽名驗證
 │   ├── groups.py            # 群組 API（含解散 4.28.6）
-│   ├── todos.py             # 統一待辦
-│   ├── notices.py           # 通知系统
-│   ├── questionnaires.py    # 問卷系統
-│   ├── boardrooms.py        # 會議室預訂 V2
-│   ├── qingjia.py           # 請假 V2
-│   ├── jiaban.py            # 加班 V2
-│   ├── personal_todos.py    # 個人待辦
 │   ├── calendars.py         # 日曆日程（含更新 4.23.12、參會人元資料 4.23.17）
 │   ├── reminders.py         # 加急提醒（4.6.14）
 │   └── users.py             # 使用者資訊
