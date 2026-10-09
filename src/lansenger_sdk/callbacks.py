@@ -18,6 +18,8 @@ import struct
 from dataclasses import dataclass, field
 from typing import Any, Union
 
+from .exceptions import LansengerCallbackError
+
 logger = logging.getLogger("lansenger_sdk.callbacks")
 
 CALLBACK_EVENT_TYPES: dict[str, str] = {
@@ -439,6 +441,21 @@ def _parse_event_data(event_type: str, raw_data: dict) -> dict | CallbackEventDa
     return parser_cls(**kwargs)
 
 
+def _load_callback_json(payload: str) -> dict:
+    """Parse a plain JSON callback payload.
+
+    Raises LansengerCallbackError (instead of leaking json.JSONDecodeError) so a
+    malformed callback payload fails with a domain error callers can catch.
+    """
+    try:
+        parsed = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise LansengerCallbackError(f"parsing callback JSON payload: {exc}") from exc
+    if not isinstance(parsed, dict):
+        raise LansengerCallbackError("parsing callback JSON payload: expected a JSON object")
+    return parsed
+
+
 def parse_callback_payload(
     encrypted_data: str,
     *,
@@ -478,7 +495,7 @@ def parse_callback_payload(
         except json.JSONDecodeError:
             pass
         else:
-            payload_inner = json.loads(encrypted_data)
+            payload_inner = _load_callback_json(encrypted_data)
             data_encrypt = payload_inner.get("dataEncrypt", "")
             if isinstance(data_encrypt, str) and data_encrypt:
                 encrypted_data = data_encrypt
@@ -513,7 +530,7 @@ def parse_callback_payload(
         }
         return _parse_decrypted_payload(payload)
 
-    payload = json.loads(encrypted_data)
+    payload = _load_callback_json(encrypted_data)
     if "dataEncrypt" in payload and not encoding_key:
         raise ValueError("Encrypted callback payload requires encoding_key for decryption")
     if verify_signature and not verify_callback_signature(

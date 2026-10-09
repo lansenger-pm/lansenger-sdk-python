@@ -1,10 +1,18 @@
 """Tests for Lansenger SDK media APIs — V2 upload (4.5.5) and share download (4.5.6)."""
 
+import os
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from lansenger_sdk.config import LansengerConfig
-from lansenger_sdk.media import upload_app_media_v2, download_media_by_share_id
+from lansenger_sdk.exceptions import LansengerFileError
+from lansenger_sdk.media import (
+    download_media_to_file,
+    download_media_to_file_result,
+    upload_app_media_v2,
+    download_media_by_share_id,
+)
 
 
 def _make_config():
@@ -207,3 +215,107 @@ async def test_download_media_by_share_id_build_api_url_args():
     mock_build.assert_called_once_with(
         config, "media", "share_fetch", "test_app_token", user_token="ut_z", share_id="sid1",
     )
+
+
+# ---------- download_media_to_file / download_media_to_file_result (4.5.2) ----------
+
+
+@pytest.mark.asyncio
+async def test_download_media_to_file_result_success(tmp_path):
+    config = _make_config()
+    tm = _make_token_manager()
+    client = _make_download_client(content=b"hello-bytes")
+    target = tmp_path / "out.dat"
+
+    result = await download_media_to_file_result(
+        config, tm, client, "media_1", str(target)
+    )
+
+    assert result.success is True
+    assert result.path == str(target)
+    assert result.size == len(b"hello-bytes")
+    assert target.read_bytes() == b"hello-bytes"
+    assert result.error is None
+    assert result.to_dict() == {"success": True, "path": str(target), "size": 11}
+
+
+@pytest.mark.asyncio
+async def test_download_media_to_file_result_api_error_is_not_raised():
+    config = _make_config()
+    tm = _make_token_manager()
+    client = _make_download_client(
+        content_type="application/json",
+        content=b'{"errCode": 50000, "errMsg": "OPEN ID invalid"}',
+    )
+
+    result = await download_media_to_file_result(config, tm, client, "media_bad")
+
+    assert result.success is False
+    assert result.path is None
+    assert "errCode=50000" in result.error
+    assert "OPEN ID invalid" in result.error
+
+
+@pytest.mark.asyncio
+async def test_download_media_to_file_result_save_failure_reports_error():
+    config = _make_config()
+    tm = _make_token_manager()
+    client = _make_download_client(content=b"payload")
+
+    result = await download_media_to_file_result(
+        config, tm, client, "media_1", "/nonexistent-dir-xyz/out.dat"
+    )
+
+    assert result.success is False
+    assert "Save failed" in result.error
+    assert result.size == 0
+
+
+@pytest.mark.asyncio
+async def test_download_media_to_file_result_temp_path_uses_media_type():
+    config = _make_config()
+    tm = _make_token_manager()
+    client = _make_download_client(content=b"\x89PNG\r\n\x1a\n" + b"\x00" * 8)
+
+    result = await download_media_to_file_result(
+        config, tm, client, "media_img", media_type="image"
+    )
+
+    try:
+        assert result.success is True
+        assert result.path.endswith(".png")
+        assert os.path.getsize(result.path) == 16
+    finally:
+        if result.path:
+            os.unlink(result.path)
+
+
+@pytest.mark.asyncio
+async def test_download_media_to_file_keeps_raising_contract(tmp_path):
+    config = _make_config()
+    tm = _make_token_manager()
+    client = _make_download_client(
+        content_type="application/json",
+        content=b'{"errCode": 50000, "errMsg": "OPEN ID invalid"}',
+    )
+
+    with pytest.raises(LansengerFileError) as exc:
+        await download_media_to_file(
+            config, tm, client, "media_bad", str(tmp_path / "never.dat")
+        )
+
+    assert "Download failed" in str(exc.value)
+    assert not (tmp_path / "never.dat").exists()
+
+
+@pytest.mark.asyncio
+async def test_download_media_to_file_success_still_returns_path(tmp_path):
+    config = _make_config()
+    tm = _make_token_manager()
+    client = _make_download_client(content=b"abc")
+    target = tmp_path / "ok.dat"
+
+    path = await download_media_to_file(config, tm, client, "media_1", str(target))
+
+    assert path == str(target)
+    assert target.read_bytes() == b"abc"

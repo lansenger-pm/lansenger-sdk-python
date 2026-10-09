@@ -256,6 +256,30 @@ class DownloadMediaResult:
 
 
 @dataclass
+class DownloadFileResult:
+    """Result of downloading media to a local file.
+
+    Mirrors the *Result convention used by the rest of the SDK: failure is
+    reported through ``success=False`` + ``error`` instead of an exception.
+    """
+
+    success: bool
+    path: str | None = None
+    size: int = 0
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.path is not None:
+            d["path"] = self.path
+        if self.success:
+            d["size"] = self.size
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
 class MediaPathResult:
     success: bool
     media_path: str | None = None

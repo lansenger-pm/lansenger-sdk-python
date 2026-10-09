@@ -484,7 +484,10 @@ def test_parse_callback_payload_encrypted_with_signature():
 
 
 def test_parse_callback_payload_invalid_json():
-    with pytest.raises(json.JSONDecodeError):
+    # 契约变更：畸形负载抛领域异常 LansengerCallbackError，不再泄漏 json.JSONDecodeError。
+    from lansenger_sdk import LansengerCallbackError
+
+    with pytest.raises(LansengerCallbackError):
         parse_callback_payload("not valid json{}")
 
 
@@ -652,3 +655,14 @@ def test_parse_callback_payload_dataencrypt_with_encoding_key_does_not_raise():
     wrapper = json.dumps({"dataEncrypt": encrypted})
     events = parse_callback_payload(wrapper, encoding_key=AES_KEY_B64, known_app_id="2285568-12042496")
     assert len(events) > 0
+
+
+def test_parse_callback_payload_malformed_json_raises_callback_error():
+    """畸形回调负载必须抛领域异常，而不是泄漏 json.JSONDecodeError。"""
+    from lansenger_sdk import LansengerCallbackError
+
+    with pytest.raises(LansengerCallbackError, match="parsing callback JSON payload"):
+        parse_callback_payload("bogus-encrypted")
+
+    with pytest.raises(LansengerCallbackError):
+        parse_callback_payload("[1, 2, 3]")

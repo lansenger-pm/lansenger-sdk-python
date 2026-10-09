@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.11.0] - 2026-10-09
+
+### Added
+
+- `download_media_to_file_result()`：与 `download_media_to_file()` 相同的下载逻辑，但按 SDK 统一的 `*Result` 约定返回 `DownloadFileResult(success / path / size / error)`，下载或写盘失败不抛异常。`download_media_to_file()` 保持原有契约（失败抛 `LansengerFileError`、成功返回路径字符串）。
+- 导出 `DownloadFileResult`。
+
+### Fixed
+
+- **回调解析**：`parse_callback()` / `parse_callback_payload()` 收到无法解析或不含事件的载荷时抛 `LansengerCallbackError`，不再泄漏裸 `json.JSONDecodeError`。
+- **视频会议成员**：`invite_members()` 及会议创建时的主办人校验遇到非对象成员条目（例如 `["u1"]`）时返回 `success=False` 的结果并说明 `members[i] must be an object …`，不再抛 `AttributeError`。
+
 ## [1.10.2] - 2026-09-24
 
 ### Removed

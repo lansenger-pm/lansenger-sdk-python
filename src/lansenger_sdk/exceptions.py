@@ -43,3 +43,10 @@ class LansengerFileError(LansengerError):
 
     def __init__(self, message: str):
         super().__init__(message, retryable=False)
+
+
+class LansengerCallbackError(LansengerError):
+    """Callback payload could not be decoded/parsed (malformed or unrecognized)."""
+
+    def __init__(self, message: str):
+        super().__init__(message, retryable=False)

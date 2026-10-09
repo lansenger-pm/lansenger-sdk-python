@@ -24,7 +24,12 @@ from .constants import (
     MEDIA_TYPE_IMAGE,
 )
 from .exceptions import LansengerFileError
-from .models import DownloadMediaResult, MediaPathResult, UploadMediaResult
+from .models import (
+    DownloadFileResult,
+    DownloadMediaResult,
+    MediaPathResult,
+    UploadMediaResult,
+)
 from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.media")
@@ -384,6 +389,73 @@ async def download_media(
     return DownloadMediaResult(success=True, data=body)
 
 
+def _resolve_target_path(
+    target_path: str | None, media_type: str, media_bytes: bytes
+) -> str:
+    """Resolve the output path, sniffing the image format for the extension."""
+    ext_map = {"image": ".jpg", "video": ".mp4", "file": ".dat", "voice": ".amr"}
+    ext = ext_map.get(media_type, ".dat")
+
+    if media_type == "image" and len(media_bytes) >= 8:
+        if media_bytes[:2] == b'\xff\xd8':
+            ext = ".jpg"
+        elif media_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+            ext = ".png"
+        elif media_bytes[:6] in (b'GIF87a', b'GIF89a'):
+            ext = ".gif"
+
+    if target_path is None:
+        fd, target_path = tempfile.mkstemp(suffix=ext, prefix=f"lansenger_{media_type}_")
+        os.close(fd)
+
+    return target_path
+
+
+async def download_media_to_file_result(
+    config: LansengerConfig,
+    token_manager: TokenManager,
+    http_client: httpx.AsyncClient,
+    media_id: str,
+    target_path: str | None = None,
+    media_type: str = "file",
+) -> DownloadFileResult:
+    """Download a media file to a local file, reporting failure as a result.
+
+    Same download logic as :func:`download_media_to_file`, but follows the
+    SDK-wide *Result convention: a failed download or a failed save returns
+    ``DownloadFileResult(success=False, error=...)`` instead of raising
+    ``LansengerFileError``.
+
+    Args:
+        config: SDK config
+        token_manager: Token manager
+        http_client: HTTP client
+        media_id: Lansenger media ID
+        target_path: Optional target file path. If None, creates a temp file.
+        media_type: "image", "video", "file", or "voice" — used for temp file extension.
+
+    Returns:
+        DownloadFileResult with the saved ``path`` and byte ``size`` on success.
+    """
+    result = await download_media(config, token_manager, http_client, media_id)
+    if not result.success or result.data is None:
+        return DownloadFileResult(success=False, error=result.error)
+
+    media_bytes = result.data
+    resolved_path = _resolve_target_path(target_path, media_type, media_bytes)
+
+    try:
+        with open(resolved_path, "wb") as f:
+            f.write(media_bytes)
+    except OSError as e:
+        return DownloadFileResult(success=False, error=f"Save failed: {e}")
+
+    logger.debug("Media saved to %s (%d bytes)", resolved_path, len(media_bytes))
+    return DownloadFileResult(
+        success=True, path=resolved_path, size=len(media_bytes)
+    )
+
+
 async def download_media_to_file(
     config: LansengerConfig,
     token_manager: TokenManager,
@@ -407,7 +479,8 @@ async def download_media_to_file(
 
     Note: unlike most SDK methods (which return a *Result with a success
     field), this raises LansengerFileError on failure and returns the path
-    string on success.
+    string on success. Use :func:`download_media_to_file_result` if you
+    prefer the result-object contract.
 
     Raises:
         LansengerFileError if download or save fails.
@@ -416,27 +489,14 @@ async def download_media_to_file(
     if not result.success or result.data is None:
         raise LansengerFileError(f"Download failed: {result.error}")
 
-    ext_map = {"image": ".jpg", "video": ".mp4", "file": ".dat", "voice": ".amr"}
-    ext = ext_map.get(media_type, ".dat")
-
     media_bytes = result.data
-    if media_type == "image" and len(media_bytes) >= 8:
-        if media_bytes[:2] == b'\xff\xd8':
-            ext = ".jpg"
-        elif media_bytes[:8] == b'\x89PNG\r\n\x1a\n':
-            ext = ".png"
-        elif media_bytes[:6] in (b'GIF87a', b'GIF89a'):
-            ext = ".gif"
-
-    if target_path is None:
-        fd, target_path = tempfile.mkstemp(suffix=ext, prefix=f"lansenger_{media_type}_")
-        os.close(fd)
+    resolved_path = _resolve_target_path(target_path, media_type, media_bytes)
 
     try:
-        with open(target_path, "wb") as f:
+        with open(resolved_path, "wb") as f:
             f.write(media_bytes)
-        logger.debug("Media saved to %s (%d bytes)", target_path, len(media_bytes))
-        return target_path
+        logger.debug("Media saved to %s (%d bytes)", resolved_path, len(media_bytes))
+        return resolved_path
     except OSError as e:
         raise LansengerFileError(f"Save failed: {e}") from e
 

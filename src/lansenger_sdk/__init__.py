@@ -110,6 +110,7 @@ from .departments import (
 from .exceptions import (
     LansengerAPIError,
     LansengerAuthError,
+    LansengerCallbackError,
     LansengerConfigError,
     LansengerError,
     LansengerFileError,
@@ -147,6 +148,7 @@ from .models import (
     DepartmentChildrenResult,
     DepartmentDetailResult,
     DepartmentStaffsResult,
+    DownloadFileResult,
     DownloadMediaResult,
     DynamicCardUpdateParams,
     ExtraFieldIdsResult,
@@ -250,6 +252,7 @@ __all__ = [
     "QueryGroupsResult",
     "UploadMediaResult",
     "DownloadMediaResult",
+    "DownloadFileResult",
     "AppCardParams",
     "LinkCardParams",
     "MediaPathResult",
@@ -306,6 +309,7 @@ __all__ = [
     "LansengerAPIError",
     "LansengerNetworkError",
     "LansengerFileError",
+    "LansengerCallbackError",
     "API_ENDPOINTS",
     "OAUTH2_SCOPE_BASIC_USER_INFO",
     "OAUTH2_SCOPES",
@@ -431,4 +435,4 @@ __all__ = [
     "fetch_chat_messages",
 ]
 
-__version__ = "1.10.2"
+__version__ = "1.11.0"

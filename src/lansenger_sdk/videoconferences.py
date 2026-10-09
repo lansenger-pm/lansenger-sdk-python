@@ -97,6 +97,9 @@ def _host_required(members: list[dict[str, Any]] | None) -> str | None:
     """Server requires exactly one member with the host role on create."""
     if not members:
         return "member is required (with exactly one host)"
+    for i, m in enumerate(members):
+        if not isinstance(m, dict):
+            return f"members[{i}] must be an object with staffId/role"
     hosts = [m for m in members if str(m.get("role", "")) == VC_MEMBER_ROLE_HOST]
     if len(hosts) != 1:
         return "exactly one member must have role='admin'"
@@ -545,7 +548,12 @@ async def invite_members(
         return VideoconferenceOpResult(success=False, error="member is required")
     normalized: list[dict[str, Any]] = []
     for i, m in enumerate(members):
-        m = dict(m or {})
+        if not isinstance(m, dict):
+            return VideoconferenceOpResult(
+                success=False,
+                error=f"members[{i}] must be an object with staffId/employeeName/type",
+            )
+        m = dict(m)
         missing = [k for k in ("staffId", "employeeName", "type") if m.get(k) in (None, "")]
         if missing:
             return VideoconferenceOpResult(

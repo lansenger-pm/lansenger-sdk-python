@@ -59,6 +59,7 @@ from .models import (
     DepartmentChildrenResult,
     DepartmentDetailResult,
     DepartmentStaffsResult,
+    DownloadFileResult,
     DownloadMediaResult,
     DynamicCardUpdateParams,
     ExtraFieldIdsResult,
@@ -1676,6 +1677,36 @@ class LansengerClient:
         from .media import download_media_to_file
 
         return await download_media_to_file(
+            self._config,
+            self._token_manager,
+            self._http_client,
+            media_id,
+            target_path=target_path,
+            media_type=media_type,
+        )
+
+    async def download_media_to_file_result(
+        self,
+        media_id: str,
+        *,
+        target_path: str | None = None,
+        media_type: str = "file",
+    ) -> DownloadFileResult:
+        """Download media and save to a file, returning a result object.
+
+        Args:
+            media_id: Lansenger media ID.
+            target_path: Target path. None = auto temp file.
+            media_type: "image"/"video"/"file"/"voice" for extension hint.
+
+        Returns:
+            DownloadFileResult with path and size on success; on failure
+            ``success=False`` with ``error`` instead of raising.
+        """
+        self._ensure_clients()
+        from .media import download_media_to_file_result
+
+        return await download_media_to_file_result(
             self._config,
             self._token_manager,
             self._http_client,
