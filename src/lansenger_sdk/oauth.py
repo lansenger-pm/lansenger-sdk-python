@@ -318,7 +318,11 @@ _REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 # Known OAuth2-service error codes (interface doc); 200-with-error-envelope or
 # unknown codes fall through to the conservative unsupported bucket (§4.1 row 6).
 _DEVICE_KNOWN_CODES = {9000, 9003, 9004, 9100, 9101, 10001, 10002}
-_DEVICE_KNOWN_ERROR_STATUSES = (400, 401, 500)
+
+
+def _device_api_error_status(status: int) -> bool:
+    """4xx/5xx other than 404 (legacy open platform): a JSON `error` body there means the route answered."""
+    return 400 <= status < 600 and status != 404
 
 
 def _device_base_url(config: LansengerConfig) -> str:
@@ -370,9 +374,9 @@ def _classify_authorization(status: int, data: object) -> DeviceAuthorizationRes
         return _unsupported_auth(status, data, "route not found (404) — legacy open platform without deviceflow")
     if status in _REDIRECT_STATUSES:  # row 3
         return _unsupported_auth(status, data, "redirected (non-JSON) — check passport_url / path.prefix")
-    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data:
+    if _device_api_error_status(status) and isinstance(data, dict) and "error" in data:  # row 5
         err = data["error"]
-        if isinstance(err, dict) and err.get("code") in _DEVICE_KNOWN_CODES:  # row 5
+        if isinstance(err, dict) and err.get("code") in _DEVICE_KNOWN_CODES:
             return DeviceAuthorizationResult(
                 success=False,
                 error=f"API error (code={err.get('code')}): {err.get('message', '')}",
@@ -424,7 +428,7 @@ def _classify_poll(status: int, data: object) -> DevicePollResult:
             error="deviceflow unavailable: redirected (non-JSON) — check passport_url / path.prefix",
             error_type=_DEVICE_UNSUPPORTED,
         )
-    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data:
+    if _device_api_error_status(status) and isinstance(data, dict) and "error" in data:
         err = data["error"]
         if isinstance(err, dict) and err.get("code") in _DEVICE_KNOWN_CODES:
             return DevicePollResult(success=False, error=f"API error (code={err.get('code')}): {err.get('message', '')}", raw_response=data)
