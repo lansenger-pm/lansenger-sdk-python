@@ -22,7 +22,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 
 - **Async & Sync clients** — `LansengerClient` (async) + `LansengerSyncClient` (blocking)
 - **Credential & token persistence** — `CredentialStore` saves app_id, app_secret, URLs, appToken, userToken to file (survives restarts)
-- **OAuth2 user authentication** — authorize URL, code exchange, token refresh
+- **OAuth2 user authentication** — authorize URL, code exchange, token refresh, device flow (headless)
 - **Organization & departments** — org info, department detail/children/staff
 - **Staff & contacts** — basic/detailed info, ID mapping, department ancestors, search
 - **Messaging** — 3 private chat channels (bot, official account, user impersonate) + group chat, all message types, @mention, human/bot sender identity, urgent reminders
@@ -95,6 +95,37 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 # Fetch user profile
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
+
+### Device flow (headless / no callback server)
+
+Hosts that cannot receive a localhost redirect (servers, CI, agents) can use the OAuth2
+device authorization grant. It requires `passport_url` (config argument or
+`LANSENGER_PASSPORT_URL`) and the new open platform; legacy servers report
+`error_type="deviceflow_unsupported"` so callers can fall back to the flow above.
+
+```python
+auth = await client.request_device_authorization()   # POST {passport_url}/oauth2/device_authorization
+if not auth.success:
+    if auth.error_type == "deviceflow_unsupported":
+        ...                                          # legacy server → use the flow above
+    raise RuntimeError(auth.error)
+
+print(f"Open {auth.verification_uri_complete} and enter {auth.user_code}")   # valid for auth.expires_in
+
+while True:
+    poll = await client.poll_device_token(auth.device_code)   # POST {passport_url}/oauth2/device_token
+    if poll.state == "access_approved":
+        token_result = await client.exchange_code(code=poll.oauth2_code)
+        break
+    if not poll.success:                             # access_denied / expired_token / error
+        raise RuntimeError(poll.error)
+    await asyncio.sleep(auth.interval)
+```
+
+- `state` is one of `authorization_pending`, `access_approved`, `access_denied`,
+  `expired_token`; only `access_approved` carries `oauth2_code`.
+- `source` defaults to `"CLI"`; allowed values are `AutoClaw`, `CLI`, `OpenClaw`, `MCP`.
+- Both methods also exist on `LansengerSyncClient` (blocking).
 
 ## 2. Organization & Departments
 

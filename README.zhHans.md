@@ -24,7 +24,7 @@
 
 - **异步与同步客户端** — `LansengerClient`（异步）+ `LansengerSyncClient`（阻塞）
 - **凭据与令牌持久化** — `CredentialStore` 将 app_id、app_secret、URL、appToken、userToken 保存到文件（重启后不丢失）
-- **OAuth2 用户认证** — 授权 URL、code 换取、令牌刷新
+- **OAuth2 用户认证** — 授权 URL、code 换取、令牌刷新、设备码流程（无头）
 - **组织与部门** — 组织信息、部门详情/子部门/员工列表
 - **员工与通讯录** — 基础/详细信息、ID 映射、部门祖辈链、搜索
 - **消息发送** — 3 种私聊通道（机器人、公众号、人→人）+ 群聊，支持所有消息类型，含 @提及和真人/机器人发送身份，加急提醒
@@ -99,6 +99,36 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 # 获取用户资料
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
+
+### 设备码流程（无头 / 无回调服务器）
+
+无法接收本地回调的宿主（服务器、CI、Agent）可用 OAuth2 设备授权流程。需要配置 `passport_url`
+（config 参数或 `LANSENGER_PASSPORT_URL`）且开放平台为新版；旧版服务端会返回
+`error_type="deviceflow_unsupported"`，调用方可回退到上面的授权码流程。
+
+```python
+auth = await client.request_device_authorization()   # POST {passport_url}/oauth2/device_authorization
+if not auth.success:
+    if auth.error_type == "deviceflow_unsupported":
+        ...                                          # 旧版服务端 → 回退到上面的流程
+    raise RuntimeError(auth.error)
+
+print(f"打开 {auth.verification_uri_complete} 并输入 {auth.user_code}")   # auth.expires_in 秒内有效
+
+while True:
+    poll = await client.poll_device_token(auth.device_code)   # POST {passport_url}/oauth2/device_token
+    if poll.state == "access_approved":
+        token_result = await client.exchange_code(code=poll.oauth2_code)
+        break
+    if not poll.success:                             # access_denied / expired_token / 出错
+        raise RuntimeError(poll.error)
+    await asyncio.sleep(auth.interval)
+```
+
+- `state` 取值：`authorization_pending`、`access_approved`、`access_denied`、`expired_token`；
+  仅 `access_approved` 带 `oauth2_code`。
+- `source` 默认 `"CLI"`，可选值 `AutoClaw`、`CLI`、`OpenClaw`、`MCP`。
+- `LansengerSyncClient` 也提供这两个方法（阻塞式）。
 
 ### External 模式（直接注入 Token）
 
