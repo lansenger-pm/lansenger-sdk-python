@@ -4,6 +4,7 @@ import asyncio
 import json
 
 import httpx
+import pytest
 
 from lansenger_sdk import __version__
 from lansenger_sdk.config import LansengerConfig
@@ -331,3 +332,46 @@ def test_debug_log_never_contains_device_code(caplog):
         _run(request_device_authorization(CONFIG, http_client=_client(handler)))
     assert ("a" * 40) not in caplog.text
     assert "WDJB-MJHT" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{"error": "invalid_client"}, {"error": None}, {"error": ["x"]}],
+    ids=["string", "null", "list"],
+)
+def test_authorization_standard_oauth_error_body_is_api_error_not_crash(body):
+    """RFC 6749 §5.2 puts a plain string in `error`; must not raise AttributeError."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json=body)
+
+    result = _run(request_device_authorization(CONFIG, http_client=_client(handler)))
+    assert not result.success
+    assert result.error_type is None
+    assert "API error" in result.error
+    assert result.device_code is None
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{"error": "invalid_client"}, {"error": None}, {"error": ["x"]}],
+    ids=["string", "null", "list"],
+)
+def test_poll_standard_oauth_error_body_is_api_error_not_crash(body):
+    """Same guard on the poll side: a string/null/list `error` must not raise."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json=body)
+
+    result = _run(poll_device_token(CONFIG, "a" * 40, http_client=_client(handler)))
+    assert not result.success
+    assert result.error_type is None
+    assert "API error" in result.error
+
+
+def test_authorization_400_without_error_key_stays_unsupported():
+    """Row 6 unchanged: a JSON body with no `error` key stays in the conservative bucket."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"detail": "bad request"})
+
+    result = _run(request_device_authorization(CONFIG, http_client=_client(handler)))
+    assert not result.success
+    assert result.error_type == "deviceflow_unsupported"

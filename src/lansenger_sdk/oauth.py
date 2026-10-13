@@ -370,14 +370,21 @@ def _classify_authorization(status: int, data: object) -> DeviceAuthorizationRes
         return _unsupported_auth(status, data, "route not found (404) — legacy open platform without deviceflow")
     if status in _REDIRECT_STATUSES:  # row 3
         return _unsupported_auth(status, data, "redirected (non-JSON) — check passport_url / path.prefix")
-    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data \
-            and data["error"].get("code") in _DEVICE_KNOWN_CODES:  # row 5
+    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data:
         err = data["error"]
-        return DeviceAuthorizationResult(
-            success=False,
-            error=f"API error (code={err.get('code')}): {err.get('message', '')}",
-            raw_response=data,
-        )
+        if isinstance(err, dict) and err.get("code") in _DEVICE_KNOWN_CODES:  # row 5
+            return DeviceAuthorizationResult(
+                success=False,
+                error=f"API error (code={err.get('code')}): {err.get('message', '')}",
+                raw_response=data,
+            )
+        if not isinstance(err, dict):
+            # RFC 6749 §5.2 error is a plain string: the route answered, so this is an API error, not a missing route
+            return DeviceAuthorizationResult(
+                success=False,
+                error=f"API error (HTTP {status}): {_device_body_summary(data)}",
+                raw_response=data,
+            )
     # rows 4 (200+HTML) & 6 (unknown shapes): conservative unsupported bucket
     return _unsupported_auth(status, data, f"unexpected response: {_device_body_summary(data)}")
 
@@ -417,10 +424,13 @@ def _classify_poll(status: int, data: object) -> DevicePollResult:
             error="deviceflow unavailable: redirected (non-JSON) — check passport_url / path.prefix",
             error_type=_DEVICE_UNSUPPORTED,
         )
-    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data \
-            and data["error"].get("code") in _DEVICE_KNOWN_CODES:
+    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data:
         err = data["error"]
-        return DevicePollResult(success=False, error=f"API error (code={err.get('code')}): {err.get('message', '')}", raw_response=data)
+        if isinstance(err, dict) and err.get("code") in _DEVICE_KNOWN_CODES:
+            return DevicePollResult(success=False, error=f"API error (code={err.get('code')}): {err.get('message', '')}", raw_response=data)
+        if not isinstance(err, dict):
+            # RFC 6749 §5.2 error is a plain string: the route answered, so this is an API error, not a missing route
+            return DevicePollResult(success=False, error=f"API error (HTTP {status}): {_device_body_summary(data)}", raw_response=data)
     return DevicePollResult(
         success=False,
         error=f"deviceflow unavailable (HTTP {status}): {_device_body_summary(data)}",
