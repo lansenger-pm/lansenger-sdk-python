@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - pyproject `Project-URL` 错指 `lansenger-skills-official`（AI Skills 文档仓），修正为本仓 `lansenger-sdk-python`。
+- `oauth` 设备码分类器对标准 OAuth2 错误体崩溃：`_classify_authorization` / `_classify_poll` 原先只在 `"error" in data` 时直接取 `data["error"].get("code")`，而 RFC 6749 §5.2 的 `error` 是**字符串**（`{"error": "invalid_client"}`，或 `null` / list），真实 400/401/500 因此抛 `AttributeError: 'str' object has no attribute 'get'` 逃出 SDK，调用方拿到 traceback 而不是 `*Result`。现按形态分派：`error` 为 dict 且命中已知码 → 真实 API 错误（语义不变）；**非对象形态** → 真实 API 错误（`error_type=None`，message 带响应体）；`error` 为 dict 但未知码 → 仍归 `deviceflow_unsupported` 灰区。新增 7 例回归测试。
 
 ## [1.11.0] - 2026-10-09
 
