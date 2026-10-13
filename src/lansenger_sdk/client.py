@@ -51,6 +51,8 @@ from .models import (
     ApproveCardParams,
     BotCommandResult,
     BotMessageResult,
+    DeviceAuthorizationResult,
+    DevicePollResult,
     CalendarPrimaryResult,
     ChatListResult,
     ChatMessagesResult,
@@ -101,7 +103,12 @@ from .models import (
     UserMessageResult,
     UserTokenResult,
 )
-from .oauth import exchange_code_for_user_token, refresh_user_token
+from .oauth import (
+    exchange_code_for_user_token,
+    poll_device_token,
+    refresh_user_token,
+    request_device_authorization,
+)
 from .persistence import CredentialStore
 from .url_helpers import build_api_url
 
@@ -1872,6 +1879,49 @@ class LansengerClient:
             )
 
         return result
+
+    async def request_device_authorization(
+        self,
+        *,
+        client_id: str = "",
+        app_id: str | None = None,
+        source: str = "CLI",
+        version: str | None = None,
+    ) -> DeviceAuthorizationResult:
+        """Request a device code (OAuth2 device flow, step 1).
+
+        POST {passport_url}/oauth2/device_authorization. Legacy open
+        platforms without the route return
+        error_type="deviceflow_unsupported".
+        """
+        self._ensure_clients()
+        return await request_device_authorization(
+            self._config,
+            client_id=client_id,
+            app_id=app_id,
+            source=source,
+            version=version,
+            http_client=self._http_client,
+        )
+
+    async def poll_device_token(
+        self,
+        device_code: str,
+        *,
+        client_id: str = "",
+    ) -> DevicePollResult:
+        """Poll once for the device authorization outcome (device flow, step 2).
+
+        success=True for pending/approved (oauth2_code on approved);
+        success=False for denied/expired/errors.
+        """
+        self._ensure_clients()
+        return await poll_device_token(
+            self._config,
+            device_code,
+            client_id=client_id,
+            http_client=self._http_client,
+        )
 
     async def refresh_user_token(
         self,

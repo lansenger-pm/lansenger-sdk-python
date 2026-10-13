@@ -26,7 +26,15 @@ htmlcov/
 .claude/
 .cursor/
 .codex/
+# Fabric / qagent 会话运行产物（.agents/ 下的 settings 等配置如需共享可手动跟踪）
+.qagent/
+.agents/runs/
+.qax-fabric/
 
-# Agent local files
-AGENTS.md
-CLAUDE.md
+# Harness 本地运行日志（verify 每次运行产生，不入库）
+harness/verify-logs/
+
+# 本地敏感值黑名单（安全门检测器数据源；含会话高危值片段，绝不入库，0600）
+harness/security-blocklist.local
+
+# 注：AGENTS.md、docs/ 不再忽略（2026-10-13 Harness 化：Agent 约束产物必须进仓库）。

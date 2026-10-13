@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.12.0] - 2026-10-13
+
+### Added
+
+- OAuth2 设备码授权（deviceflow，新版开平）：`API_ENDPOINTS["oauth2"]` 新增 `device_authorization` / `device_token` 端点；`oauth` 模块新增 `request_device_authorization` / `poll_device_token` 异步实现（POST JSON，基座 = `passport_url`）；`LansengerClient` / `LansengerSyncClient` 双面透传；`DeviceAuthorizationResult` / `DevicePollResult` 结果类。旧版开平无此路由时返回 `error_type="deviceflow_unsupported"`，供调用方回退 authorize-url 流程（分类依据双环境实测：缺失路由 = 404+空 body 或 200+`errCode` 包裹，302/未知形态保守归入不支持；已知错误码集 {9000,9003,9004,9100,9101,10001,10002} 按具体错误透出）。
+
+### Fixed
+
+- pyproject `Project-URL` 错指 `lansenger-skills-official`（AI Skills 文档仓），修正为本仓 `lansenger-sdk-python`。
+- `oauth` 设备码分类器对标准 OAuth2 错误体崩溃：`_classify_authorization` / `_classify_poll` 原先只在 `"error" in data` 时直接取 `data["error"].get("code")`，而 RFC 6749 §5.2 的 `error` 是**字符串**（`{"error": "invalid_client"}`，或 `null` / list），真实 400/401/500 因此抛 `AttributeError: 'str' object has no attribute 'get'` 逃出 SDK，调用方拿到 traceback 而不是 `*Result`。现按形态分派：`error` 为 dict 且命中已知码 → 真实 API 错误（语义不变）；**非对象形态** → 真实 API 错误（`error_type=None`，message 带响应体）；`error` 为 dict 但未知码 → 仍归 `deviceflow_unsupported` 灰区。新增 7 例回归测试。
+
 ## [1.11.0] - 2026-10-09
 
 ### Added

@@ -188,6 +188,8 @@ from .models import (
     UploadMediaResult,
     UserInfoResult,
     UserMessageResult,
+    DeviceAuthorizationResult,
+    DevicePollResult,
     UserTokenResult,
 )
 from .videoconferences import (
@@ -266,6 +268,8 @@ __all__ = [
     "VideoconferenceVodUrlResult",
     "OaCardParams",
     "DynamicCardUpdateParams",
+    "DeviceAuthorizationResult",
+    "DevicePollResult",
     "UserTokenResult",
     "UserInfoResult",
     "StaffBasicInfoResult",
@@ -435,4 +439,4 @@ __all__ = [
     "fetch_chat_messages",
 ]
 
-__version__ = "1.11.0"
+__version__ = "1.12.0"

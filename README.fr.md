@@ -24,7 +24,7 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 
 - **Clients async & sync** — `LansengerClient` (async) + `LansengerSyncClient` (bloquant)
 - **Persistance des identifiants & tokens** — `CredentialStore` sauvegarde app_id, app_secret, URLs, appToken, userToken dans un fichier (survit aux redémarrages)
-- **Authentification utilisateur OAuth2** — URL d'autorisation, échange de code, refresh de token
+- **Authentification utilisateur OAuth2** — URL d'autorisation, échange de code, refresh de token, flux device (headless)
 - **Organisation & départements** — infos org, détail/children/staff de département
 - **Staff & contacts** — infos basiques/détaillées, mapping d'ID, ancêtres de département, recherche
 - **Messagerie** — 3 canaux de chat privé (robot, compte officiel, impersonnation utilisateur) + chat de groupe, tous les types de messages, @mention, identité humain/robot, rappels urgents
@@ -99,6 +99,38 @@ new_token = await client.refresh_user_token(refresh_token=token_result.refresh_t
 # Récupérer le profil utilisateur
 user_info = await client.fetch_user_info(user_token=token_result.user_token)
 ```
+
+### Flux device (headless / sans serveur de callback)
+
+Les hôtes qui ne peuvent pas recevoir de redirection locale (serveurs, CI, agents) peuvent
+utiliser le device authorization grant OAuth2. Il nécessite `passport_url` (argument de
+config ou `LANSENGER_PASSPORT_URL`) et la nouvelle plateforme ouverte ; les serveurs
+hérités renvoient `error_type="deviceflow_unsupported"` pour permettre un repli vers le
+flux ci-dessus.
+
+```python
+auth = await client.request_device_authorization()   # POST {passport_url}/oauth2/device_authorization
+if not auth.success:
+    if auth.error_type == "deviceflow_unsupported":
+        ...                                          # serveur hérité → utiliser le flux ci-dessus
+    raise RuntimeError(auth.error)
+
+print(f"Ouvrez {auth.verification_uri_complete} et saisissez {auth.user_code}")   # valide auth.expires_in
+
+while True:
+    poll = await client.poll_device_token(auth.device_code)   # POST {passport_url}/oauth2/device_token
+    if poll.state == "access_approved":
+        token_result = await client.exchange_code(code=poll.oauth2_code)
+        break
+    if not poll.success:                             # access_denied / expired_token / erreur
+        raise RuntimeError(poll.error)
+    await asyncio.sleep(auth.interval)
+```
+
+- `state` vaut `authorization_pending`, `access_approved`, `access_denied` ou
+  `expired_token` ; seul `access_approved` porte `oauth2_code`.
+- `source` vaut `"CLI"` par défaut ; valeurs acceptées : `AutoClaw`, `CLI`, `OpenClaw`, `MCP`.
+- Les deux méthodes existent aussi sur `LansengerSyncClient` (bloquant).
 
 ### Mode externe (Injection directe de jetons)
 

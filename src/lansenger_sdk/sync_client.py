@@ -24,6 +24,8 @@ from .models import (
     BotCommandQueryResult,
     BotCommandResult,
     BotMessageResult,
+    DeviceAuthorizationResult,
+    DevicePollResult,
     CalendarPrimaryResult,
     ChatListResult,
     ChatMessagesResult,
@@ -241,6 +243,7 @@ class LansengerSyncClient:
             app_id=self._app_id,
             app_secret=self._app_secret,
             api_gateway_url=self._api_gateway_url,
+            passport_url=self._passport_url,
             http_timeout=self._http_timeout,
             encoding_key=self._encoding_key,
             callback_token=self._callback_token,
@@ -260,6 +263,7 @@ class LansengerSyncClient:
             app_id=self._app_id,
             app_secret=self._app_secret,
             api_gateway_url=self._api_gateway_url,
+            passport_url=self._passport_url,
             http_timeout=self._http_timeout,
             encoding_key=self._encoding_key,
             callback_token=self._callback_token,
@@ -826,6 +830,36 @@ class LansengerSyncClient:
             "exchange_code",
             code=code,
             redirect_uri=redirect_uri,
+        ))
+
+    def request_device_authorization(
+        self,
+        *,
+        client_id: str = "",
+        app_id: str | None = None,
+        source: str = "CLI",
+        version: str | None = None,
+    ) -> DeviceAuthorizationResult:
+        """Request a device code (device flow step 1, blocking)."""
+        return _run_async(self._ephemeral_call(
+            "request_device_authorization",
+            client_id=client_id,
+            app_id=app_id,
+            source=source,
+            version=version,
+        ))
+
+    def poll_device_token(
+        self,
+        device_code: str,
+        *,
+        client_id: str = "",
+    ) -> DevicePollResult:
+        """Poll once for the device authorization outcome (blocking)."""
+        return _run_async(self._ephemeral_call(
+            "poll_device_token",
+            device_code=device_code,
+            client_id=client_id,
         ))
 
     def refresh_user_token(

@@ -13,6 +13,8 @@ API_ENDPOINTS = {
         "authorize": "/oauth2/authorize",
         "user_token_create": "/v2/user_token/create",
         "refresh_token_create": "/v1/refresh_token/create",
+        "device_authorization": "/oauth2/device_authorization",
+        "device_token": "/oauth2/device_token",
     },
     "users": {
         "fetch": "/v1/users/fetch",

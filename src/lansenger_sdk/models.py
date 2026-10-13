@@ -419,6 +419,70 @@ class ApproveCardUpdateParams:
 
 
 @dataclass
+class DeviceAuthorizationResult:
+    """Result of POST /oauth2/device_authorization (device code grant, step 1)."""
+
+    success: bool
+    device_code: str | None = None
+    user_code: str | None = None
+    verification_uri_complete: str | None = None
+    interval: int = 5
+    expires_in: int = 600
+    expires_at: int | None = None
+    open_api_domain: str | None = None
+    error: str | None = None
+    error_type: str | None = None  # "deviceflow_unsupported" | None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.device_code is not None:
+            d["device_code"] = self.device_code
+            d["user_code"] = self.user_code
+            d["verification_uri_complete"] = self.verification_uri_complete
+            d["interval"] = self.interval
+            d["expires_in"] = self.expires_in
+        if self.expires_at is not None:
+            d["expires_at"] = self.expires_at
+        if self.open_api_domain is not None:
+            d["open_api_domain"] = self.open_api_domain
+        if self.error is not None:
+            d["error"] = self.error
+        if self.error_type is not None:
+            d["error_type"] = self.error_type
+        return d
+
+
+@dataclass
+class DevicePollResult:
+    """Result of one POST /oauth2/device_token poll (device code grant, step 2).
+
+    success=True means the flow may continue (pending/approved);
+    success=False with a state means a terminal outcome (denied/expired)
+    or an error. oauth2_code is present only when state == "access_approved".
+    """
+
+    success: bool
+    state: str | None = None
+    oauth2_code: str | None = None
+    error: str | None = None
+    error_type: str | None = None  # "deviceflow_unsupported" | None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.state is not None:
+            d["state"] = self.state
+        if self.oauth2_code is not None:
+            d["oauth2_code"] = self.oauth2_code
+        if self.error is not None:
+            d["error"] = self.error
+        if self.error_type is not None:
+            d["error_type"] = self.error_type
+        return d
+
+
+@dataclass
 class UserTokenResult:
     success: bool
     user_token: str | None = None

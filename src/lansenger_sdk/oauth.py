@@ -20,7 +20,9 @@ Authentication hierarchy:
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 import uuid
 from urllib.parse import quote, urlencode
 
@@ -29,7 +31,7 @@ import httpx
 from .config import LansengerConfig
 from .constants import API_ENDPOINTS, OAUTH2_SCOPE_BASIC_USER_INFO
 from .exceptions import LansengerConfigError
-from .models import UserTokenResult
+from .models import DeviceAuthorizationResult, DevicePollResult, UserTokenResult
 from .url_helpers import build_api_url
 
 logger = logging.getLogger("lansenger_sdk.oauth")
@@ -305,3 +307,251 @@ def validate_callback_state(
         True if they match, False otherwise.
     """
     return callback_state == expected_state
+
+
+# --- OAuth2 Device Authorization Grant (新版开平；旧版无此路由，见 unsupported 分类) ---
+
+DEVICE_SOURCE_WHITELIST = ("AutoClaw", "CLI", "OpenClaw", "MCP")
+_DEVICE_UNSUPPORTED = "deviceflow_unsupported"
+_APP_ID_PATTERN = re.compile(r"\d+-\d+")
+_REDIRECT_STATUSES = (301, 302, 303, 307, 308)
+# Known OAuth2-service error codes (interface doc); 200-with-error-envelope or
+# unknown codes fall through to the conservative unsupported bucket (§4.1 row 6).
+_DEVICE_KNOWN_CODES = {9000, 9003, 9004, 9100, 9101, 10001, 10002}
+_DEVICE_KNOWN_ERROR_STATUSES = (400, 401, 500)
+
+
+def _device_base_url(config: LansengerConfig) -> str:
+    """Device endpoints live on the passport base (verified on stage: T1)."""
+    if not config.passport_url:
+        raise LansengerConfigError(
+            "passport_url is required for device flow. "
+            "Set LANSENGER_PASSPORT_URL env var or pass passport_url in config."
+        )
+    return config.passport_url.rstrip("/")
+
+
+def _device_body_summary(data: object) -> str:
+    if isinstance(data, dict):
+        return json.dumps(data, ensure_ascii=False)[:200]
+    return f"non-JSON body ({len(str(data))} bytes)"
+
+
+def _unsupported_auth(status: int, data: object, reason: str) -> DeviceAuthorizationResult:
+    return DeviceAuthorizationResult(
+        success=False,
+        error=f"deviceflow unavailable (HTTP {status}): {reason}",
+        error_type=_DEVICE_UNSUPPORTED,
+        raw_response=data if isinstance(data, dict) else None,
+    )
+
+
+def _classify_authorization(status: int, data: object) -> DeviceAuthorizationResult:
+    # Priority order mirrors evaluation.md §4.1 rows 0-6.
+    if status == 200 and isinstance(data, dict) and data.get("deviceCode") and "errCode" not in data:
+        return DeviceAuthorizationResult(
+            success=True,
+            device_code=data["deviceCode"],
+            user_code=data.get("userCode"),
+            verification_uri_complete=data.get("verificationUriComplete"),
+            interval=data.get("interval", 5),
+            expires_in=data.get("expiresIn", 600),
+            expires_at=data.get("expiresAt"),
+            open_api_domain=data.get("openApiDomain"),
+            raw_response=data,
+        )
+    if isinstance(data, dict) and "errCode" in data:  # row 1: gateway path error (T5a/P3)
+        return _unsupported_auth(
+            status,
+            data,
+            f"gateway path error (errCode={data.get('errCode')}): {data.get('errMsg', '')}",
+        )
+    if status == 404:  # row 2: legacy open platform (beta11 P1/T5b)
+        return _unsupported_auth(status, data, "route not found (404) — legacy open platform without deviceflow")
+    if status in _REDIRECT_STATUSES:  # row 3
+        return _unsupported_auth(status, data, "redirected (non-JSON) — check passport_url / path.prefix")
+    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data:
+        err = data["error"]
+        if isinstance(err, dict) and err.get("code") in _DEVICE_KNOWN_CODES:  # row 5
+            return DeviceAuthorizationResult(
+                success=False,
+                error=f"API error (code={err.get('code')}): {err.get('message', '')}",
+                raw_response=data,
+            )
+        if not isinstance(err, dict):
+            # RFC 6749 §5.2 error is a plain string: the route answered, so this is an API error, not a missing route
+            return DeviceAuthorizationResult(
+                success=False,
+                error=f"API error (HTTP {status}): {_device_body_summary(data)}",
+                raw_response=data,
+            )
+    # rows 4 (200+HTML) & 6 (unknown shapes): conservative unsupported bucket
+    return _unsupported_auth(status, data, f"unexpected response: {_device_body_summary(data)}")
+
+
+def _classify_poll(status: int, data: object) -> DevicePollResult:
+    if status == 200 and isinstance(data, dict) and "state" in data and "errCode" not in data:
+        state = data["state"]
+        if state == "authorization_pending":
+            return DevicePollResult(success=True, state=state, raw_response=data)
+        if state == "access_approved":
+            return DevicePollResult(success=True, state=state, oauth2_code=data.get("oauth2Code"), raw_response=data)
+        if state == "access_denied":
+            return DevicePollResult(success=False, state=state, error="user denied authorization (access_denied)", raw_response=data)
+        if state == "expired_token":
+            return DevicePollResult(
+                success=False,
+                state=state,
+                error="authorization expired (expired_token) — request a new device code",
+                raw_response=data,
+            )
+        return DevicePollResult(success=False, error=f"unknown state: {state}", raw_response=data)
+    if status == 404:
+        return DevicePollResult(
+            success=False,
+            error="deviceflow unavailable (HTTP 404): route not found",
+            error_type=_DEVICE_UNSUPPORTED,
+        )
+    if isinstance(data, dict) and "errCode" in data:
+        return DevicePollResult(
+            success=False,
+            error=f"deviceflow unavailable: gateway path error (errCode={data.get('errCode')})",
+            error_type=_DEVICE_UNSUPPORTED,
+        )
+    if status in _REDIRECT_STATUSES:
+        return DevicePollResult(
+            success=False,
+            error="deviceflow unavailable: redirected (non-JSON) — check passport_url / path.prefix",
+            error_type=_DEVICE_UNSUPPORTED,
+        )
+    if status in _DEVICE_KNOWN_ERROR_STATUSES and isinstance(data, dict) and "error" in data:
+        err = data["error"]
+        if isinstance(err, dict) and err.get("code") in _DEVICE_KNOWN_CODES:
+            return DevicePollResult(success=False, error=f"API error (code={err.get('code')}): {err.get('message', '')}", raw_response=data)
+        if not isinstance(err, dict):
+            # RFC 6749 §5.2 error is a plain string: the route answered, so this is an API error, not a missing route
+            return DevicePollResult(success=False, error=f"API error (HTTP {status}): {_device_body_summary(data)}", raw_response=data)
+    return DevicePollResult(
+        success=False,
+        error=f"deviceflow unavailable (HTTP {status}): {_device_body_summary(data)}",
+        error_type=_DEVICE_UNSUPPORTED,
+    )
+
+
+async def request_device_authorization(
+    config: LansengerConfig,
+    *,
+    client_id: str = "",
+    app_id: str | None = None,
+    source: str = "CLI",
+    version: str | None = None,
+    scope: str = OAUTH2_SCOPE_BASIC_USER_INFO,
+    http_client: httpx.AsyncClient | None = None,
+) -> DeviceAuthorizationResult:
+    """Request a device code (OAuth2 device flow, step 1).
+
+    POST {passport_url}/oauth2/device_authorization. The route lives on the
+    passport base; servers without the route are classified as
+    ``error_type="deviceflow_unsupported"`` (legacy open platforms).
+
+    Args:
+        config: LansengerConfig with passport_url set.
+        client_id: OAuth2 client id; defaults to app_id (accepted by server).
+        app_id: App id in ``数字-数字`` form; defaults to config.app_id.
+        source: Client source, one of DEVICE_SOURCE_WHITELIST (default "CLI").
+        version: Client version; defaults to this SDK's __version__.
+        scope: Fixed to basic_userinfor by the server; kept as a parameter.
+        http_client: Optional httpx.AsyncClient; ephemeral if None.
+
+    Returns:
+        DeviceAuthorizationResult with device_code/user_code/
+        verification_uri_complete/interval/expires_in/expires_at,
+        or success=False with error_type="deviceflow_unsupported".
+    """
+    resolved_app_id = app_id or config.app_id
+    if not resolved_app_id:
+        return DeviceAuthorizationResult(success=False, error="app_id is required")
+    if not _APP_ID_PATTERN.fullmatch(resolved_app_id):
+        return DeviceAuthorizationResult(success=False, error=f"invalid appId format: expect 数字-数字, got length {len(resolved_app_id)}")
+    if source not in DEVICE_SOURCE_WHITELIST:
+        return DeviceAuthorizationResult(success=False, error=f"invalid source: {source!r} not in {DEVICE_SOURCE_WHITELIST}")
+    if version is None:
+        from . import __version__
+
+        version = __version__
+    if not version:
+        return DeviceAuthorizationResult(success=False, error="version is required")
+
+    url = _device_base_url(config) + API_ENDPOINTS["oauth2"]["device_authorization"]
+    payload = {
+        "clientId": client_id or resolved_app_id,
+        "responseType": "device_code",
+        "scope": scope,
+        "appId": resolved_app_id,
+        "from": source,
+        "version": version,
+    }
+
+    owns_client = http_client is None
+    if owns_client:
+        http_client = httpx.AsyncClient(timeout=config.http_timeout)
+    try:
+        response = await http_client.post(url, json=payload)
+        try:
+            data = response.json()
+        except ValueError:
+            data = None
+        logger.debug("device_authorization HTTP %s", response.status_code)
+    except httpx.HTTPError as e:
+        return DeviceAuthorizationResult(success=False, error=f"HTTP error: {e}")
+    finally:
+        if owns_client:
+            await http_client.aclose()
+
+    return _classify_authorization(response.status_code, data)
+
+
+async def poll_device_token(
+    config: LansengerConfig,
+    device_code: str,
+    *,
+    client_id: str = "",
+    http_client: httpx.AsyncClient | None = None,
+) -> DevicePollResult:
+    """Poll once for the device authorization outcome (device flow, step 2).
+
+    POST {passport_url}/oauth2/device_token. Callers poll every
+    ``interval`` seconds (from step 1) until state becomes
+    ``access_approved`` (take oauth2_code) or a terminal state.
+
+    Returns:
+        DevicePollResult: success=True for pending/approved (oauth2_code on
+        approved); success=False for denied/expired/errors. HTTP-level
+        missing-route shapes carry error_type="deviceflow_unsupported".
+    """
+    if not device_code:
+        return DevicePollResult(success=False, error="device_code is required")
+    client_id = client_id or config.app_id
+    if not client_id:
+        return DevicePollResult(success=False, error="client_id is required")
+
+    url = _device_base_url(config) + API_ENDPOINTS["oauth2"]["device_token"]
+    payload = {"deviceCode": device_code, "clientId": client_id}
+
+    owns_client = http_client is None
+    if owns_client:
+        http_client = httpx.AsyncClient(timeout=config.http_timeout)
+    try:
+        response = await http_client.post(url, json=payload)
+        try:
+            data = response.json()
+        except ValueError:
+            data = None
+        logger.debug("device_token HTTP %s", response.status_code)
+    except httpx.HTTPError as e:
+        return DevicePollResult(success=False, error=f"HTTP error: {e}")
+    finally:
+        if owns_client:
+            await http_client.aclose()
+
+    return _classify_poll(response.status_code, data)
