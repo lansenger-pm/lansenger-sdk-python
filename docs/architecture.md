@@ -1,7 +1,7 @@
 # 架构（docs/architecture.md）
 
 > 定位：Harness ③结构层。模块地图 + 依赖方向 + **跨模块/跨仓契约同步清单**。
-> 事实源：源码实读（client.py / sync_client.py / models.py / constants.py / config.py / auth.py / url_helpers.py，2026-10-13）+ 实测（453 passed）。
+> 事实源：源码实读（client.py / sync_client.py / models.py / constants.py / config.py / auth.py / url_helpers.py，2026-10-13）+ 实测（485 passed）。
 
 ## 1. 架构图
 
@@ -23,7 +23,7 @@ flowchart TD
     U -->|"同步 API（每调用临时 client）"| SYNC -->|"asyncio.run 包装"| CLIENT
     CLIENT --> DOMAINS --> INFRA --> HTTP --> API
     INFRA -.持久化.-> STORE[("~/.lansenger/sdk_state.json<br/>appToken/userToken/凭据（0600）")]
-    TESTS["tests/（25 文件，453 例，pytest-asyncio，全 mock）"] --> CLIENT
+    TESTS["tests/（25 文件，485 例，pytest-asyncio，全 mock）"] --> CLIENT
 ```
 
 ## 2. 模块职责与模式
