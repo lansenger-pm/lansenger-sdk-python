@@ -1,0 +1,48 @@
+# Harness ⑤验证层 · 棘轮基线（harness/verify-allowlist）
+#
+# 棘轮边界（只减不增）：
+# - 本文件是 scripts/verify.sh 第 4 步凭证扫描的基线。[存量棘轮段] 内条目 = 存量已知（WARN 不阻断）；
+#   新增命中不在册 → FAIL 阻断。轮内新增豁免必须先经 FAIL 报警、人工确认后才能入册——
+#   严禁先加基线再看内容方向的洗白用法。
+# - 条目格式：`路径|键名|次数`（文件级计数粒度）。
+# - 基线内换值不拦：本扫描器只输出键名不读值，基线锁的是「形态+数量」。文件改名/删除后须重新入册。
+# - 扫描键名集（最小参考集，见 scripts/scan_secrets.py）：
+#   password / passwd / secret / token / credential / api_key|apikey / private_key|privatekey / keystore
+# - 占位符形态（大写占位 / 占位词组合 / 纯小写标识符 / 模板占位）已在扫描器内机制化过滤（is_placeholder）。
+# - 安全门检测器（2026-10-13 起，同为 FAIL 阻断）：
+#   internal-endpoint（内部测试环境主机族 open-*/user-*.{e,t}.lanxin.cn）·
+#   long-hex-value（≥32 位 hex，涣散 token/哈希；依赖哈希类 legit 值走误报段）·
+#   blocklisted-value（本地黑名单 harness/security-blocklist.local 的片段，该文件 gitignored+0600，绝不入库；
+#   黑名单内容 = 会话中出现过的真实凭证/内部端点/测试 appId 片段，新增高危值时追加）。
+# - 扫描范围：src/(含 egg-info 排除) tests/ docs/ .github/ pyproject.toml CHANGELOG.md README*.md；
+#   控制面（harness/ evals/ templates/ scripts/hooks/ scripts 自身/ AGENTS.md KNOWLEDGE.md）不扫。
+#   新增 Harness 目录时同步扩充 EXCLUDED_PARTS。
+
+[误报段]
+# 键名级假阳性逐条注明判据；能机制化的已修入扫描器（宪法 #5），此处登记判据备查。
+# （2026-10-13 首建）
+# 1) 构建产物：src/lansenger_sdk.egg-info/ 整目录曾按文件名误扫（PKG-INFO 是 README 拷贝）→
+#    已修扫描器按 path parts 排除 .egg-info 目录（机制化）。
+# 2) 文档占位：README×6 的示例值全为占位形态（形态分类统计：占位词 42 / 大写占位 9 / 小写标识 6，
+#    零随机 hex）→ is_placeholder 过滤机制化，不占棘轮。
+# 3) 运行时赋值：`app_secret = os.environ.get(...)` 类纯小写标识符值形态 → is_placeholder 过滤。
+
+[存量棘轮段]
+# 格式：路径|键名|次数
+# （2026-10-13 首建入册：tests 夹具假值。人工核证据——5 个为短单元重复模式（合成实锤）；
+#   4 个 36 位混合字符集 ≠ 真实平台 token 观测形态（stage 实测 36 位 hex）→ 判定非真值。
+#   这些假值防止真凭证混入：新增同形态命中 → FAIL → 人工确认。）
+tests/test_client_tokens.py|token|1
+tests/test_config.py|token|2
+tests/test_oauth.py|token|4
+tests/test_sync_client_tokens.py|token|2
+# （2026-10-13 安全门上线首跑：long-hex-value 为存量测试数据——callbacks 密文测试向量本就是
+#  hex 形态、persistence 夹具假 token；人工核非真实凭证。新增同形态 → FAIL → 人工确认。）
+tests/test_callbacks.py|long-hex-value|1
+tests/test_persistence.py|long-hex-value|10
+
+[生成物豁免段]
+# vendored / 生成物目录（src/lansenger_sdk.egg-info/ 已由扫描器排除；dist/ build/ 不在扫描范围）
+
+[二进制·生成物段]
+# 误入库的大件（当前无；发现时入册 + 列人工待办出库）
