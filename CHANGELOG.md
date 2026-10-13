@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.12.0] - 2026-10-13
+
+### Added
+
+- OAuth2 设备码授权（deviceflow，新版开平）：`API_ENDPOINTS["oauth2"]` 新增 `device_authorization` / `device_token` 端点；`oauth` 模块新增 `request_device_authorization` / `poll_device_token` 异步实现（POST JSON，基座 = `passport_url`）；`LansengerClient` / `LansengerSyncClient` 双面透传；`DeviceAuthorizationResult` / `DevicePollResult` 结果类。旧版开平无此路由时返回 `error_type="deviceflow_unsupported"`，供调用方回退 authorize-url 流程（分类依据双环境实测：缺失路由 = 404+空 body 或 200+`errCode` 包裹，302/未知形态保守归入不支持；已知错误码集 {9000,9003,9004,9100,9101,10001,10002} 按具体错误透出）。
+
+### Fixed
+
+- pyproject `Project-URL` 错指 `lansenger-skills-official`（AI Skills 文档仓），修正为本仓 `lansenger-sdk-python`。
+
 ## [1.11.0] - 2026-10-09
 
 ### Added
