@@ -375,3 +375,34 @@ def test_authorization_400_without_error_key_stays_unsupported():
     result = _run(request_device_authorization(CONFIG, http_client=_client(handler)))
     assert not result.success
     assert result.error_type == "deviceflow_unsupported"
+
+
+def test_authorization_403_with_known_code_is_api_error():
+    """403 was outside the old status allowlist and fell into the unsupported bucket."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"error": {"code": 9000, "message": "无权限"}})
+
+    result = _run(request_device_authorization(CONFIG, http_client=_client(handler)))
+    assert not result.success
+    assert result.error_type is None
+    assert "9000" in result.error
+
+
+def test_poll_403_with_known_code_is_api_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"error": {"code": 9003, "message": "签名错误"}})
+
+    result = _run(poll_device_token(CONFIG, "a" * 40, http_client=_client(handler)))
+    assert not result.success
+    assert result.error_type is None
+    assert "9003" in result.error
+
+
+def test_authorization_503_without_error_key_stays_unsupported():
+    """Widening the status range must not blanket-trust every 4xx/5xx body."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={"detail": "service unavailable"})
+
+    result = _run(request_device_authorization(CONFIG, http_client=_client(handler)))
+    assert not result.success
+    assert result.error_type == "deviceflow_unsupported"

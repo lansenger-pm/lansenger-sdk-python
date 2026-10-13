@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.12.1] - 2026-10-13
+
+### Fixed
+
+- 设备码分类器的状态码判定过窄：`403`（以及 `404` 之外的其它 4xx/5xx）上的 JSON `error` 错误体原先落入 `deviceflow_unsupported` 灰区，调用方会误判「服务端不支持设备码」并去回退旧流程。现改为「`404` 之外的 4xx/5xx + 带 `error` 键的 JSON 体 = 真实 API 错误」（`error_type=None`，已知码集照旧透出具体码；非对象形态照旧按 RFC 6749 §5.2 判真实错误）；`404`（旧版开平）、200 + `errCode`/`error` 包裹、未知码与未知形态仍按原规则归入灰区。新增 3 例回归测试（403 已知码 authorize/poll、503 非 error 体保持灰区）。
+
 ## [1.12.0] - 2026-10-13
 
 ### Added

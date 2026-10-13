@@ -46,7 +46,7 @@ flowchart TD
 |---|---|---|---|
 | C1' | **端点总表** `API_ENDPOINTS` | constants.py | 域模块实现 · README ×6 · **ts/go SDK 对齐登记**（C7'） · 下游 CLI 文档 |
 | C2' | **结果类模式** `*Result`（success + to_dict；snake_case） | models.py | client/sync_client 透传签名 · README ×6 · 下游 CLI `output_result` fields |
-| C3' | **双错误包裹兼容**：网关 `errCode/errMsg` + OAuth2 `error:{code,message,detail?}`（detail 可缺省——实测 9004 无 detail） | exceptions.py + 各域 | 错误分类逻辑 · 下游 CLI 的 deviceflow_unsupported 判定（双端共用同一优先级分类表：成功 → errCode 包裹 → 404 → 重定向 → 已知码集 → 灰区，未知形态一律保守判不支持；仅当 400/401/500 上 `error` 为非对象形态（RFC 6749 §5.2 字符串/null/list）时判真实 API 错误——该形态证明路由存在，落入灰区会误导下游回退旧流程） |
+| C3' | **双错误包裹兼容**：网关 `errCode/errMsg` + OAuth2 `error:{code,message,detail?}`（detail 可缺省——实测 9004 无 detail） | exceptions.py + 各域 | 错误分类逻辑 · 下游 CLI 的 deviceflow_unsupported 判定（双端共用同一优先级分类表：成功 → errCode 包裹 → 404 → 重定向 → 已知码集 → 灰区，未知形态一律保守判不支持；`404` 之外的 4xx/5xx 上带 `error` 键的 JSON 体一律判真实 API 错误——`error` 为对象且命中已知码集，或为 RFC 6749 §5.2 的非对象形态（字符串/null/list）；错误体本身即证明路由存在，落入灰区会误导下游回退旧流程） |
 | C4' | **py.typed 公共签名** | 所有公共 API | 破坏性变更 = `feat!:` + CHANGELOG + 下游评估 |
 | C5' | **版本三元组** tag `v*` == pyproject `version` == `__init__.__version__` | release.yml 硬校验 | 发版同 PR 三处改齐 + CHANGELOG |
 | C6' | **下游下限联动** | lansenger-cli pyproject `lansenger-sdk>=X` | 升下限 = CLI 全量回归 64 例 + CLI CHANGELOG `dep:` |
