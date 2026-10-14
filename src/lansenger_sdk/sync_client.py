@@ -24,6 +24,7 @@ from .models import (
     BotCommandQueryResult,
     BotCommandResult,
     BotMessageResult,
+    ReplyMessageResult,
     DeviceAuthorizationResult,
     DevicePollResult,
     CalendarPrimaryResult,
@@ -658,6 +659,44 @@ class LansengerSyncClient:
             message_ids=message_ids,
             chat_type=chat_type,
             sender_id=sender_id,
+        ))
+
+    def reply_message(
+        self,
+        msg_id: str,
+        *,
+        emoji_id: str = "",
+        reply_type: int = 1,
+        user_token: str = "",
+    ) -> ReplyMessageResult:
+        """Create or cancel an emoji reply (4.6.17, blocking)."""
+        return _run_async(self._ephemeral_call(
+            "reply_message",
+            msg_id=msg_id,
+            emoji_id=emoji_id,
+            reply_type=reply_type,
+            user_token=user_token,
+        ))
+
+    def send_authorization_request(
+        self,
+        *,
+        chat_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
+        account_id: str = "",
+        entry_id: str = "",
+        authorization_type: int = 1,
+        user_token: str = "",
+    ) -> AccountMessageResult:
+        """Send an authorizationReq permission request (4.6.4.14, blocking)."""
+        return _run_async(self._ephemeral_call(
+            "send_authorization_request",
+            chat_ids=chat_ids,
+            department_ids=department_ids,
+            account_id=account_id,
+            entry_id=entry_id,
+            authorization_type=authorization_type,
+            user_token=user_token,
         ))
 
     def query_groups(

@@ -51,6 +51,7 @@ from .models import (
     ApproveCardParams,
     BotCommandResult,
     BotMessageResult,
+    ReplyMessageResult,
     DeviceAuthorizationResult,
     DevicePollResult,
     CalendarPrimaryResult,
@@ -1478,6 +1479,89 @@ class LansengerClient:
             return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
 
         return _parse_send_response(data, operation="revoke")
+
+    async def reply_message(
+        self,
+        msg_id: str,
+        *,
+        emoji_id: str = "",
+        reply_type: int = 1,
+        user_token: str = "",
+    ) -> ReplyMessageResult:
+        """Create or cancel an emoji reply on a message (4.6.17).
+
+        Args:
+            msg_id: ID of the message being replied to (msgId).
+            emoji_id: TYPE_THUMB / TYPE_OK / TYPE_ADD_ONE / TYPE_FIREWORK /
+                TYPE_LOVE / TYPE_DOUBT. Required for reply_type=1.
+            reply_type: 1=reply (default), 2=cancel the reply.
+            user_token: Optional userToken (the endpoint accepts one).
+        """
+        from .message_replies import reply_message, validate_reply_request
+
+        invalid = validate_reply_request(msg_id, emoji_id, reply_type)
+        if invalid is not None:
+            return invalid
+
+        self._ensure_clients()
+        return await reply_message(
+            self._config,
+            await self._get_token(),
+            msg_id,
+            emoji_id=emoji_id,
+            reply_type=reply_type,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def send_authorization_request(
+        self,
+        *,
+        chat_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
+        account_id: str = "",
+        entry_id: str = "",
+        authorization_type: int = 1,
+        user_token: str = "",
+    ) -> AccountMessageResult:
+        """Send an authorizationReq message — a permission request (4.6.4.14).
+
+        Only ``authorizationType=1`` (位置请求授权) is defined today. When the
+        user grants it, personal bots receive the location report on the long
+        connection (``report_location``); organization bots must subscribe to
+        the 位置上报事件 callback in the developer console instead.
+
+        Args:
+            chat_ids: Target chat/employee openIds.
+            department_ids: Target department IDs.
+            account_id: Public account ID (defaults to the app's account).
+            entry_id: Application entry ID.
+            authorization_type: 1=location permission request.
+            user_token: Optional userToken.
+        """
+        from .account_messages import send_account_message
+        from .authorization_requests import authorization_req_payload
+        from .constants import MSG_TYPE_AUTHORIZATION_REQ
+
+        if not chat_ids and not department_ids:
+            return AccountMessageResult(
+                success=False,
+                error="at least one of chat_ids or department_ids is required",
+            )
+
+        self._ensure_clients()
+        return await send_account_message(
+            self._config,
+            await self._get_token(),
+            MSG_TYPE_AUTHORIZATION_REQ,
+            authorization_req_payload(authorization_type),
+            chat_ids=chat_ids,
+            department_ids=department_ids,
+            account_id=account_id,
+            entry_id=entry_id,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
 
     async def query_groups(
         self,

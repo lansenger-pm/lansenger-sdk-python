@@ -600,6 +600,28 @@ class UserMessageResult:
 
 
 @dataclass
+class ReplyMessageResult:
+    success: bool
+    reply_type: int = 0
+    msg_id: str = ""
+    emoji_id: str = ""
+    error: str | None = None
+    raw_response: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"success": self.success}
+        if self.reply_type:
+            d["reply_type"] = self.reply_type
+        if self.msg_id:
+            d["msg_id"] = self.msg_id
+        if self.emoji_id:
+            d["emoji_id"] = self.emoji_id
+        if self.error is not None:
+            d["error"] = self.error
+        return d
+
+
+@dataclass
 class BotMessageResult:
     success: bool
     message_id: str | None = None

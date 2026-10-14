@@ -91,6 +91,7 @@ API_ENDPOINTS = {
     },
     "message": {
         "revoke": "/v1/messages/revoke",
+        "reply_create": "/v1/messages/reply/create",
         "dynamic_update": "/v1/messages/dynamic/update",
         "reminder_create": "/v1/messages/reminder/create",
     },
@@ -162,6 +163,37 @@ APP_TO_MSG_MEDIA_TYPE = {
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".amr", ".m4a", ".ogg", ".flac", ".aac"}
+
+# 4.6.17 Emoji reply
+REPLY_TYPE_REPLY = 1
+REPLY_TYPE_CANCEL = 2
+EMOJI_IDS = (
+    "TYPE_THUMB",
+    "TYPE_OK",
+    "TYPE_ADD_ONE",
+    "TYPE_FIREWORK",
+    "TYPE_LOVE",
+    "TYPE_DOUBT",
+)
+
+# 4.6.4.14 authorizationReq message body
+MSG_TYPE_AUTHORIZATION_REQ = "authorizationReq"
+AUTHORIZATION_TYPE_LOCATION = 1
+AUTHORIZATION_TYPES = {AUTHORIZATION_TYPE_LOCATION: "location"}
+
+# 4.10.1.3 bot message callbacks (prs5.10.0+): osType of the sending device
+OS_TYPES = (
+    "Android",
+    "ios",
+    "iPad",
+    "Android Pad",
+    "Harmony Phone",
+    "Harmony Pad",
+    "Windows PC",
+    "Mac Pc",
+    "browser",
+    "Harmony Pc",
+)
 
 
 def guess_media_type(file_path: str) -> Optional[int]:
