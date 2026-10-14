@@ -272,7 +272,7 @@ result = await client.send_reminder(
 ```python
 result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
 result = await client.reply_message(msg_id="msg123", reply_type=2)
-result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
+result = client.reply_message("msg123", emoji_id="TYPE_OK")  # blocking sync client
 ```
 
 `reply_type=1` (default) adds a reply, `reply_type=2` cancels it. `emoji_id` must be one of
