@@ -9,7 +9,7 @@
 | 语言 | Python ≥ 3.10 | pyproject `requires-python` |
 | HTTP | httpx ≥ 0.24（**唯一运行时依赖**，最小面是发布承诺） | pyproject |
 | 异步 | asyncio 内核 + `asyncio.run` 同步包装（嵌套循环→线程池） | sync_client.py:81 |
-| 测试 | pytest + pytest-asyncio（**485 passed, 6 skipped in 0.36s 实测**；25 文件/7344 行） | tests/ 实测 |
+| 测试 | pytest + pytest-asyncio（**493 passed, 6 skipped in 0.36s 实测**；25 文件/7457 行） | tests/ 实测 |
 | Lint | ruff（F/E/W/B，line-length 120），**CI 已含** | pyproject + ci.yml |
 | 构建 | setuptools；`uv build` 实测通过 | pyproject |
 | CI | ci.yml：ruff + pytest 矩阵 3.10–3.13；release.yml：**tag==pyproject==__init__ 三元组硬校验** | .github/workflows 实读 |
@@ -20,14 +20,14 @@
 
 ```
 lansenger-sdk-python/
-├── src/lansenger_sdk/      # 28 模块 14940 行
+├── src/lansenger_sdk/      # 28 模块 14995 行
 │   ├── client.py           # 异步内核 LansengerClient
 │   ├── sync_client.py      # 同步门面（_run_async/_ephemeral_call）
 │   ├── models.py           # *Result dataclass
 │   ├── constants.py        # API_ENDPOINTS
 │   ├── config.py / auth.py / persistence.py / url_helpers.py / exceptions.py
 │   └── <域>.py ×20         # oauth/groups/calendars/…（协议实现）
-├── tests/                  # 25 文件 485 例（全 mock）
+├── tests/                  # 25 文件 493 例（全 mock）
 ├── .github/workflows/      # ci.yml（ruff+test 矩阵）/ release.yml（三元组校验）
 ├── scripts/ docs/ harness/ evals/ templates/ AGENTS.md KNOWLEDGE.md  # 【本次新增 Harness】
 └── README ×6               # md/zhHans/zhHant/zhHantHK/fr + pypi 专版
@@ -38,7 +38,7 @@ lansenger-sdk-python/
 | 检查 | 状态 |
 |---|---|
 | ruff check src tests | ✅ All checks passed（且 CI 已含——优于 CLI 修复前） |
-| pytest（矩阵 3.10–3.13） | ✅ 485 passed, 6 skipped |
+| pytest（矩阵 3.10–3.13） | ✅ 493 passed, 6 skipped |
 | uv build | ✅ 通过 |
 | release 三元组校验 | ✅ 机制级（tag/pyproject/__init__ 三处） |
 | 凭证排除意识 | ✅ .gitignore 排除 .env/*.pem/*.key/*.log |

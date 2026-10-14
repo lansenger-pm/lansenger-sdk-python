@@ -12,7 +12,7 @@
 | `src/lansenger_sdk/constants.py` | **`API_ENDPOINTS` 端点总表**（新增端点唯一登记处） |
 | `src/lansenger_sdk/config.py` / `auth.py` / `persistence.py` | 配置解析（env 优先）/ `TokenManager`（appToken 生命周期，支持 external 模式）/ `CredentialStore`（`~/.lansenger/sdk_state.json` 持久化） |
 | `src/lansenger_sdk/<域>.py` ×20 | 业务域模块（oauth/groups/calendars/…）：async 函数 = 协议实现 |
-| `tests/` | pytest + pytest-asyncio，**485 passed / 6 skipped**（全 mock，不打真实 API） |
+| `tests/` | pytest + pytest-asyncio，**493 passed / 6 skipped**（全 mock，不打真实 API） |
 | `docs/` · `harness/` · `scripts/` · `evals/` · `templates/` | Harness 产物（架构与契约 · 盘点与治理 · verify 与扫描 · 约束回归 · 度量） |
 
 依赖方向：域模块 → `url_helpers`/`constants`/`models`/`exceptions` → httpx；`sync_client` 只包装不实现协议。禁止域模块互相 import。
@@ -23,7 +23,7 @@
 |---|---|---|
 | 统一验证（提交前必跑） | `bash scripts/verify.sh` | ✅ 可用（lint+test+build+secrets 四态） |
 | Lint（对齐 CI） | `uv run --frozen ruff check src tests` | ✅ 可用 |
-| 单测 | `uv run --frozen --extra dev pytest -q` | ✅ 可用（485 passed；**`--frozen` 防锁漂移**） |
+| 单测 | `uv run --frozen --extra dev pytest -q` | ✅ 可用（493 passed；**`--frozen` 防锁漂移**） |
 | 构建 | `uv build` | ✅ 可用 |
 | pip 安装 | `pip install -e ".[dev]"` | ⚠️ 受限可用（CI 同款；本地未实测） |
 | 类型检查 | mypy/pyright | 🚫 未配置（py.typed 已发布，接入=演进项，勿臆造命令） |

@@ -10,6 +10,17 @@ from .exceptions import LansengerConfigError
 DEFAULT_API_GATEWAY_URL = ""
 
 
+def _parse_epoch(raw: str) -> float:
+    """Parse an epoch timestamp (seconds or milliseconds) from an env var; 0.0 when absent/invalid."""
+    try:
+        value = float(raw.strip())
+    except ValueError:
+        return 0.0
+    if value <= 0:
+        return 0.0
+    return value / 1000.0 if value > 10**11 else value
+
+
 @dataclass
 class LansengerConfig:
     """SDK configuration — resolved from env vars or direct params.
@@ -33,6 +44,7 @@ class LansengerConfig:
     callback_token: str = ""
     app_token: str = ""
     user_token: str = ""
+    app_token_expiry: float = 0.0
 
     @classmethod
     def create(
@@ -47,6 +59,7 @@ class LansengerConfig:
         callback_token: str | None = None,
         app_token: str | None = None,
         user_token: str | None = None,
+        app_token_expiry: float | None = None,
     ) -> LansengerConfig:
         """Create config from params with env var fallback.
 
@@ -77,6 +90,11 @@ class LansengerConfig:
         resolved_user_token = user_token or os.environ.get(
             "LANSENGER_USER_TOKEN", ""
         ).strip()
+        resolved_app_token_expiry = (
+            app_token_expiry
+            if app_token_expiry is not None
+            else _parse_epoch(os.environ.get("LANSENGER_APP_TOKEN_EXPIRES_AT", ""))
+        )
 
         # In external mode (app_token provided), app_id/app_secret are optional
         if not resolved_app_token and (not resolved_app_id or not resolved_app_secret):
@@ -98,6 +116,7 @@ class LansengerConfig:
             callback_token=resolved_callback_token,
             app_token=resolved_app_token,
             user_token=resolved_user_token,
+            app_token_expiry=resolved_app_token_expiry,
         )
 
     @classmethod
