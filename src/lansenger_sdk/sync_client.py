@@ -665,7 +665,7 @@ class LansengerSyncClient:
         self,
         msg_id: str,
         *,
-        emoji_id: str = "",
+        emoji_id: str,
         reply_type: int = 1,
         user_token: str = "",
     ) -> ReplyMessageResult:
@@ -680,23 +680,17 @@ class LansengerSyncClient:
 
     def send_authorization_request(
         self,
+        chat_id: str,
         *,
-        chat_ids: list[str] | None = None,
-        department_ids: list[str] | None = None,
-        account_id: str = "",
-        entry_id: str = "",
         authorization_type: int = 1,
-        user_token: str = "",
-    ) -> AccountMessageResult:
+        ref_msg_id: str = "",
+    ) -> SendMessageResult:
         """Send an authorizationReq permission request (4.6.4.14, blocking)."""
         return _run_async(self._ephemeral_call(
             "send_authorization_request",
-            chat_ids=chat_ids,
-            department_ids=department_ids,
-            account_id=account_id,
-            entry_id=entry_id,
+            chat_id=chat_id,
             authorization_type=authorization_type,
-            user_token=user_token,
+            ref_msg_id=ref_msg_id,
         ))
 
     def query_groups(

@@ -53,19 +53,29 @@ def test_reply_message_posts_the_documented_body():
     assert result.to_dict()["msg_id"] == "m-1"
 
 
-def test_cancel_reply_needs_no_emoji():
+def test_cancel_reply_sends_the_emoji_too():
     seen = {}
 
     async def go():
         async with _client(_ok_handler(seen)) as client:
             return await reply_message(
-                CONFIG, "at", "m-2", reply_type=2, http_client=client
+                CONFIG, "at", "m-2", emoji_id="TYPE_OK", reply_type=2, http_client=client
             )
 
     result = _run(go())
 
     assert result.success is True
-    assert seen["body"] == {"replyType": 2, "msgId": "m-2"}
+    assert seen["body"] == {"replyType": 2, "msgId": "m-2", "emojiId": "TYPE_OK"}
+
+
+def test_cancel_reply_without_emoji_is_rejected():
+    cancelled = _run(reply_message(CONFIG, "at", "m-2", emoji_id="", reply_type=2))
+    assert cancelled.success is False
+    assert "invalid emoji_id" in (cancelled.error or "")
+
+    replied = _run(reply_message(CONFIG, "at", "m-2", emoji_id="", reply_type=1))
+    assert replied.success is False
+    assert "invalid emoji_id" in (replied.error or "")
 
 
 @pytest.mark.parametrize("emoji", EMOJI_IDS)

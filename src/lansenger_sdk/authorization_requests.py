@@ -2,14 +2,18 @@
 
 Sending side
 ------------
-An authorizationReq body only carries ``authorizationType``; it is sent through
-the normal message channels (public account / bot / user), so the SDK ships this
-payload builder instead of a bespoke transport::
+An authorizationReq body only carries ``authorizationType``. The platform
+accepts this msgType **only on the bot→staff private-chat channel** (4.6.12,
+``POST /v1/bot/messages/create``): sending it through the account channel is
+rejected with「非法的msgType｜authorizationReq msgType only support bot-to-staff
+private chat」. The client wrapper routes it through ``_send_private``::
 
+    # async client; LansengerSyncClient.send_authorization_request is the same
+    result = await client.send_authorization_request("<staff openId>")
+
+    # when talking to the bot channel yourself, build the body with this helper
     from lansenger_sdk.authorization_requests import authorization_req_payload
     from lansenger_sdk.constants import MSG_TYPE_AUTHORIZATION_REQ
-
-    client.send_account_message(MSG_TYPE_AUTHORIZATION_REQ, authorization_req_payload())
 
 Receiving side (where the granted data arrives)
 -----------------------------------------------

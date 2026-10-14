@@ -1484,7 +1484,7 @@ class LansengerClient:
         self,
         msg_id: str,
         *,
-        emoji_id: str = "",
+        emoji_id: str,
         reply_type: int = 1,
         user_token: str = "",
     ) -> ReplyMessageResult:
@@ -1493,7 +1493,9 @@ class LansengerClient:
         Args:
             msg_id: ID of the message being replied to (msgId).
             emoji_id: TYPE_THUMB / TYPE_OK / TYPE_ADD_ONE / TYPE_FIREWORK /
-                TYPE_LOVE / TYPE_DOUBT. Required for reply_type=1.
+                TYPE_LOVE / TYPE_DOUBT. Required in both modes — with
+                reply_type=2 the platform needs it to know which emoji reply
+                to cancel.
             reply_type: 1=reply (default), 2=cancel the reply.
             user_token: Optional userToken (the endpoint accepts one).
         """
@@ -1516,51 +1518,38 @@ class LansengerClient:
 
     async def send_authorization_request(
         self,
+        chat_id: str,
         *,
-        chat_ids: list[str] | None = None,
-        department_ids: list[str] | None = None,
-        account_id: str = "",
-        entry_id: str = "",
         authorization_type: int = 1,
-        user_token: str = "",
-    ) -> AccountMessageResult:
+        ref_msg_id: str = "",
+    ) -> SendMessageResult:
         """Send an authorizationReq message — a permission request (4.6.4.14).
 
-        Only ``authorizationType=1`` (位置请求授权) is defined today. When the
-        user grants it, personal bots receive the location report on the long
+        The platform only accepts this msgType on the bot→staff private-chat
+        channel (``POST /v1/bot/messages/create``); sending it through the
+        account channel is rejected with ``非法的msgType``. Only
+        ``authorizationType=1`` (位置请求授权) is defined today. After the user
+        grants it, personal bots receive the location report on the long
         connection (``report_location``); organization bots must subscribe to
         the 位置上报事件 callback in the developer console instead.
 
         Args:
-            chat_ids: Target chat/employee openIds.
-            department_ids: Target department IDs.
-            account_id: Public account ID (defaults to the app's account).
-            entry_id: Application entry ID.
+            chat_id: Target staff openId (private chat with the bot).
             authorization_type: 1=location permission request.
-            user_token: Optional userToken.
+            ref_msg_id: Optional message to quote (prs5.9.0).
         """
-        from .account_messages import send_account_message
         from .authorization_requests import authorization_req_payload
         from .constants import MSG_TYPE_AUTHORIZATION_REQ
 
-        if not chat_ids and not department_ids:
-            return AccountMessageResult(
-                success=False,
-                error="at least one of chat_ids or department_ids is required",
-            )
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        try:
+            msg_data = authorization_req_payload(authorization_type)
+        except ValueError as e:
+            return SendMessageResult(success=False, error=str(e))
 
-        self._ensure_clients()
-        return await send_account_message(
-            self._config,
-            await self._get_token(),
-            MSG_TYPE_AUTHORIZATION_REQ,
-            authorization_req_payload(authorization_type),
-            chat_ids=chat_ids,
-            department_ids=department_ids,
-            account_id=account_id,
-            entry_id=entry_id,
-            user_token=user_token,
-            http_client=self._http_client,
+        return await self._send_private(
+            chat_id, MSG_TYPE_AUTHORIZATION_REQ, msg_data, ref_msg_id=ref_msg_id
         )
 
     async def query_groups(

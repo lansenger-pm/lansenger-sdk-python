@@ -327,11 +327,11 @@ result = await client.send_reminder(
 
 ```python
 result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
-result = await client.reply_message(msg_id="msg123", reply_type=2)
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB", reply_type=2)
 result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
-`reply_type=1`（默认）表示添加回复，`reply_type=2` 表示取消回复。`emoji_id` 必须是
+`reply_type=1`（默认）表示添加回复，`reply_type=2` 表示取消回复；**两种模式都必填 `emoji_id`**（平台靠它判断取消的是哪一个表情），取值必须是
 `TYPE_THUMB`（点赞）、`TYPE_OK`（收到）、`TYPE_ADD_ONE`（+1）、`TYPE_FIREWORK`（烟火）、
 `TYPE_LOVE`（爱心）、`TYPE_DOUBT`（问号）之一；该端点还接受可选的 `user_token=`。
 调用返回 `ReplyMessageResult`——失败时返回 `result.success is False` 并带上 `result.error`
@@ -341,11 +341,11 @@ result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 #### 权限（授权）请求消息（4.6.4.14）
 
 ```python
-result = await client.send_authorization_request(chat_ids=["staff123"])
+result = await client.send_authorization_request("staff123")  # bot -> staff private chat
 ```
 
 消息体由 `authorization_req_payload()` 构建，即 `{"authorizationType": 1}`
-（1 = 位置请求授权，目前平台仅定义这一种），调用返回 `AccountMessageResult`。
+（1 = 位置请求授权，目前平台仅定义这一种）。该 msgType **平台只接受「机器人 → 员工私聊」通道**（`POST /v1/bot/messages/create`），所以 `chat_id` 只传一个员工 openId、返回 `SendMessageResult`；走账号通道会被拒 `50084 非法的msgType`。
 
 授权数据的接收方式：
 

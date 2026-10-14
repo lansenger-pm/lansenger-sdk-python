@@ -36,10 +36,13 @@ def validate_reply_request(
             msg_id=msg_id,
         )
 
-    if reply_type == REPLY_TYPE_REPLY and emoji_id not in EMOJI_IDS:
+    if emoji_id not in EMOJI_IDS:
         return ReplyMessageResult(
             success=False,
-            error=f"invalid emoji_id: {emoji_id!r}; one of {', '.join(EMOJI_IDS)}",
+            error=(
+                f"invalid emoji_id: {emoji_id!r}; one of {', '.join(EMOJI_IDS)} "
+                "(required for both reply and cancel: cancel needs to know which reply to drop)"
+            ),
             reply_type=reply_type,
             msg_id=msg_id,
             emoji_id=emoji_id,
@@ -53,7 +56,7 @@ async def reply_message(
     app_token: str,
     msg_id: str,
     *,
-    emoji_id: str = "",
+    emoji_id: str,
     reply_type: int = REPLY_TYPE_REPLY,
     user_token: str = "",
     http_client: httpx.AsyncClient | None = None,
@@ -66,7 +69,8 @@ async def reply_message(
         msg_id: ID of the message being replied to (msgId).
         emoji_id: Emoji to attach — TYPE_THUMB (点赞), TYPE_OK (收到),
             TYPE_ADD_ONE (+1), TYPE_FIREWORK (烟火), TYPE_LOVE (爱心),
-            TYPE_DOUBT (问号). Required for reply_type=1.
+            TYPE_DOUBT (问号). Required in both modes: with reply_type=2 the
+            platform needs it to know which emoji reply to cancel.
         reply_type: 1=reply (default), 2=cancel the existing reply.
         user_token: Optional userToken (the endpoint accepts one).
         http_client: Optional injected client (tests).
@@ -81,9 +85,11 @@ async def reply_message(
     url = build_api_url(
         config, "message", "reply_create", app_token, user_token=user_token
     )
-    payload: dict[str, Any] = {"replyType": reply_type, "msgId": msg_id}
-    if emoji_id:
-        payload["emojiId"] = emoji_id
+    payload: dict[str, Any] = {
+        "replyType": reply_type,
+        "msgId": msg_id,
+        "emojiId": emoji_id,
+    }
 
     owns_client = http_client is None
     client = http_client or httpx.AsyncClient(timeout=30.0)

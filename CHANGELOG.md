@@ -10,8 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **表情回复（4.6.17）**：新增 `reply_message`（`LansengerClient` / `LansengerSyncClient` 同名方法 + 模块级函数），对应 `POST /v1/messages/reply/create`（已登记进 `API_ENDPOINTS["message"]["reply_create"]`）。`reply_type=1` 添加回复，`emoji_id` 取 `TYPE_THUMB` / `TYPE_OK` / `TYPE_ADD_ONE` / `TYPE_FIREWORK` / `TYPE_LOVE` / `TYPE_DOUBT`；`reply_type=2` 取消回复（不需要 emoji）。失败照例走结果对象（`ReplyMessageResult`，不抛异常）。
-- **授权请求消息（4.6.4.14）**：新增 `send_authorization_request`（异步 / 同步同名方法），发送 `authorizationReq` 消息体（`authorization_req_payload()` = `{"authorizationType": 1}`，当前平台仅定义「位置请求授权」）；同时写明授权后位置上报的两条通道 —— 个人机器人走长连接 `report_location` 回调事件，组织机器人需在开发者中心订阅「位置上报事件」并配置回调地址。
+- **表情回复（4.6.17）**：新增 `reply_message`（`LansengerClient` / `LansengerSyncClient` 同名方法 + 模块级函数），对应 `POST /v1/messages/reply/create`（已登记进 `API_ENDPOINTS["message"]["reply_create"]`）。`reply_type=1` 添加回复，`emoji_id` 取 `TYPE_THUMB` / `TYPE_OK` / `TYPE_ADD_ONE` / `TYPE_FIREWORK` / `TYPE_LOVE` / `TYPE_DOUBT`；`reply_type=2` 取消回复。**`emoji_id` 两种模式都必填**（平台靠它判断取消的是哪一个表情；真实环境实测缺省会返回 `40060 消息为空或格式错误｜emojiId is empty`）。失败照例走结果对象（`ReplyMessageResult`，不抛异常）。
+- **授权请求消息（4.6.4.14）**：新增 `send_authorization_request(chat_id, ...)`（异步 / 同步同名方法），发送 `authorizationReq` 消息体（`authorization_req_payload()` = `{"authorizationType": 1}`，当前平台仅定义「位置请求授权」）。该 msgType **平台只接受「机器人 → 员工私聊」通道**（`POST /v1/bot/messages/create`，与 `send_text` 私聊同路），走账号通道会被拒 `50084 非法的msgType｜authorizationReq msgType only support bot-to-staff private chat`（真实环境实测）；因此客户端走 `_send_private`，不再提供 `chat_ids`/`department_ids`/`account_id` 参数。同时写明授权后位置上报的两条通道 —— 个人机器人走长连接 `report_location` 回调事件，组织机器人需在开发者中心订阅「位置上报事件」并配置回调地址。
 - **机器人消息回调新字段（4.10.1.3，需服务端 prs5.10.0+）**：`bot_private_message` / `bot_group_message` 的 `fromName`（发送者名称）与 `osType`（发送设备操作系统）现在映射为 `BotPrivateMessageData` / `BotGroupMessageData` 的 `from_name` / `os_type`；老版本服务端不带这两个字段时为空字符串。新增 `OS_TYPES` 常量列出 10 种取值。
 
 ### Changed

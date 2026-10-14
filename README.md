@@ -328,11 +328,11 @@ result = await client.send_reminder(
 
 ```python
 result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
-result = await client.reply_message(msg_id="msg123", reply_type=2)
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB", reply_type=2)
 result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
-`reply_type=1` (default) adds a reply, `reply_type=2` cancels it. `emoji_id` must be one of
+`reply_type=1` (default) adds a reply, `reply_type=2` cancels it. `emoji_id` is required in **both** modes (the platform needs it to tell which emoji reply to cancel) and must be one of
 `TYPE_THUMB` (点赞), `TYPE_OK` (收到), `TYPE_ADD_ONE` (+1), `TYPE_FIREWORK` (烟火),
 `TYPE_LOVE` (爱心), `TYPE_DOUBT` (问号); the endpoint also accepts an optional `user_token=`.
 The call returns a `ReplyMessageResult` — a failed call comes back as `result.success is False`
@@ -342,11 +342,11 @@ with `result.error` (e.g. `errCode 40060` = 消息为空或格式错误), never 
 #### Permission (authorization) request (4.6.4.14)
 
 ```python
-result = await client.send_authorization_request(chat_ids=["staff123"])
+result = await client.send_authorization_request("staff123")  # bot -> staff private chat
 ```
 
 The message body is built by `authorization_req_payload()` = `{"authorizationType": 1}`
-(1 = 位置请求授权, the only type defined today); the call returns an `AccountMessageResult`.
+(1 = 位置请求授权, the only type defined today). The platform accepts this msgType **only on the bot -> staff private-chat channel** (`POST /v1/bot/messages/create`), so `chat_id` is one staff openId and the call returns a `SendMessageResult`; the account channel rejects it with `50084 非法的msgType`.
 
 Where the granted data arrives:
 

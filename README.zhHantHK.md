@@ -327,11 +327,11 @@ result = await client.send_reminder(
 
 ```python
 result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
-result = await client.reply_message(msg_id="msg123", reply_type=2)
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB", reply_type=2)
 result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
-`reply_type=1` 表示新增回覆（預設），`reply_type=2` 表示取消回覆（無需 `emoji_id`）。`emoji_id` 必須為下列其中一個：
+`reply_type=1` 表示新增回覆（預設），`reply_type=2` 表示取消回覆；**兩種模式都必填 `emoji_id`**（平台靠它判斷要取消哪一個表情）。`emoji_id` 必須為下列其中一個：
 
 | `emoji_id` | 含義 |
 |---|---|
@@ -351,11 +351,11 @@ from lansenger_sdk import reply_message
 #### 授權請求訊息（4.6.4.14）
 
 ```python
-result = await client.send_authorization_request(chat_ids=["staff123"])
-result = sync_client.send_authorization_request(chat_ids=["staff123"])
+result = await client.send_authorization_request("staff123")  # bot -> staff private chat
+result = sync_client.send_authorization_request("staff123")  # bot -> staff private chat
 ```
 
-傳送的內容由 `authorization_req_payload()` 建立：`{"authorizationType": 1}`，其中 `1` 代表 位置请求授权（位置請求授權），是現時唯一定義的類型。呼叫會回傳 `AccountMessageResult`。
+傳送的內容由 `authorization_req_payload()` 建立：`{"authorizationType": 1}`，其中 `1` 代表 位置请求授权（位置請求授權），是現時唯一定義的類型。該 msgType **平台只接受「機械人 → 員工私聊」通道**（`POST /v1/bot/messages/create`），因此 `chat_id` 只傳一個員工 openId、回傳 `SendMessageResult`；走帳號通道會被拒 `50084 非法的msgType`。
 
 接收授權後的資料：
 

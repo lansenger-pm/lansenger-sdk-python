@@ -329,11 +329,11 @@ result = await client.send_reminder(
 
 ```python
 result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
-result = await client.reply_message(msg_id="msg123", reply_type=2)
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB", reply_type=2)
 result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
-`reply_type=1` ajoute une réponse (valeur par défaut), `reply_type=2` l'annule (aucun `emoji_id` n'est nécessaire). `emoji_id` doit être l'une des valeurs suivantes :
+`reply_type=1` ajoute une réponse (valeur par défaut), `reply_type=2` l'annule. `emoji_id` est **obligatoire dans les deux cas** (la plateforme en a besoin pour savoir quelle réaction annuler) et doit être l'une des valeurs suivantes :
 
 | `emoji_id` | Signification |
 |---|---|
@@ -353,11 +353,11 @@ from lansenger_sdk import reply_message
 #### Message de demande d'autorisation (4.6.4.14)
 
 ```python
-result = await client.send_authorization_request(chat_ids=["staff123"])
-result = sync_client.send_authorization_request(chat_ids=["staff123"])
+result = await client.send_authorization_request("staff123")  # bot -> staff private chat
+result = sync_client.send_authorization_request("staff123")  # bot -> staff private chat
 ```
 
-Le corps envoyé est construit par `authorization_req_payload()` : `{"authorizationType": 1}`, où `1` correspond à 位置请求授权 (demande d'autorisation de localisation), seul type défini aujourd'hui. L'appel renvoie un `AccountMessageResult`.
+Le corps envoyé est construit par `authorization_req_payload()` : `{"authorizationType": 1}`, où `1` correspond à 位置请求授权 (demande d'autorisation de localisation), seul type défini aujourd'hui. La plateforme n'accepte ce msgType **que sur le canal bot -> collaborateur en privé** (`POST /v1/bot/messages/create`) : `chat_id` est un seul openId de collaborateur et l'appel renvoie un `SendMessageResult` ; le canal compte le rejette avec `50084 非法的msgType`.
 
 Réception des données accordées :
 

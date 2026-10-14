@@ -33,15 +33,16 @@ async def test_client_reply_message_rejects_bad_arguments_locally():
 async def test_client_authorization_request_requires_a_target():
     client = LansengerClient(app_id="id", app_secret="sec")
     try:
-        result = await client.send_authorization_request()
+        result = await client.send_authorization_request("")
         assert result.success is False
-        assert "at least one of chat_ids or department_ids" in (result.error or "")
+        assert result.error == "chat_id is required"
     finally:
         await client.close()
 
 
-def test_cancel_needs_no_emoji_but_reply_does():
-    assert validate_reply_request("m-1", "", 2) is None
+def test_cancel_also_requires_an_emoji():
+    assert validate_reply_request("m-1", "", 2) is not None
+    assert validate_reply_request("m-1", "TYPE_OK", 2) is None
     assert validate_reply_request("m-1", "", 1) is not None
     assert validate_reply_request("", "TYPE_OK", 1) is not None
 
@@ -53,6 +54,6 @@ def test_sync_client_exposes_the_same_two_entry_points():
     assert reply.success is False
     assert reply.error == "msg_id is required"
 
-    request = sync.send_authorization_request()
+    request = sync.send_authorization_request("")
     assert request.success is False
-    assert "at least one of chat_ids or department_ids" in (request.error or "")
+    assert request.error == "chat_id is required"
