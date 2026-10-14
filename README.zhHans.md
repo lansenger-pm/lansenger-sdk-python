@@ -37,6 +37,7 @@
 - **机器人命令** — 创建/查询/删除机器人快捷命令
 - **个人应用** — 创建/修改/查询/删除/列表个人机器人应用
 - **回调事件** — 25 种事件类型、结构化解析、AES 解密（按 4.10.1.4 规范）、SHA1 签名验证
+- **表情回复与授权请求** — 用六种内置表情回复消息，并可向用户发起位置授权请求
 
 ## 快速安装
 
@@ -308,6 +309,8 @@ path_result = await client.fetch_media_path(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
+`upload_media` 需要先在开发者中心开启「上传素材」权限，否则平台会拒绝上传。
+
 #### 加急提醒（4.6.14）
 
 ```python
@@ -319,6 +322,41 @@ result = await client.send_reminder(
     user_id_list=["staff1", "staff2"],
 )
 ```
+
+#### 表情回复（4.6.17）
+
+```python
+# 为消息添加表情回复
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
+
+# 取消回复 — 无需 emoji
+result = await client.reply_message(msg_id="msg123", reply_type=2)
+
+# 同步客户端提供同名方法
+result = client.reply_message("msg-id", emoji_id="TYPE_OK")
+```
+
+`reply_type=1`（默认）表示添加回复，`reply_type=2` 表示取消回复。`emoji_id` 必须是
+`TYPE_THUMB`（点赞）、`TYPE_OK`（收到）、`TYPE_ADD_ONE`（+1）、`TYPE_FIREWORK`（烟火）、
+`TYPE_LOVE`（爱心）、`TYPE_DOUBT`（问号）之一；该端点还接受可选的 `user_token=`。
+调用返回 `ReplyMessageResult`——失败时返回 `result.success is False` 并带上 `result.error`
+（例如 `errCode 40060` = 消息为空或格式错误），不会抛出异常。也可以用
+`from lansenger_sdk import reply_message` 以模块级函数调用。
+
+#### 权限（授权）请求消息（4.6.4.14）
+
+```python
+# 请求用户授予位置权限（authorizationReq 消息）
+result = await client.send_authorization_request(chat_ids=["staff123"])
+```
+
+消息体由 `authorization_req_payload()` 构建，即 `{"authorizationType": 1}`
+（1 = 位置请求授权，目前平台仅定义这一种），调用返回 `AccountMessageResult`。
+
+授权数据的接收方式：
+
+- **个人机器人**——位置上报会直接经长连接送达，表现为 `report_location` 回调事件。
+- **组织机器人**——需在开发者中心订阅「位置上报事件」并配置回调地址，上报数据随后经回调接口送达。
 
 ## 5. 群组
 
@@ -451,6 +489,25 @@ types = client.get_callback_event_types()  # 13 个类别下共 25 种事件类�
 ```
 
 AES 解密需安装 `pycryptodome` 或 `cryptography` 包（自动检测）。
+
+### 机器人消息回调字段（4.10.1.3）
+
+需服务端 prs5.10.0+。`bot_private_message` 与 `bot_group_message` 事件另外携带：
+
+| 回调字段 | 含义 | 解析后字段 |
+|----------------|---------|--------------|
+| `fromName` | 消息发送者名称 | `BotPrivateMessageData.from_name` / `BotGroupMessageData.from_name` |
+| `osType` | 机器人发送设备操作系统 | `.os_type` |
+
+```python
+for event in events:
+    if event.event_type in ("bot_private_message", "bot_group_message"):
+        print(event.data.from_name, event.data.os_type)
+```
+
+`osType` 取值为 `OS_TYPES` 元组之一：`Android`、`ios`、`iPad`、`Android Pad`、`Harmony Phone`、
+`Harmony Pad`、`Windows PC`、`Mac Pc`、`browser`、`Harmony Pc`。在旧版服务端上这两个字段
+为空字符串，不会报错。
 
 ## 消息类型能力矩阵
 

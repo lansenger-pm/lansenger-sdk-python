@@ -37,6 +37,7 @@ Les trois types de robots utilisent le même mécanisme d'authentification : `ap
 - **Commandes de bot** — créer/gérer les entrées de commande de bot
 - **Applications personnelles** — gérer les bots personnels
 - **Événements de callback** — 25 types d'événements, parsing structuré, décryptage AES (spec 4.10.1.4), vérification de signature SHA1
+- **Réponses emoji et demandes d'autorisation** — réagissez aux messages avec les six emojis intégrés et demandez aux utilisateurs d'autoriser la localisation
 
 ## Installation rapide
 
@@ -322,6 +323,27 @@ result = await client.send_reminder(
 )
 ```
 
+#### Réponse emoji (4.6.17)
+
+```python
+await client.reply_message(msg_id="MSG_ID", emoji_id="TYPE_OK")   # réagir
+await client.reply_message(msg_id="MSG_ID", reply_type=2)         # retirer
+sync_client.reply_message("MSG_ID", emoji_id="TYPE_LOVE")         # client synchrone
+```
+
+`emoji_id` : `TYPE_THUMB` / `TYPE_OK` / `TYPE_ADD_ONE` / `TYPE_FIREWORK` / `TYPE_LOVE` / `TYPE_DOUBT`.
+
+#### Message de demande d'autorisation (4.6.4.14)
+
+```python
+await client.send_authorization_request(chat_ids=["STAFF_ID"])        # robot personnel
+await client.send_authorization_request(department_ids=["DEPT_ID"])   # robot d'organisation
+```
+
+`authorization_type=1` correspond à une demande de localisation. Après approbation, un robot personnel reçoit l'événement de localisation via la connexion longue, tandis qu'un robot d'organisation doit s'abonner à l'événement de remontée de position dans le centre de développement et configurer une URL de callback.
+
+> ⚠️ `upload_media` (4.5.1) nécessite l'activation de la **permission de téléversement de médias** dans le centre de développement.
+
 ## 5. Groups
 
 ```python
@@ -393,6 +415,8 @@ await client.update_schedule_attendee_meta(
 ```
 
 ## 7. Événements de callback
+
+> Depuis PRS 5.10.0, les payloads `bot_private_message` / `bot_group_message` exposent aussi `from_name` (nom de l'expéditeur) et `os_type` (système de l'appareil expéditeur) ; les deux sont optionnels, tolérer les serveurs plus anciens.
 
 Le SDK prend en charge les payloads de callback en JSON brut et en AES chiffré (selon la spec API Lansenger 4.10.1.4).
 

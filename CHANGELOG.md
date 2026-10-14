@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.13.0] - 2026-10-14
+
+### Added
+
+- **表情回复（4.6.17）**：新增 `reply_message`（`LansengerClient` / `LansengerSyncClient` 同名方法 + 模块级函数），对应 `POST /v1/messages/reply/create`（已登记进 `API_ENDPOINTS["message"]["reply_create"]`）。`reply_type=1` 添加回复，`emoji_id` 取 `TYPE_THUMB` / `TYPE_OK` / `TYPE_ADD_ONE` / `TYPE_FIREWORK` / `TYPE_LOVE` / `TYPE_DOUBT`；`reply_type=2` 取消回复（不需要 emoji）。失败照例走结果对象（`ReplyMessageResult`，不抛异常）。
+- **授权请求消息（4.6.4.14）**：新增 `send_authorization_request`（异步 / 同步同名方法），发送 `authorizationReq` 消息体（`authorization_req_payload()` = `{"authorizationType": 1}`，当前平台仅定义「位置请求授权」）；同时写明授权后位置上报的两条通道 —— 个人机器人走长连接 `report_location` 回调事件，组织机器人需在开发者中心订阅「位置上报事件」并配置回调地址。
+- **机器人消息回调新字段（4.10.1.3，需服务端 prs5.10.0+）**：`bot_private_message` / `bot_group_message` 的 `fromName`（发送者名称）与 `osType`（发送设备操作系统）现在映射为 `BotPrivateMessageData` / `BotGroupMessageData` 的 `from_name` / `os_type`；老版本服务端不带这两个字段时为空字符串。新增 `OS_TYPES` 常量列出 10 种取值。
+
+### Changed
+
+- `upload_media`（4.5.1）补上接口前提：应用需在开发者中心开通「上传素材」权限，否则平台拒绝上传。
+
 ## [1.12.2] - 2026-10-14
 
 ### Fixed

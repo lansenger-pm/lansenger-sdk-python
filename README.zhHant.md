@@ -37,6 +37,7 @@
 - **機器人命令** — 創建/查詢/刪除機器人快捷命令
 - **個人應用** — 創建/修改/查詢/刪除/列表個人機器人應用
 - **回調事件** — 25 種事件類型、結構化解析、AES 解密（按 4.10.1.4規範）、SHA1 簽名驗證
+- **表情回覆與授權請求** — 用六種內建表情回覆訊息，並可向使用者發起位置授權請求
 
 ## 快速安裝
 
@@ -308,6 +309,8 @@ path_result = await client.fetch_media_path(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
+`upload_media` 需要先在開發者中心開啟「上傳素材」權限，否則平台會拒絕上傳。
+
 #### 加急提醒（4.6.14）
 
 ```python
@@ -319,6 +322,41 @@ result = await client.send_reminder(
     user_id_list=["staff1", "staff2"],
 )
 ```
+
+#### 表情回覆（4.6.17）
+
+```python
+# 為訊息加上表情回覆
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
+
+# 取消回覆 — 無需 emoji
+result = await client.reply_message(msg_id="msg123", reply_type=2)
+
+# 同步客戶端提供同名方法
+result = client.reply_message("msg-id", emoji_id="TYPE_OK")
+```
+
+`reply_type=1`（預設）代表新增回覆，`reply_type=2` 代表取消回覆。`emoji_id` 必須是
+`TYPE_THUMB`（點讚）、`TYPE_OK`（收到）、`TYPE_ADD_ONE`（+1）、`TYPE_FIREWORK`（煙火）、
+`TYPE_LOVE`（愛心）、`TYPE_DOUBT`（問號）之一；此端點亦接受選填的 `user_token=`。
+呼叫會回傳 `ReplyMessageResult`——失敗時回傳 `result.success is False` 並附上 `result.error`
+（例如 `errCode 40060` = 訊息為空或格式錯誤），不會拋出例外。也可以
+`from lansenger_sdk import reply_message` 以模組層級函式呼叫。
+
+#### 權限（授權）請求訊息（4.6.4.14）
+
+```python
+# 請求使用者授予位置權限（authorizationReq 訊息）
+result = await client.send_authorization_request(chat_ids=["staff123"])
+```
+
+訊息內容由 `authorization_req_payload()` 建構，即 `{"authorizationType": 1}`
+（1 = 位置請求授權，目前平台僅定義這一種），呼叫會回傳 `AccountMessageResult`。
+
+授權資料的接收方式：
+
+- **個人機器人**——位置回報會直接經由長連線送達，表現為 `report_location` 回呼事件。
+- **組織機器人**——需在開發者中心訂閱「位置上報事件」並設定回呼位址，回報資料隨後經由回呼介面送達。
 
 ## 5. 群組
 
@@ -451,6 +489,25 @@ types = client.get_callback_event_types()  # 13 個類別共 25 種事件類型
 ```
 
 AES 解密需安裝 `pycryptodome` 或 `cryptography` 包（自動檢測）。
+
+### 機器人訊息回呼欄位（4.10.1.3）
+
+需伺服端 prs5.10.0+。`bot_private_message` 與 `bot_group_message` 事件另外攜帶：
+
+| 回呼欄位 | 含義 | 解析後欄位 |
+|----------------|---------|--------------|
+| `fromName` | 訊息傳送者名稱 | `BotPrivateMessageData.from_name` / `BotGroupMessageData.from_name` |
+| `osType` | 機器人傳送裝置作業系統 | `.os_type` |
+
+```python
+for event in events:
+    if event.event_type in ("bot_private_message", "bot_group_message"):
+        print(event.data.from_name, event.data.os_type)
+```
+
+`osType` 取值為 `OS_TYPES` 元組之一：`Android`、`ios`、`iPad`、`Android Pad`、`Harmony Phone`、
+`Harmony Pad`、`Windows PC`、`Mac Pc`、`browser`、`Harmony Pc`。在較舊的伺服端上這兩個欄位
+是空字串，不會報錯。
 
 ## 訊息類型能力矩陣
 

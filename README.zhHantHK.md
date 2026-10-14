@@ -37,6 +37,7 @@
 - **機械人命令** — 創建/查詢/刪除機械人快捷命令
 - **個人應用** — 創建/修改/查詢/刪除/列表個人機械人應用
 - **回呼事件** — 25 種事件類型、結構化訊息解析、AES 解密（按 4.10.1.4規範）、SHA1 簽名驗證
+- **表情回覆與授權請求** — 用六種內建表情回覆訊息，並可向使用者發起位置授權請求
 
 ## 快速安裝
 
@@ -320,6 +321,27 @@ result = await client.send_reminder(
 )
 ```
 
+#### 表情回覆（4.6.17）
+
+```python
+await client.reply_message(msg_id="MSG_ID", emoji_id="TYPE_OK")   # 回覆
+await client.reply_message(msg_id="MSG_ID", reply_type=2)         # 取消回覆
+sync_client.reply_message("MSG_ID", emoji_id="TYPE_LOVE")         # 同步客戶端
+```
+
+`emoji_id`：`TYPE_THUMB`（讚好）/ `TYPE_OK`（收到）/ `TYPE_ADD_ONE`（+1）/ `TYPE_FIREWORK`（煙花）/ `TYPE_LOVE`（愛心）/ `TYPE_DOUBT`（問號）。
+
+#### 授權請求訊息（4.6.4.14）
+
+```python
+await client.send_authorization_request(chat_ids=["STAFF_ID"])        # 個人機械人
+await client.send_authorization_request(department_ids=["DEPT_ID"])   # 組織機械人
+```
+
+`authorization_type=1` 代表位置請求授權。使用者授權後：個人機械人直接透過長連線接收位置回呼事件；組織機械人需在開發者中心訂閱「位置回報事件」並設定回呼位址。
+
+> ⚠️ `upload_media`（4.5.1）需要先在**開發者中心開通上傳素材權限**。
+
 ## 5. 群組
 
 ```python
@@ -391,6 +413,8 @@ await client.update_schedule_attendee_meta(
 ```
 
 ## 7. 回呼事件
+
+> PRS 5.10.0 起，`bot_private_message` / `bot_group_message` 回呼額外帶 `from_name`（發送者名稱）與 `os_type`（發送裝置作業系統）；兩者都可能缺省（舊版服務端不返回），消費端需容錯。
 
 SDK 同時支援明文 JSON 和 AES 加密回呼載荷（按藍信接口規範 4.10.1.4）。
 
