@@ -309,6 +309,8 @@ path_result = await client.fetch_media_path(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
+> ⚠️ `upload_media`（4.5.1）需要先在開發者中心啟用「上載素材」權限（上傳素材），否則平台會拒絕上載。
+
 #### 加急提醒（4.6.14）
 
 ```python
@@ -324,23 +326,41 @@ result = await client.send_reminder(
 #### 表情回覆（4.6.17）
 
 ```python
-await client.reply_message(msg_id="MSG_ID", emoji_id="TYPE_OK")   # 回覆
-await client.reply_message(msg_id="MSG_ID", reply_type=2)         # 取消回覆
-sync_client.reply_message("MSG_ID", emoji_id="TYPE_LOVE")         # 同步客戶端
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
+result = await client.reply_message(msg_id="msg123", reply_type=2)
+result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
-`emoji_id`：`TYPE_THUMB`（讚好）/ `TYPE_OK`（收到）/ `TYPE_ADD_ONE`（+1）/ `TYPE_FIREWORK`（煙花）/ `TYPE_LOVE`（愛心）/ `TYPE_DOUBT`（問號）。
+`reply_type=1` 表示新增回覆（預設），`reply_type=2` 表示取消回覆（無需 `emoji_id`）。`emoji_id` 必須為下列其中一個：
+
+| `emoji_id` | 含義 |
+|---|---|
+| `TYPE_THUMB` | 点赞（讚好） |
+| `TYPE_OK` | 收到 |
+| `TYPE_ADD_ONE` | +1 |
+| `TYPE_FIREWORK` | 烟火（煙花） |
+| `TYPE_LOVE` | 爱心（愛心） |
+| `TYPE_DOUBT` | 问号（問號） |
+
+亦接受選填的 `user_token=`。呼叫會回傳 `ReplyMessageResult`：失敗時 `result.success is False`，並在 `result.error` 帶出原因（例如 `errCode 40060` = 消息为空或格式错误），不會拋出例外。模組層級函式亦可直接匯入：
+
+```python
+from lansenger_sdk import reply_message
+```
 
 #### 授權請求訊息（4.6.4.14）
 
 ```python
-await client.send_authorization_request(chat_ids=["STAFF_ID"])        # 個人機械人
-await client.send_authorization_request(department_ids=["DEPT_ID"])   # 組織機械人
+result = await client.send_authorization_request(chat_ids=["staff123"])
+result = sync_client.send_authorization_request(chat_ids=["staff123"])
 ```
 
-`authorization_type=1` 代表位置請求授權。使用者授權後：個人機械人直接透過長連線接收位置回呼事件；組織機械人需在開發者中心訂閱「位置回報事件」並設定回呼位址。
+傳送的內容由 `authorization_req_payload()` 建立：`{"authorizationType": 1}`，其中 `1` 代表 位置请求授权（位置請求授權），是現時唯一定義的類型。呼叫會回傳 `AccountMessageResult`。
 
-> ⚠️ `upload_media`（4.5.1）需要先在**開發者中心開通上傳素材權限**。
+接收授權後的資料：
+
+- **個人機械人**：位置回報會直接透過長連線以 `report_location` 回呼事件送達。
+- **組織機械人**：應用程式須在開發者中心訂閱「位置上報事件」並設定回呼網址，回報會經回呼介面送達。
 
 ## 5. 群組
 
@@ -475,6 +495,24 @@ types = client.get_callback_event_types()  # 13 個類別共 25 種事件類型
 ```
 
 AES 解密需安裝 `pycryptodome` 或 `cryptography` 包（自動檢測）。
+
+### 機械人訊息回呼欄位（4.10.1.3）
+
+`bot_private_message` 與 `bot_group_message` 事件另帶以下兩個欄位（需伺服器 prs5.10.0+）：
+
+| 欄位 | 說明 | SDK 存取方式 |
+|---|---|---|
+| `fromName` | 消息发送者名称 | `BotPrivateMessageData.from_name` / `BotGroupMessageData.from_name` |
+| `osType` | 机器人发送设备操作系统 | `BotPrivateMessageData.os_type` / `BotGroupMessageData.os_type` |
+
+```python
+for event in events:
+    if event.event_type in ("bot_private_message", "bot_group_message"):
+        print(event.data.from_name)
+        print(event.data.os_type)
+```
+
+`osType` 為下列其中一個值（SDK 以 `OS_TYPES` tuple 提供）：`Android`、`ios`、`iPad`、`Android Pad`、`Harmony Phone`、`Harmony Pad`、`Windows PC`、`Mac Pc`、`browser`、`Harmony Pc`。在較舊的伺服器上，這兩個欄位只會是空字串，不會報錯。
 
 ## 訊息類型能力矩陣
 

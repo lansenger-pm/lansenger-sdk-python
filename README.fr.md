@@ -311,6 +311,8 @@ path_result = await client.fetch_media_path(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
+> ⚠️ `upload_media` (4.5.1) nécessite au préalable l'activation de la permission 「上传素材」 (téléversement de médias) dans le Centre Développeur, faute de quoi la plateforme refuse le téléversement.
+
 #### Rappels urgents (4.6.14)
 
 ```python
@@ -323,26 +325,44 @@ result = await client.send_reminder(
 )
 ```
 
-#### Réponse emoji (4.6.17)
+#### Réponses emoji (4.6.17)
 
 ```python
-await client.reply_message(msg_id="MSG_ID", emoji_id="TYPE_OK")   # réagir
-await client.reply_message(msg_id="MSG_ID", reply_type=2)         # retirer
-sync_client.reply_message("MSG_ID", emoji_id="TYPE_LOVE")         # client synchrone
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
+result = await client.reply_message(msg_id="msg123", reply_type=2)
+result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
-`emoji_id` : `TYPE_THUMB` / `TYPE_OK` / `TYPE_ADD_ONE` / `TYPE_FIREWORK` / `TYPE_LOVE` / `TYPE_DOUBT`.
+`reply_type=1` ajoute une réponse (valeur par défaut), `reply_type=2` l'annule (aucun `emoji_id` n'est nécessaire). `emoji_id` doit être l'une des valeurs suivantes :
+
+| `emoji_id` | Signification |
+|---|---|
+| `TYPE_THUMB` | 点赞 (J'aime) |
+| `TYPE_OK` | 收到 (Bien reçu) |
+| `TYPE_ADD_ONE` | +1 |
+| `TYPE_FIREWORK` | 烟火 (Feux d'artifice) |
+| `TYPE_LOVE` | 爱心 (Cœur) |
+| `TYPE_DOUBT` | 问号 (Point d'interrogation) |
+
+Le paramètre facultatif `user_token=` est également accepté. L'appel renvoie un `ReplyMessageResult` : en cas d'échec, `result.success is False` et `result.error` porte la cause (par exemple `errCode 40060` = 消息为空或格式错误) — aucune exception n'est levée. La fonction de module est également exportée :
+
+```python
+from lansenger_sdk import reply_message
+```
 
 #### Message de demande d'autorisation (4.6.4.14)
 
 ```python
-await client.send_authorization_request(chat_ids=["STAFF_ID"])        # robot personnel
-await client.send_authorization_request(department_ids=["DEPT_ID"])   # robot d'organisation
+result = await client.send_authorization_request(chat_ids=["staff123"])
+result = sync_client.send_authorization_request(chat_ids=["staff123"])
 ```
 
-`authorization_type=1` correspond à une demande de localisation. Après approbation, un robot personnel reçoit l'événement de localisation via la connexion longue, tandis qu'un robot d'organisation doit s'abonner à l'événement de remontée de position dans le centre de développement et configurer une URL de callback.
+Le corps envoyé est construit par `authorization_req_payload()` : `{"authorizationType": 1}`, où `1` correspond à 位置请求授权 (demande d'autorisation de localisation), seul type défini aujourd'hui. L'appel renvoie un `AccountMessageResult`.
 
-> ⚠️ `upload_media` (4.5.1) nécessite l'activation de la **permission de téléversement de médias** dans le centre de développement.
+Réception des données accordées :
+
+- **Robots personnels (个人机器人)** : le rapport de localisation arrive directement sur la connexion longue, via l'événement de callback `report_location`.
+- **Robots d'organisation (组织机器人)** : l'application doit s'abonner à l'événement 「位置上報事件」 (remontée de position) dans le Centre Développeur et configurer une URL de callback ; le rapport arrive alors via l'interface de callback.
 
 ## 5. Groups
 
@@ -477,6 +497,24 @@ types = client.get_callback_event_types()  # 25 types d'événements sur 13 cat�
 ```
 
 Le décryptage AES nécessite le package `pycryptodome` ou `cryptography` (auto-détecté).
+
+### Champs de callback des messages de bot (4.10.1.3)
+
+Les événements `bot_private_message` et `bot_group_message` portent également les deux champs suivants (serveur prs5.10.0+) :
+
+| Champ | Description | Accès SDK |
+|---|---|---|
+| `fromName` | 消息发送者名称 | `BotPrivateMessageData.from_name` / `BotGroupMessageData.from_name` |
+| `osType` | 机器人发送设备操作系统 | `BotPrivateMessageData.os_type` / `BotGroupMessageData.os_type` |
+
+```python
+for event in events:
+    if event.event_type in ("bot_private_message", "bot_group_message"):
+        print(event.data.from_name)
+        print(event.data.os_type)
+```
+
+`osType` vaut l'une des valeurs suivantes (exposées par le SDK dans le tuple `OS_TYPES`) : `Android`, `ios`, `iPad`, `Android Pad`, `Harmony Phone`, `Harmony Pad`, `Windows PC`, `Mac Pc`, `browser`, `Harmony Pc`. Sur un serveur plus ancien, ces deux champs sont de simples chaînes vides et aucune erreur n'est levée.
 
 ## Matrice de capacités des types de messages
 
