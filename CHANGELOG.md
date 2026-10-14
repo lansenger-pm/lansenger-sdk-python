@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.12.2] - 2026-10-14
+
+### Fixed
+
+- **外部 appToken 过期不再被盲信**：`LansengerConfig` 新增 `app_token_expiry` 字段（由新增的 `LANSENGER_APP_TOKEN_EXPIRES_AT` 环境变量填充，秒/毫秒都识别）；外部模式（`LANSENGER_APP_TOKEN`）下，`TokenManager` 发现该 token 已过期、或距过期不足 5 分钟时不再直接返回它：同时配了 `app_id`/`app_secret` 就改用应用凭证换取新 appToken（打 warning 日志），否则抛 `LansengerAuthError` 并指明需要替换的 `LANSENGER_APP_TOKEN`。未提供过期时间时保持原行为（继续信任该 token），新增 5 例回归测试。
+
 ## [1.12.1] - 2026-10-13
 
 ### Fixed

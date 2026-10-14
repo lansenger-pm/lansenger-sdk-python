@@ -1,11 +1,15 @@
 """Tests for LansengerSyncClient token management fixes."""
 
+import asyncio
 import tempfile
 import time
 
+import httpx
 import pytest
 
 from lansenger_sdk import LansengerSyncClient
+from lansenger_sdk.auth import TokenManager
+from lansenger_sdk.config import LansengerConfig
 from lansenger_sdk.persistence import CredentialStore
 from lansenger_sdk.exceptions import LansengerAuthError
 
@@ -400,3 +404,81 @@ def test_from_store_with_future_expiry_computes_remaining_correctly():
         # Token is still valid (just saved)
         token = client.get_user_token()
         assert token == "future_token"
+
+
+# --- external appToken (LANSENGER_APP_TOKEN) expiry handling ---
+
+
+def test_external_app_token_without_expiry_is_used_as_is():
+    config = LansengerConfig(app_id="", app_secret="", api_gateway_url="https://gw.example.com", app_token="given")
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(500))) as client:
+            return await TokenManager(config, client).get_token()
+
+    assert asyncio.run(go()) == "given"
+
+
+def test_expired_external_app_token_is_replaced_using_app_credentials():
+    seen = {}
+
+    def handler(request):
+        seen["url"] = str(request.url)
+        return httpx.Response(200, json={"errCode": 0, "data": {"appToken": "fresh", "expiresIn": 7200}})
+
+    config = LansengerConfig(
+        app_id="app-1",
+        app_secret="sec",
+        api_gateway_url="https://gw.example.com",
+        app_token="stale",
+        app_token_expiry=time.time() - 10,
+    )
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await TokenManager(config, client).get_token()
+
+    assert asyncio.run(go()) == "fresh"
+    assert "apptoken" in seen["url"]
+
+
+def test_expired_external_app_token_without_credentials_raises():
+    config = LansengerConfig(
+        app_id="",
+        app_secret="",
+        api_gateway_url="https://gw.example.com",
+        app_token="stale",
+        app_token_expiry=time.time() - 10,
+    )
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(500))) as client:
+            return await TokenManager(config, client).get_token()
+
+    with pytest.raises(LansengerAuthError, match="LANSENGER_APP_TOKEN expired"):
+        asyncio.run(go())
+
+
+def test_external_app_token_near_expiry_is_replaced():
+    config = LansengerConfig(
+        app_id="app-1",
+        app_secret="sec",
+        api_gateway_url="https://gw.example.com",
+        app_token="soon",
+        app_token_expiry=time.time() + 60,
+    )
+
+    def handler(request):
+        return httpx.Response(200, json={"errCode": 0, "data": {"appToken": "fresh", "expiresIn": 7200}})
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await TokenManager(config, client).get_token()
+
+    assert asyncio.run(go()) == "fresh"
+
+
+def test_app_token_expires_at_env_var_accepts_milliseconds(monkeypatch):
+    monkeypatch.setenv("LANSENGER_APP_TOKEN_EXPIRES_AT", "1791956696000")
+    config = LansengerConfig.create(app_id="app-1", app_secret="sec", app_token="token")
+    assert config.app_token_expiry == 1791956696.0

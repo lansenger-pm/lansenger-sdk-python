@@ -20,6 +20,11 @@ _TOKEN_REFRESH_MARGIN = 300  # Refresh 5 minutes before expiry
 _USER_TOKEN_REFRESH_MARGIN = 300
 
 
+def _format_epoch(epoch: float) -> str:
+    """Format an epoch timestamp for error messages."""
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch)) if epoch > 0 else "an unknown time"
+
+
 class TokenManager:
     """Manages Lansenger app access token lifecycle.
 
@@ -47,12 +52,19 @@ class TokenManager:
         self._token: str | None = None
         self._token_expiry: float = 0
         self._store = store
+        self._stale_external_token = False
 
-        # External mode: app_token from config takes precedence over store cache
+        # External mode: a fresh app_token from config takes precedence over the store cache
         if self._config.app_token:
-            self._token = self._config.app_token
-            # No expiry — external mode skips all time-based checks
-            return
+            if self._external_token_is_fresh():
+                self._token = self._config.app_token
+                return
+            self._stale_external_token = True
+            if self._config.app_id and self._config.app_secret:
+                logger.warning(
+                    "LANSENGER_APP_TOKEN expired at %s; obtaining a new appToken with app_id/app_secret",
+                    _format_epoch(self._config.app_token_expiry),
+                )
 
         if self._store:
             cached = self._store.load_app_token()
@@ -63,18 +75,38 @@ class TokenManager:
                 self._token_expiry = data.get("app_token_expiry", 0)
                 logger.debug("Restored cached appToken from %s", self._store.path)
 
+    def _external_token_is_fresh(self) -> bool:
+        """Return True while the externally provided appToken is still valid.
+
+        An unknown expiry (0) keeps the historical pass-through behaviour: the token is
+        trusted, because only the caller knows when it was issued.
+        """
+        expiry = self._config.app_token_expiry
+        if expiry <= 0:
+            return True
+        return time.time() < expiry - _TOKEN_REFRESH_MARGIN
+
     async def get_token(self) -> str:
         """Get a valid app access token.
 
-        In external mode (config.app_token is set), returns the
-        provided token directly with no expiry check or refresh.
+        In external mode (config.app_token is set) a token whose recorded expiry has
+        passed is not returned blindly: with app_id/app_secret available the SDK obtains
+        a fresh appToken instead, and without them it raises a LansengerAuthError naming
+        the env var to replace.
 
         Otherwise, returns a cached token or obtains a new one
         via the API, refreshing before expiry.
         """
-        # External mode: pass-through, no refresh
-        if self._config.app_token:
+        # External mode: pass-through while the token is known to be valid
+        if self._config.app_token and not self._stale_external_token:
             return self._config.app_token
+        if self._stale_external_token and not (self._config.app_id and self._config.app_secret):
+            raise LansengerAuthError(
+                f"LANSENGER_APP_TOKEN expired at {_format_epoch(self._config.app_token_expiry)} and no "
+                "app_id/app_secret is configured to replace it; export a fresh LANSENGER_APP_TOKEN "
+                "(with LANSENGER_APP_TOKEN_EXPIRES_AT) or set LANSENGER_APP_ID / LANSENGER_APP_SECRET.",
+                err_code=-3,
+            )
 
         if self._token and time.time() < self._token_expiry:
             return self._token
