@@ -434,7 +434,6 @@ await client.update_schedule_attendee_meta(
 
 ## 7. 回呼事件
 
-> PRS 5.10.0 起，`bot_private_message` / `bot_group_message` 回呼額外帶 `from_name`（發送者名稱）與 `os_type`（發送裝置作業系統）；兩者都可能缺省（舊版服務端不返回），消費端需容錯。
 
 SDK 同時支援明文 JSON 和 AES 加密回呼載荷（按藍信接口規範 4.10.1.4）。
 

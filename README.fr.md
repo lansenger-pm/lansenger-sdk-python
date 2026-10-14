@@ -436,7 +436,6 @@ await client.update_schedule_attendee_meta(
 
 ## 7. Événements de callback
 
-> Depuis PRS 5.10.0, les payloads `bot_private_message` / `bot_group_message` exposent aussi `from_name` (nom de l'expéditeur) et `os_type` (système de l'appareil expéditeur) ; les deux sont optionnels, tolérer les serveurs plus anciens.
 
 Le SDK prend en charge les payloads de callback en JSON brut et en AES chiffré (selon la spec API Lansenger 4.10.1.4).
 

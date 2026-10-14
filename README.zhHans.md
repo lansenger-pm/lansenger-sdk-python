@@ -326,14 +326,9 @@ result = await client.send_reminder(
 #### 表情回复（4.6.17）
 
 ```python
-# 为消息添加表情回复
 result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
-
-# 取消回复 — 无需 emoji
 result = await client.reply_message(msg_id="msg123", reply_type=2)
-
-# 同步客户端提供同名方法
-result = client.reply_message("msg-id", emoji_id="TYPE_OK")
+result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
 `reply_type=1`（默认）表示添加回复，`reply_type=2` 表示取消回复。`emoji_id` 必须是
@@ -346,7 +341,6 @@ result = client.reply_message("msg-id", emoji_id="TYPE_OK")
 #### 权限（授权）请求消息（4.6.4.14）
 
 ```python
-# 请求用户授予位置权限（authorizationReq 消息）
 result = await client.send_authorization_request(chat_ids=["staff123"])
 ```
 

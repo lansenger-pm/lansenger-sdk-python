@@ -270,14 +270,9 @@ result = await client.send_reminder(
 #### Emoji replies (4.6.17)
 
 ```python
-# Add an emoji reply to a message
 result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
-
-# Cancel the reply — no emoji needed
 result = await client.reply_message(msg_id="msg123", reply_type=2)
-
-# The blocking sync client exposes the same method
-result = client.reply_message("msg-id", emoji_id="TYPE_OK")
+result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
 ```
 
 `reply_type=1` (default) adds a reply, `reply_type=2` cancels it. `emoji_id` must be one of
@@ -290,7 +285,6 @@ with `result.error` (e.g. `errCode 40060` = 消息为空或格式错误), never 
 #### Permission (authorization) request (4.6.4.14)
 
 ```python
-# Ask users to grant location permission (authorizationReq, msgType)
 result = await client.send_authorization_request(chat_ids=["staff123"])
 ```
 
