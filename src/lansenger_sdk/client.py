@@ -51,6 +51,7 @@ from .models import (
     ApproveCardParams,
     BotCommandResult,
     BotMessageResult,
+    ReplyMessageResult,
     DeviceAuthorizationResult,
     DevicePollResult,
     CalendarPrimaryResult,
@@ -1478,6 +1479,78 @@ class LansengerClient:
             return SendMessageResult(success=False, error=f"HTTP error: {e}", retryable=True)
 
         return _parse_send_response(data, operation="revoke")
+
+    async def reply_message(
+        self,
+        msg_id: str,
+        *,
+        emoji_id: str,
+        reply_type: int = 1,
+        user_token: str = "",
+    ) -> ReplyMessageResult:
+        """Create or cancel an emoji reply on a message (4.6.17).
+
+        Args:
+            msg_id: ID of the message being replied to (msgId).
+            emoji_id: TYPE_THUMB / TYPE_OK / TYPE_ADD_ONE / TYPE_FIREWORK /
+                TYPE_LOVE / TYPE_DOUBT. Required in both modes — with
+                reply_type=2 the platform needs it to know which emoji reply
+                to cancel.
+            reply_type: 1=reply (default), 2=cancel the reply.
+            user_token: Optional userToken (the endpoint accepts one).
+        """
+        from .message_replies import reply_message, validate_reply_request
+
+        invalid = validate_reply_request(msg_id, emoji_id, reply_type)
+        if invalid is not None:
+            return invalid
+
+        self._ensure_clients()
+        return await reply_message(
+            self._config,
+            await self._get_token(),
+            msg_id,
+            emoji_id=emoji_id,
+            reply_type=reply_type,
+            user_token=user_token,
+            http_client=self._http_client,
+        )
+
+    async def send_authorization_request(
+        self,
+        chat_id: str,
+        *,
+        authorization_type: int = 1,
+        ref_msg_id: str = "",
+    ) -> SendMessageResult:
+        """Send an authorizationReq message — a permission request (4.6.4.14).
+
+        The platform only accepts this msgType on the bot→staff private-chat
+        channel (``POST /v1/bot/messages/create``); sending it through the
+        account channel is rejected with ``非法的msgType``. Only
+        ``authorizationType=1`` (位置请求授权) is defined today. After the user
+        grants it, personal bots receive the location report on the long
+        connection (``report_location``); organization bots must subscribe to
+        the 位置上报事件 callback in the developer console instead.
+
+        Args:
+            chat_id: Target staff openId (private chat with the bot).
+            authorization_type: 1=location permission request.
+            ref_msg_id: Optional message to quote (prs5.9.0).
+        """
+        from .authorization_requests import authorization_req_payload
+        from .constants import MSG_TYPE_AUTHORIZATION_REQ
+
+        if not chat_id:
+            return SendMessageResult(success=False, error="chat_id is required")
+        try:
+            msg_data = authorization_req_payload(authorization_type)
+        except ValueError as e:
+            return SendMessageResult(success=False, error=str(e))
+
+        return await self._send_private(
+            chat_id, MSG_TYPE_AUTHORIZATION_REQ, msg_data, ref_msg_id=ref_msg_id
+        )
 
     async def query_groups(
         self,

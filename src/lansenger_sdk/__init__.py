@@ -77,6 +77,7 @@ from .chats import (
     fetch_chat_list,
     fetch_chat_messages,
 )
+from .authorization_requests import authorization_req_payload
 from .client import LansengerClient
 from .config import LansengerConfig
 from .constants import (
@@ -85,11 +86,17 @@ from .constants import (
     APP_MEDIA_TYPE_FILE,
     APP_MEDIA_TYPE_IMAGE,
     APP_MEDIA_TYPE_VIDEO,
+    AUTHORIZATION_TYPE_LOCATION,
+    EMOJI_IDS,
     MEDIA_TYPE_AUDIO,
     MEDIA_TYPE_IMAGE,
     MEDIA_TYPE_VIDEO,
+    MSG_TYPE_AUTHORIZATION_REQ,
     OAUTH2_SCOPE_BASIC_USER_INFO,
     OAUTH2_SCOPES,
+    OS_TYPES,
+    REPLY_TYPE_CANCEL,
+    REPLY_TYPE_REPLY,
     guess_app_media_type,
     guess_media_type,
 )
@@ -133,10 +140,12 @@ from .media import (
     fetch_media_path,
     upload_app_media,
 )
+from .message_replies import reply_message
 from .models import (
     AccountMessageResult,
     AppCardParams,
     BotMessageResult,
+    ReplyMessageResult,
     CalendarPrimaryResult,
     ChatGroupInfo,
     ChatListResult,
@@ -247,6 +256,9 @@ from .user_messages import (
 from .users import fetch_user_info
 
 __all__ = [
+    "ReplyMessageResult",
+    "authorization_req_payload",
+    "reply_message",
     "LansengerClient",
     "LansengerSyncClient",
     "LansengerConfig",
@@ -439,4 +451,4 @@ __all__ = [
     "fetch_chat_messages",
 ]
 
-__version__ = "1.12.2"
+__version__ = "1.13.0"

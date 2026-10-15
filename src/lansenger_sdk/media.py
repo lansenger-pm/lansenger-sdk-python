@@ -48,6 +48,9 @@ async def upload_media(
     Uses /v1/medias/create. Type values must match API 4.5.1:
     1=video, 2=image, 3=audio. No generic "file" type supported.
 
+    The app must have the 上传素材 (media upload) permission enabled in the
+    developer console — the platform rejects the call otherwise.
+
     Args:
         config: SDK config
         token_manager: Token manager for authentication

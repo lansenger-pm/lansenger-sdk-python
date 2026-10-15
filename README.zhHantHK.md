@@ -37,6 +37,7 @@
 - **機械人命令** — 創建/查詢/刪除機械人快捷命令
 - **個人應用** — 創建/修改/查詢/刪除/列表個人機械人應用
 - **回呼事件** — 25 種事件類型、結構化訊息解析、AES 解密（按 4.10.1.4規範）、SHA1 簽名驗證
+- **表情回覆與授權請求** — 用六種內建表情回覆訊息，並可向使用者發起位置授權請求
 
 ## 快速安裝
 
@@ -308,6 +309,8 @@ path_result = await client.fetch_media_path(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
+> ⚠️ `upload_media`（4.5.1）需要先在開發者中心啟用「上載素材」權限（上傳素材），否則平台會拒絕上載。
+
 #### 加急提醒（4.6.14）
 
 ```python
@@ -319,6 +322,45 @@ result = await client.send_reminder(
     user_id_list=["staff1", "staff2"],
 )
 ```
+
+#### 表情回覆（4.6.17）
+
+```python
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB", reply_type=2)
+result = sync_client.reply_message("msg123", emoji_id="TYPE_OK")
+```
+
+`reply_type=1` 表示新增回覆（預設），`reply_type=2` 表示取消回覆；**兩種模式都必填 `emoji_id`**（平台靠它判斷要取消哪一個表情）。`emoji_id` 必須為下列其中一個：
+
+| `emoji_id` | 含義 |
+|---|---|
+| `TYPE_THUMB` | 点赞（讚好） |
+| `TYPE_OK` | 收到 |
+| `TYPE_ADD_ONE` | +1 |
+| `TYPE_FIREWORK` | 烟火（煙花） |
+| `TYPE_LOVE` | 爱心（愛心） |
+| `TYPE_DOUBT` | 问号（問號） |
+
+亦接受選填的 `user_token=`。呼叫會回傳 `ReplyMessageResult`：失敗時 `result.success is False`，並在 `result.error` 帶出原因（例如 `errCode 40060` = 消息为空或格式错误），不會拋出例外。模組層級函式亦可直接匯入：
+
+```python
+from lansenger_sdk import reply_message
+```
+
+#### 授權請求訊息（4.6.4.14）
+
+```python
+result = await client.send_authorization_request("staff123")  # bot -> staff private chat
+result = sync_client.send_authorization_request("staff123")  # bot -> staff private chat
+```
+
+傳送的內容由 `authorization_req_payload()` 建立：`{"authorizationType": 1}`，其中 `1` 代表 位置请求授权（位置請求授權），是現時唯一定義的類型。該 msgType **平台只接受「機械人 → 員工私聊」通道**（`POST /v1/bot/messages/create`），因此 `chat_id` 只傳一個員工 openId、回傳 `SendMessageResult`；走帳號通道會被拒 `50084 非法的msgType`。
+
+接收授權後的資料：
+
+- **個人機械人**：位置回報會直接透過長連線以 `report_location` 回呼事件送達。
+- **組織機械人**：應用程式須在開發者中心訂閱「位置上報事件」並設定回呼網址，回報會經回呼介面送達。
 
 ## 5. 群組
 
@@ -392,6 +434,7 @@ await client.update_schedule_attendee_meta(
 
 ## 7. 回呼事件
 
+
 SDK 同時支援明文 JSON 和 AES 加密回呼載荷（按藍信接口規範 4.10.1.4）。
 
 ### 配置
@@ -451,6 +494,24 @@ types = client.get_callback_event_types()  # 13 個類別共 25 種事件類型
 ```
 
 AES 解密需安裝 `pycryptodome` 或 `cryptography` 包（自動檢測）。
+
+### 機械人訊息回呼欄位（4.10.1.3）
+
+`bot_private_message` 與 `bot_group_message` 事件另帶以下兩個欄位（需伺服器 prs5.10.0+）：
+
+| 欄位 | 說明 | SDK 存取方式 |
+|---|---|---|
+| `fromName` | 消息发送者名称 | `BotPrivateMessageData.from_name` / `BotGroupMessageData.from_name` |
+| `osType` | 机器人发送设备操作系统 | `BotPrivateMessageData.os_type` / `BotGroupMessageData.os_type` |
+
+```python
+for event in events:
+    if event.event_type in ("bot_private_message", "bot_group_message"):
+        print(event.data.from_name)
+        print(event.data.os_type)
+```
+
+`osType` 為下列其中一個值（SDK 以 `OS_TYPES` tuple 提供）：`Android`、`ios`、`iPad`、`Android Pad`、`Harmony Phone`、`Harmony Pad`、`Windows PC`、`Mac Pc`、`browser`、`Harmony Pc`。在較舊的伺服器上，這兩個欄位只會是空字串，不會報錯。
 
 ## 訊息類型能力矩陣
 

@@ -33,6 +33,7 @@ All three bot types use the same auth mechanism: `appToken` is required for ever
 - **Groups** — create, info, members, list, membership check, update settings & members, dismiss
 - **Calendar & schedule** — primary calendar, schedule CRUD + update, attendee management + attendee metadata
 - **Callback events** — 25 event types, structured parsing, AES decryption (per 4.10.1.4), SHA1 signature verification
+- **Emoji replies & authorization requests** — react to messages with the six built-in emojis, and ask users to authorize location reporting
 
 ## Quick Install
 
@@ -252,6 +253,8 @@ path_result = await client.fetch_media_path(media_id="media123")
 result = await client.revoke_message(message_ids=["msg1", "msg2"])
 ```
 
+`upload_media` needs the 「上传素材」(media upload) permission enabled in the developer console — otherwise the platform rejects the upload.
+
 #### Urgent reminders (4.6.14)
 
 ```python
@@ -263,6 +266,35 @@ result = await client.send_reminder(
     user_id_list=["staff1", "staff2"],
 )
 ```
+
+#### Emoji replies (4.6.17)
+
+```python
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB")
+result = await client.reply_message(msg_id="msg123", emoji_id="TYPE_THUMB", reply_type=2)
+result = client.reply_message("msg123", emoji_id="TYPE_OK")  # blocking sync client
+```
+
+`reply_type=1` (default) adds a reply, `reply_type=2` cancels it. `emoji_id` is required in **both** modes (the platform needs it to tell which emoji reply to cancel) and must be one of
+`TYPE_THUMB` (点赞), `TYPE_OK` (收到), `TYPE_ADD_ONE` (+1), `TYPE_FIREWORK` (烟火),
+`TYPE_LOVE` (爱心), `TYPE_DOUBT` (问号); the endpoint also accepts an optional `user_token=`.
+The call returns a `ReplyMessageResult` — a failed call comes back as `result.success is False`
+with `result.error` (e.g. `errCode 40060` = 消息为空或格式错误), never an exception.
+`from lansenger_sdk import reply_message` exposes it as a module-level function as well.
+
+#### Permission (authorization) request (4.6.4.14)
+
+```python
+result = await client.send_authorization_request("staff123")  # bot -> staff private chat
+```
+
+The message body is built by `authorization_req_payload()` = `{"authorizationType": 1}`
+(1 = 位置请求授权, the only type defined today). The platform accepts this msgType **only on the bot -> staff private-chat channel** (`POST /v1/bot/messages/create`), so `chat_id` is one staff openId and the call returns a `SendMessageResult`; the account channel rejects it with `50084 非法的msgType`.
+
+Where the granted data arrives:
+
+- **Personal bots (个人机器人)** — the location report arrives directly on the long connection as the `report_location` callback event.
+- **Organization bots (组织机器人)** — subscribe to the 「位置上报事件」 in the developer console and configure a callback URL; the report then arrives through the callback interface.
 
 ## 5. Groups
 
@@ -395,6 +427,25 @@ types = client.get_callback_event_types()  # 25 event types across 13 categories
 ```
 
 AES decryption requires `pycryptodome` or `cryptography` package (auto-detected).
+
+### Bot message callback fields (4.10.1.3)
+
+Requires server prs5.10.0+. The `bot_private_message` and `bot_group_message` events also carry:
+
+| Callback field | Meaning | Parsed field |
+|----------------|---------|--------------|
+| `fromName` | 消息发送者名称 | `BotPrivateMessageData.from_name` / `BotGroupMessageData.from_name` |
+| `osType` | 机器人发送设备操作系统 | `.os_type` |
+
+```python
+for event in events:
+    if event.event_type in ("bot_private_message", "bot_group_message"):
+        print(event.data.from_name, event.data.os_type)
+```
+
+`osType` is one of the `OS_TYPES` tuple: `Android`, `ios`, `iPad`, `Android Pad`, `Harmony Phone`,
+`Harmony Pad`, `Windows PC`, `Mac Pc`, `browser`, `Harmony Pc`. On older servers both fields are
+simply empty strings — no error.
 
 ## Message Type Capability Matrix
 
